@@ -4,6 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import GoogleAnalytics from '@/components/GoogleAnalytics';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -50,6 +51,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && <GoogleAnalytics />}
         <ThemeProvider
           attribute='class'
           defaultTheme='system'
