@@ -121,3 +121,7 @@
     @apply bg-background text-foreground;
   }
 }
+
+.invisible-cells .activity-cell {
+  opacity: 0;
+}
