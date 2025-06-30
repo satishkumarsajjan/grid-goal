@@ -3,6 +3,7 @@ import { AwardsSection } from './awards-section';
 import { FeatureBentoGrid } from './feature-bento-grid';
 import { Header } from './header';
 import { HeroSection } from './hero-section';
+import { DualRewindSection } from './rewind-section';
 import { VisualWorkflowSection } from './visual-workflow-section';
 
 const LandingPage = () => {
@@ -18,6 +19,7 @@ const LandingPage = () => {
       <VisualWorkflowSection />
       <FeatureBentoGrid />
       <AwardsSection />
+      <DualRewindSection />
     </div>
   );
 };
