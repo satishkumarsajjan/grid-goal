@@ -1,10 +1,9 @@
-import { TaskActivity } from '@/components/landing-page/activity-feed';
-import Image from 'next/image';
+import { Header } from '@/components/landing-page/header';
 
 export default function Home() {
   return (
     <main>
-      <TaskActivity />
+      <Header />
     </main>
   );
 }
