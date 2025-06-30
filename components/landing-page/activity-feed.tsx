@@ -1,24 +1,22 @@
 'use client';
 
+import useDeviceDetect from '@/lib/hooks/use-hover-support';
 import { cn } from '@/lib/utils';
 import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Dot } from 'lucide-react';
 import * as React from 'react';
+import { EnterBlur } from '../ui/enter-blur';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
-import { EnterBlur } from '../ui/enter-blur';
 
-// Register the GSAP plugin
 gsap.registerPlugin(ScrollTrigger);
 
-// --- TYPE DEFINITIONS and HELPER FUNCTIONS ---
-// (No changes here, using your original functions)
 type Activity = { date: string; hours: number };
 type GridCellData = { date: string; hours: number; level: 0 | 1 | 2 | 3 | 4 };
 type MonthData = {
@@ -85,21 +83,18 @@ const MONTH_NAMES = [
   'Dec',
 ];
 
-// --- MAIN COMPONENT ---
 export function TaskActivity() {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [activityData] = React.useState<Activity[]>(() =>
     generateActivityData(365)
   );
-
+  const { isTouch } = useDeviceDetect();
   useGSAP(
     () => {
       if (!containerRef.current) return;
 
-      // Set the initial scale of the cells before animating
       gsap.set('.activity-cell', { scale: 0.5 });
 
-      // Animate TO the final state. The initial opacity is handled by CSS.
       gsap.to('.activity-cell', {
         opacity: 1,
         scale: 1,
@@ -204,10 +199,8 @@ export function TaskActivity() {
                 </div>
               </div>
 
-              {/* This div contains the cells and has the helper class */}
               <div
                 ref={containerRef}
-                // The 'invisible-cells' class hides the children until GSAP runs
                 className={cn(
                   'invisible-cells grid flex-1 gap-x-3 gap-y-5',
                   'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12'
@@ -243,21 +236,39 @@ export function TaskActivity() {
                             : `No activity on ${formattedDate}`;
 
                         return (
-                          <TooltipProvider key={date} delayDuration={150}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div
-                                  className={cn(
-                                    'activity-cell size-3 rounded-xs cursor-pointer hover:border-2 border-foreground',
-                                    getColorClass(level)
-                                  )}
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{tooltipText}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <div key={date}>
+                            {!isTouch ? (
+                              <TooltipProvider key={date} delayDuration={150}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div
+                                      className={cn(
+                                        'activity-cell size-3 rounded-xs cursor-pointer hover:border-2 border-foreground',
+                                        getColorClass(level)
+                                      )}
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{tooltipText}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <Popover key={date}>
+                                <PopoverTrigger asChild>
+                                  <div
+                                    className={cn(
+                                      ' size-3 rounded-xs cursor-pointer hover:border-2 border-foreground',
+                                      getColorClass(level)
+                                    )}
+                                  />
+                                </PopoverTrigger>
+                                <PopoverContent>
+                                  <p className='text-sm'>{tooltipText}</p>
+                                </PopoverContent>
+                              </Popover>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
@@ -268,7 +279,9 @@ export function TaskActivity() {
 
             <div className='w-full flex items-center justify-between mt-4'>
               <p className='flex items-center justify-center text-center text-xs text-muted-foreground'>
-                <Dot /> Hover on the cells to know more
+                {!isTouch
+                  ? `Hover on the cells to know more`
+                  : 'Touch the cells to know more'}
               </p>
               <div className='flex items-center gap-2 text-xs text-muted-foreground'>
                 <span>Less</span>
