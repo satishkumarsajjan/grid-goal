@@ -7,6 +7,11 @@ import {
   ChartLine,
   Check,
   Circle,
+  Clock,
+  Clock10,
+  Clock10Icon,
+  ClockAlert,
+  ClockPlusIcon,
   Hourglass,
   Sparkles,
   Trophy,
@@ -180,10 +185,10 @@ export function FeatureBentoGrid() {
       className: 'md:col-span-1',
       title: 'Smart Timers',
       description: 'Pomodoro & idle detection.',
-      icon: <Hourglass size={20} />,
+      icon: <Clock size={20} />,
       content: (
         <div className='w-full h-full flex items-center justify-center'>
-          <Hourglass className='size-16 text-primary/20 group-hover:text-primary/40 transition-colors' />
+          <ClockPlusIcon className='size-16 text-primary/20 group-hover:text-primary/40 transition-colors' />
         </div>
       ),
     },

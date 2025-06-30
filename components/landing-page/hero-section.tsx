@@ -1,9 +1,7 @@
 'use client';
 import { useGSAP } from '@gsap/react';
-import { useRef } from 'react';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
 import gsap from 'gsap';
+import { useRef } from 'react';
 import JoinButton from './join';
 
 export function HeroSection() {
@@ -32,7 +30,7 @@ export function HeroSection() {
   );
 
   return (
-    <section ref={container} id='hero' className='pt-40 pb-16 text-center'>
+    <section ref={container} id='hero' className='pt-40 pb-8 text-center'>
       <div className='container mx-auto px-6'>
         <h1 className='hero-h1 opacity-0 translate-y-[20px] text-5xl md:text-7xl font-bold tracking-tighter leading-tight max-w-4xl mx-auto bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/70'>
           All of the Progress, None of the Bloat
@@ -42,10 +40,7 @@ export function HeroSection() {
           you create goals and track consistency, grid by grid. Stop guessing.
           Start achieving.
         </p>
-        <span
-          onSubmit={(e) => e.preventDefault()}
-          className='hero-form mt-8 flex items-center justify-center opacity-0 translate-y-[20px]'
-        >
+        <span className='hero-form mt-16 flex items-center justify-center opacity-0 translate-y-[20px]'>
           <JoinButton text='Join the waitlist by completing this quick survey' />
         </span>
       </div>

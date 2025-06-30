@@ -1,14 +1,10 @@
-'use client';
-import Link from 'next/link';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import JoinButton from './join';
 
 export function FinalCTASection() {
   return (
     <section
       id='join'
-      className='py-32 bg-muted/50 rounded-xl'
+      className='py-32 bg-card/50 backdrop-blur-sm rounded-xl'
       aria-labelledby='cta-heading'
     >
       <div id='waitlist' className='container mx-auto px-6 text-center'>

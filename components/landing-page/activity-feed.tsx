@@ -162,7 +162,11 @@ export function TaskActivity() {
   if (!activityData.length) return <div>Loading activity...</div>;
 
   return (
-    <EnterBlur className='my-24 md:my-32' aria-labelledby='product-heading'>
+    <EnterBlur
+      className='my-24 md:my-32'
+      aria-labelledby='product-heading'
+      delay={2}
+    >
       {/* Content remains the same, just wrapped in a section with an ID */}
       <div className='container mx-auto px-6 flex flex-col items-center text-center'>
         <p className='text-primary font-semibold uppercase tracking-wider text-sm'>
@@ -179,7 +183,7 @@ export function TaskActivity() {
           dedication. Watch your consistency take shape, one day at a time.
         </p>
         <div className='mt-12 flex justify-center'>
-          <div className='flex flex-col items-center p-4 sm:p-6 bg-card rounded-lg border w-full max-w-7xl mx-auto'>
+          <div className='flex flex-col items-center p-4 sm:p-6 bg-card/15 backdrop-blur-sm rounded-lg border w-full max-w-7xl mx-auto'>
             <div className='w-full text-left mb-4 px-2'>
               <h2 className='text-base font-semibold text-card-foreground'>
                 {activityData
