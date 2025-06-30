@@ -14,8 +14,9 @@ import {
 } from 'lucide-react';
 import React, { useRef } from 'react';
 
-import { PaceIndicatorChart } from './pace-indicator-chart';
 import { cn } from '@/lib/utils';
+import { EnterBlur } from '../ui/enter-blur';
+import { PaceIndicatorChart } from './pace-indicator-chart';
 
 const BentoCard = ({
   className,
@@ -35,7 +36,7 @@ const BentoCard = ({
       'bento-card group relative flex flex-col justify-between overflow-hidden rounded-xl',
       'bg-background/50 border border-border/80 shadow-inner shadow-muted-foreground/10',
       'transition-all duration-300 hover:border-primary/50 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10',
-      'opacity-0 translate-y-10', // Initial state for GSAP animation
+      'opacity-0', // Initial state for GSAP animation
       className
     )}
   >
@@ -203,14 +204,11 @@ export function FeatureBentoGrid() {
     () => {
       gsap.to('.bento-card', {
         opacity: 1,
-        y: 0,
-        ease: 'power3.out',
         stagger: { amount: 0.4, from: 'start' },
         scrollTrigger: {
           trigger: container.current,
-          start: 'top 80%',
-          end: 'top 50%',
-          toggleActions: 'play none none reverse',
+          start: 'top 30%',
+          toggleActions: 'play none none none',
         },
       });
     },
@@ -225,7 +223,7 @@ export function FeatureBentoGrid() {
       aria-labelledby='features-heading'
     >
       <div className='container mx-auto px-6'>
-        <div className='text-center mb-16 max-w-3xl mx-auto'>
+        <EnterBlur className='text-center mb-16 max-w-3xl mx-auto'>
           <h2
             id='features-heading'
             className='text-4xl md:text-5xl font-bold tracking-tighter'
@@ -236,8 +234,8 @@ export function FeatureBentoGrid() {
             GridGoal is a powerful, focused system designed to eliminate
             distractions and maximize your productive output.
           </p>
-        </div>
-        {/* REFACTORED: A 6-column grid for a more balanced and hierarchical layout */}
+        </EnterBlur>
+
         <div className='grid grid-cols-1 md:grid-cols-6 auto-rows-[14rem] gap-4'>
           {features.map((feature) => (
             <BentoCard
