@@ -14,8 +14,8 @@ import {
   Trophy,
 } from 'lucide-react';
 import { useRef } from 'react';
-import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
+import { Switch } from '../ui/switch';
 
 export function VisualWorkflowSection() {
   const container = useRef(null);

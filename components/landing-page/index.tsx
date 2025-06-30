@@ -1,4 +1,5 @@
 import { TaskActivity } from './activity-feed';
+import { FeatureBentoGrid } from './feature-bento-grid';
 import { Header } from './header';
 import { HeroSection } from './hero-section';
 import { VisualWorkflowSection } from './visual-workflow-section';
@@ -14,6 +15,7 @@ const LandingPage = () => {
       <HeroSection />
       <TaskActivity />
       <VisualWorkflowSection />
+      <FeatureBentoGrid />
     </div>
   );
 };
