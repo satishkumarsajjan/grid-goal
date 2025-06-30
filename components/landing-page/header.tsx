@@ -17,30 +17,25 @@ export function Header() {
   useGSAP(
     () => {
       // Your existing animation for the header appearing
-      gsap.from(headerRef.current, {
-        y: '-100%',
+      gsap.to(headerRef.current, {
+        y: '0',
         duration: 0.5,
         ease: 'power2.out',
         delay: 0.5,
       });
 
-      // --- Smooth Scroll Logic ---
-      // 4. Select all elements with the 'nav-link' class inside the header
       const links = gsap.utils.toArray('.nav-link');
 
       links.forEach((link: any) => {
         link.addEventListener('click', (e: MouseEvent) => {
-          e.preventDefault(); // Prevent the default browser jump
+          e.preventDefault();
           const targetId = link.getAttribute('href');
 
-          // Scroll to the target element
           gsap.to(window, {
             duration: 1.5,
             ease: 'power2.inOut',
             scrollTo: {
               y: targetId,
-              // Add an offset to account for the fixed header's height
-              // The header has h-16 (64px), so let's use a bit more for padding.
               offsetY: 80,
             },
           });
@@ -55,7 +50,7 @@ export function Header() {
   return (
     <header
       ref={headerRef}
-      className='fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-transparent transition-colors duration-300'
+      className='fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-transparent transition-colors duration-300 -translate-y-[100%]'
     >
       <div className='container mx-auto px-6 h-16 flex items-center justify-between max-w-6xl'>
         <GridGoalLogo />
