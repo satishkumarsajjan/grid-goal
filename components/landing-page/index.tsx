@@ -1,9 +1,13 @@
 import { TaskActivity } from './activity-feed';
 import { AwardsSection } from './awards-section';
 import { FeatureBentoGrid } from './feature-bento-grid';
+import { FinalCTASection } from './final-cta-Section';
+import { Footer } from './footer';
 import { Header } from './header';
 import { HeroSection } from './hero-section';
 import { DualRewindSection } from './rewind-section';
+import { TestimonialSection } from './testimonial-section';
+import { ToolkitSection } from './toolkit-section';
 import { VisualWorkflowSection } from './visual-workflow-section';
 
 const LandingPage = () => {
@@ -20,6 +24,10 @@ const LandingPage = () => {
       <FeatureBentoGrid />
       <AwardsSection />
       <DualRewindSection />
+      <TestimonialSection />
+      <ToolkitSection />
+      <FinalCTASection />
+      <Footer />
     </div>
   );
 };
