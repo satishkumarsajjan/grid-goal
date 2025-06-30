@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://gridgoal.xyz'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_URL as string),
   icons: {
     icon: '/gridgoal-logo.svg',
   },
