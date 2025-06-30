@@ -1,6 +1,7 @@
 import { TaskActivity } from './activity-feed';
 import { Header } from './header';
 import { HeroSection } from './hero-section';
+import { VisualWorkflowSection } from './visual-workflow-section';
 
 const LandingPage = () => {
   return (
@@ -12,6 +13,7 @@ const LandingPage = () => {
       <Header />
       <HeroSection />
       <TaskActivity />
+      <VisualWorkflowSection />
     </div>
   );
 };
