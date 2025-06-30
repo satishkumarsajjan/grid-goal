@@ -165,7 +165,7 @@ export function TaskActivity() {
     <EnterBlur
       className='my-24 md:my-32'
       aria-labelledby='product-heading'
-      delay={2}
+      delay={1}
     >
       {/* Content remains the same, just wrapped in a section with an ID */}
       <div className='container mx-auto px-6 flex flex-col items-center text-center'>
