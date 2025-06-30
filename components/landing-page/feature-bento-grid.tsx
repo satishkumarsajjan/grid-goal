@@ -8,11 +8,7 @@ import {
   Check,
   Circle,
   Clock,
-  Clock10,
-  Clock10Icon,
-  ClockAlert,
   ClockPlusIcon,
-  Hourglass,
   Sparkles,
   Trophy,
   Zap,
@@ -233,7 +229,7 @@ export function FeatureBentoGrid() {
             id='features-heading'
             className='text-4xl md:text-5xl font-bold tracking-tighter'
           >
-            Everything you need. Nothing you don't.
+            Everything you need. Nothing you don&apos;t.
           </h2>
           <p className='mt-4 text-lg text-muted-foreground'>
             GridGoal is a powerful, focused system designed to eliminate

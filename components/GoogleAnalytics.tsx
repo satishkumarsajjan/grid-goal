@@ -3,38 +3,31 @@
 import { usePathname, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { useEffect } from 'react';
-
-declare global {
-  interface Window {
-    gtag: (...args: any[]) => void;
-  }
-}
+import * as gtag from '@/lib/gtag'; // Import our new helper functions
 
 const GoogleAnalytics = () => {
-  const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  // This useEffect is now responsible for sending page views on client-side navigation
   useEffect(() => {
-    if (GA_MEASUREMENT_ID) {
-      const url = pathname + searchParams.toString();
+    const url = pathname + searchParams.toString();
+    gtag.pageview(url); // Use our safe pageview function
+  }, [pathname, searchParams]);
 
-      window.gtag('config', GA_MEASUREMENT_ID, {
-        page_path: url,
-      });
-    }
-  }, [pathname, searchParams, GA_MEASUREMENT_ID]);
-
+  // We only want to run this in production
   if (process.env.NODE_ENV !== 'production') {
     return null;
   }
 
   return (
     <>
+      {/* The main GA script */}
       <Script
         strategy='afterInteractive'
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+        src={`https://www.googletagmanager.com/gtag/js?id=${gtag.GA_MEASUREMENT_ID}`}
       />
+      {/* The inline script to initialize GA and send the first pageview */}
       <Script
         id='google-analytics'
         strategy='afterInteractive'
@@ -44,7 +37,7 @@ const GoogleAnalytics = () => {
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             
-            gtag('config', '${GA_MEASUREMENT_ID}', {
+            gtag('config', '${gtag.GA_MEASUREMENT_ID}', {
               page_path: window.location.pathname,
             });
           `,

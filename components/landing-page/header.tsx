@@ -25,7 +25,7 @@ export function Header() {
       });
 
       const links = gsap.utils.toArray('.nav-link');
-
+      // @ts-ignore
       links.forEach((link: any) => {
         link.addEventListener('click', (e: MouseEvent) => {
           e.preventDefault();

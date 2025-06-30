@@ -12,8 +12,8 @@ export function FinalCTASection() {
           Want to build your grid?
         </h2>
         <p className='mt-6 text-lg text-muted-foreground max-w-md mx-auto'>
-          Get notified when we launch. No spam, just a single email when we're
-          live.
+          Get notified when we launch. No spam, just a single email when
+          we&apos;re live.
         </p>
         <div className='mt-8'>
           <JoinButton text='Join the waitlist by completing this quick survey' />

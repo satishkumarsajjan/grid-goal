@@ -161,7 +161,7 @@ const monthlyRewindData: Slide[] = [
     icon: CalendarClock,
     title: (
       <>
-        You're a <span className='text-primary'>Night Owl 🦉</span>
+        You&apos;re a <span className='text-primary'>Night Owl 🦉</span>
       </>
     ),
     description: 'Your most productive hours were between 10 PM and 3 AM.',
@@ -184,7 +184,7 @@ const monthlyRewindData: Slide[] = [
       <div className='mt-4 flex flex-col items-center gap-3 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 p-6 text-white shadow-lg'>
         <h3 className='text-3xl font-bold'>The Finisher</h3>
         <p className='text-sm text-purple-200'>
-          You don't just start things; you see them through to the end.
+          You don&apos;t just start things; you see them through to the end.
         </p>
       </div>
     ),
