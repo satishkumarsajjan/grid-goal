@@ -23,6 +23,7 @@ export function Header() {
         y: '0',
         duration: 0.5,
         ease: 'power2.out',
+        delay: 0.3,
       });
 
       const links = gsap.utils.toArray('.nav-link');
