@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import gsap from 'gsap';
+import JoinButton from './join';
 
 export function HeroSection() {
   const container = useRef(null);
@@ -41,27 +42,12 @@ export function HeroSection() {
           you create goals and track consistency, grid by grid. Stop guessing.
           Start achieving.
         </p>
-        <form
+        <span
           onSubmit={(e) => e.preventDefault()}
-          className='hero-form mt-8 flex max-w-md mx-auto gap-2 opacity-0 translate-y-[20px]'
+          className='hero-form mt-8 flex items-center justify-center opacity-0 translate-y-[20px]'
         >
-          <label htmlFor='email-waitlist' className='sr-only'>
-            Enter your email to join the waitlist
-          </label>
-          <Input
-            id='email-waitlist'
-            type='email'
-            placeholder='Enter your email'
-            required
-            className='flex-1'
-          />
-          <Button
-            type='submit'
-            className='shadow-primary/20 shadow-[0_4px_15px]'
-          >
-            Join the Waitlist
-          </Button>
-        </form>
+          <JoinButton text='Join the waitlist by completing this quick survey' />
+        </span>
       </div>
     </section>
   );

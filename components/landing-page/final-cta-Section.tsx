@@ -1,6 +1,8 @@
 'use client';
+import Link from 'next/link';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import JoinButton from './join';
 
 export function FinalCTASection() {
   return (
@@ -18,27 +20,7 @@ export function FinalCTASection() {
           live.
         </p>
         <div className='mt-8'>
-          <form
-            onSubmit={(e) => e.preventDefault()}
-            className='hero-form mt-8 flex max-w-md mx-auto gap-2'
-          >
-            <label htmlFor='email-waitlist' className='sr-only'>
-              Enter your email to join the waitlist
-            </label>
-            <Input
-              id='email-waitlist'
-              type='email'
-              placeholder='Enter your email'
-              required
-              className='flex-1'
-            />
-            <Button
-              type='submit'
-              className='shadow-primary/20 shadow-[0_4px_15px]'
-            >
-              Join the Waitlist
-            </Button>
-          </form>
+          <JoinButton text='Join the waitlist by completing this quick survey' />
         </div>
       </div>
     </section>

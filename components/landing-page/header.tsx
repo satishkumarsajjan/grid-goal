@@ -8,6 +8,7 @@ import { useRef } from 'react';
 import { Button } from '../ui/button';
 import GridGoalLogo from './grid-goal-logo';
 import ThemeSwitch from './theme-switch';
+import JoinButton from './join';
 
 gsap.registerPlugin(ScrollToPlugin);
 
@@ -16,7 +17,6 @@ export function Header() {
 
   useGSAP(
     () => {
-      // Your existing animation for the header appearing
       gsap.to(headerRef.current, {
         y: '0',
         duration: 0.5,
@@ -42,8 +42,7 @@ export function Header() {
         });
       });
     },
-    // The scope ensures GSAP only selects links within this component
-    // and handles cleanup automatically when the component unmounts.
+
     { scope: headerRef }
   );
 
@@ -96,10 +95,7 @@ export function Header() {
         <div className='flex items-center gap-2'>
           <ThemeSwitch />
           <Button asChild>
-            {/* 3. Add the 'nav-link' class to the button's anchor tag */}
-            <a href='#hero' className='nav-link'>
-              Join Waitlist
-            </a>
+            <JoinButton text='Join waitlist' />
           </Button>
         </div>
       </div>
