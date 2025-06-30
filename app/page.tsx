@@ -19,7 +19,7 @@ export const metadata: Metadata = {
       },
     ],
 
-    url: 'https://gridgoal.xyz',
+    url: process.env.NEXT_PUBLIC_URL,
     siteName: 'GridGoal',
     type: 'website',
     locale: 'en_US',
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     title: 'GridGoal | A Minimal Goal Tracking Platform',
     description:
       'Manage your goals and tasks. Visualize your dedication. GridGoal helps you create goals and track consistency, grid by grid. Stop guessing. Start achieving.',
-    images: ['https://gridgoal.xyz/gridgoal-hero.png'],
+    images: [`${process.env.NEXT_PUBLIC_URL}gridgoal-hero.png`],
     creator: '@iamsatish4564',
   },
 };
