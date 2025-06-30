@@ -1,4 +1,5 @@
 import { TaskActivity } from './activity-feed';
+import { AwardsSection } from './awards-section';
 import { FeatureBentoGrid } from './feature-bento-grid';
 import { Header } from './header';
 import { HeroSection } from './hero-section';
@@ -16,6 +17,7 @@ const LandingPage = () => {
       <TaskActivity />
       <VisualWorkflowSection />
       <FeatureBentoGrid />
+      <AwardsSection />
     </div>
   );
 };
