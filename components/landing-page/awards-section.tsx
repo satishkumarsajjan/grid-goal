@@ -232,9 +232,9 @@ export function AwardsSection() {
             A Trophy Case for Your Journey
           </h2>
           <p className='mt-4 text-lg text-muted-foreground'>
-            Your hard work doesn't go unnoticed. Unlock a collection of awards
-            that celebrate every step of your journey, from the first task to
-            total mastery.
+            Your hard work doesn&apos;t go unnoticed. Unlock a collection of
+            awards that celebrate every step of your journey, from the first
+            task to total mastery.
           </p>
         </div>
         <div ref={container} className='flex flex-col gap-16'>

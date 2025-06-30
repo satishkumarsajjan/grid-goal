@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 'use client';
 
 import { useGSAP } from '@gsap/react';
@@ -21,11 +23,9 @@ export function Header() {
         y: '0',
         duration: 0.5,
         ease: 'power2.out',
-        delay: 0.5,
       });
 
       const links = gsap.utils.toArray('.nav-link');
-
       links.forEach((link: any) => {
         link.addEventListener('click', (e: MouseEvent) => {
           e.preventDefault();

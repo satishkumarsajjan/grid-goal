@@ -28,8 +28,8 @@ export function TestimonialSection() {
           </h2>
           <p className='text-3xl md:text-4xl font-medium leading-normal'>
             “GridGoal gives you no excuse to skip the work. Seeing the grid fill
-            up is the most satisfying feedback loop I've ever used. It’s that
-            simple and that powerful.”
+            up is the most satisfying feedback loop I&apos;ve ever used.
+            It&apos;s that simple and that powerful.”
           </p>
           <footer className='mt-8'>
             <div className='mt-4 text-lg font-semibold'>Veena</div>
