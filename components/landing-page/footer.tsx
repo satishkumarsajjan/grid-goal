@@ -27,7 +27,7 @@ export function Footer() {
           </div>
         </div>
         <div className='border-t border-border text-center md:text-left text-sm text-muted-foreground pt-4'>
-          Built by Satish kumar
+          Built by SATISH_KUMAR
         </div>
       </div>
     </footer>
