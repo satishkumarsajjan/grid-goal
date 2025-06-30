@@ -12,6 +12,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
+import { EnterBlur } from '../ui/enter-blur';
 
 // Register the GSAP plugin
 gsap.registerPlugin(ScrollTrigger);
@@ -161,104 +162,129 @@ export function TaskActivity() {
   if (!activityData.length) return <div>Loading activity...</div>;
 
   return (
-    <div className='flex flex-col items-center p-4 sm:p-6 bg-card rounded-lg border w-full max-w-7xl mx-auto'>
-      <div className='w-full text-left mb-4 px-2'>
-        <h2 className='text-base font-semibold text-card-foreground'>
-          {activityData.reduce((sum, a) => sum + a.hours, 0).toLocaleString()}{' '}
-          hours dedicated in the last 365 days
-        </h2>
-      </div>
-
-      <div className='w-full flex'>
-        {/* Day Labels Column */}
-        <div className='hidden shrink-0 pr-4 xl:flex flex-col text-xs text-muted-foreground'>
-          <div className='h-7' />
-          <div className='flex flex-col'>
-            <span>Sun</span> <span>Mon</span> <span>Tue</span> <span>Wed</span>{' '}
-            <span>Thu</span> <span>Fri</span> <span>Sat</span>
-          </div>
-        </div>
-
-        {/* This div contains the cells and has the helper class */}
-        <div
-          ref={containerRef}
-          // The 'invisible-cells' class hides the children until GSAP runs
-          className={cn(
-            'invisible-cells grid flex-1 gap-x-3 gap-y-5',
-            'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12'
-          )}
+    <EnterBlur className='my-24 md:my-32' aria-labelledby='product-heading'>
+      {/* Content remains the same, just wrapped in a section with an ID */}
+      <div className='container mx-auto px-6 flex flex-col items-center text-center'>
+        <p className='text-primary font-semibold uppercase tracking-wider text-sm'>
+          Visualization
+        </p>
+        <h2
+          id='product-heading'
+          className='mt-2 text-4xl md:text-5xl font-bold tracking-tighter'
         >
-          {processedMonths.map(({ monthName, days }, monthIndex) => (
-            <div key={monthName + monthIndex}>
-              <div className='text-xs text-muted-foreground h-7 flex items-center justify-center pb-1'>
-                {monthName}
+          Your Progress, Solidified.
+        </h2>
+        <p className='mt-4 text-lg text-muted-foreground max-w-2xl mx-auto'>
+          The grid doesn’t lie. It’s the most honest feedback on your
+          dedication. Watch your consistency take shape, one day at a time.
+        </p>
+        <div className='mt-12 flex justify-center'>
+          <div className='flex flex-col items-center p-4 sm:p-6 bg-card rounded-lg border w-full max-w-7xl mx-auto'>
+            <div className='w-full text-left mb-4 px-2'>
+              <h2 className='text-base font-semibold text-card-foreground'>
+                {activityData
+                  .reduce((sum, a) => sum + a.hours, 0)
+                  .toLocaleString()}{' '}
+                hours dedicated in the last 365 days
+              </h2>
+            </div>
+
+            <div className='w-full flex'>
+              {/* Day Labels Column */}
+              <div className='hidden shrink-0 pr-4 xl:flex flex-col text-xs text-muted-foreground'>
+                <div className='h-7' />
+                <div className='flex flex-col'>
+                  <span>Sun</span> <span>Mon</span> <span>Tue</span>{' '}
+                  <span>Wed</span> <span>Thu</span> <span>Fri</span>{' '}
+                  <span>Sat</span>
+                </div>
               </div>
-              <div className='grid grid-rows-7 grid-flow-col gap-1'>
-                {days.map((cell, dayIndex) => {
-                  if (!cell)
-                    return <div key={`pad-${dayIndex}`} className='size-3' />;
 
-                  const { date, hours, level } = cell;
-                  const formattedDate = new Date(date).toLocaleDateString(
-                    'en-US',
-                    {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    }
-                  );
-                  const tooltipText =
-                    hours > 0
-                      ? `${hours} hour${
-                          hours > 1 ? 's' : ''
-                        } on ${formattedDate}`
-                      : `No activity on ${formattedDate}`;
+              {/* This div contains the cells and has the helper class */}
+              <div
+                ref={containerRef}
+                // The 'invisible-cells' class hides the children until GSAP runs
+                className={cn(
+                  'invisible-cells grid flex-1 gap-x-3 gap-y-5',
+                  'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12'
+                )}
+              >
+                {processedMonths.map(({ monthName, days }, monthIndex) => (
+                  <div key={monthName + monthIndex}>
+                    <div className='text-xs text-muted-foreground h-7 flex items-center justify-center pb-1'>
+                      {monthName}
+                    </div>
+                    <div className='grid grid-rows-7 grid-flow-col gap-1'>
+                      {days.map((cell, dayIndex) => {
+                        if (!cell)
+                          return (
+                            <div key={`pad-${dayIndex}`} className='size-3' />
+                          );
 
-                  return (
-                    <TooltipProvider key={date} delayDuration={150}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div
-                            className={cn(
-                              'activity-cell size-3 rounded-xs cursor-pointer hover:border-2 border-foreground',
-                              getColorClass(level)
-                            )}
-                          />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{tooltipText}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  );
-                })}
+                        const { date, hours, level } = cell;
+                        const formattedDate = new Date(date).toLocaleDateString(
+                          'en-US',
+                          {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          }
+                        );
+                        const tooltipText =
+                          hours > 0
+                            ? `${hours} hour${
+                                hours > 1 ? 's' : ''
+                              } on ${formattedDate}`
+                            : `No activity on ${formattedDate}`;
+
+                        return (
+                          <TooltipProvider key={date} delayDuration={150}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  className={cn(
+                                    'activity-cell size-3 rounded-xs cursor-pointer hover:border-2 border-foreground',
+                                    getColorClass(level)
+                                  )}
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{tooltipText}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      <div className='w-full flex items-center justify-between mt-4'>
-        <p className='flex items-center justify-center text-center text-xs text-muted-foreground'>
-          <Dot /> Hover on the cells to know more
-        </p>
-        <div className='flex items-center gap-2 text-xs text-muted-foreground'>
-          <span>Less</span>
-          <div className='flex gap-1'>
-            {[0, 1, 2, 3, 4].map((level) => (
-              <div
-                key={level}
-                className={cn(
-                  'size-3 rounded-xs',
-                  getColorClass(level as 0 | 1 | 2 | 3 | 4)
-                )}
-              />
-            ))}
+            <div className='w-full flex items-center justify-between mt-4'>
+              <p className='flex items-center justify-center text-center text-xs text-muted-foreground'>
+                <Dot /> Hover on the cells to know more
+              </p>
+              <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+                <span>Less</span>
+                <div className='flex gap-1'>
+                  {[0, 1, 2, 3, 4].map((level) => (
+                    <div
+                      key={level}
+                      className={cn(
+                        'size-3 rounded-xs',
+                        getColorClass(level as 0 | 1 | 2 | 3 | 4)
+                      )}
+                    />
+                  ))}
+                </div>
+                <span>More</span>
+              </div>
+            </div>
           </div>
-          <span>More</span>
         </div>
       </div>
-    </div>
+    </EnterBlur>
   );
 }
