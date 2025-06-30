@@ -8,7 +8,7 @@ export function HeroSection() {
   const container = useRef(null);
   useGSAP(
     () => {
-      const tl = gsap.timeline();
+      const tl = gsap.timeline({ delay: 0.3 });
       tl.to('.hero-h1', {
         opacity: 1,
         y: 0,
