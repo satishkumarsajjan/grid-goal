@@ -3,6 +3,44 @@ import { auth } from '@/auth';
 import { prisma } from '@/prisma';
 
 // This file handles requests to /api/goals/[SOME_ID]
+export async function GET(
+  request: Request,
+  { params }: { params: { goalId: string } }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+      });
+    }
+    const userId = session.user.id;
+    const { goalId } = await params;
+
+    const goal = await prisma.goal.findFirst({
+      where: { id: goalId, userId },
+      include: {
+        _count: {
+          select: { tasks: true },
+        },
+      },
+    });
+
+    if (!goal) {
+      return new NextResponse(JSON.stringify({ error: 'Goal not found' }), {
+        status: 404,
+      });
+    }
+
+    return NextResponse.json(goal);
+  } catch (error) {
+    console.error('[API:GET_SINGLE_GOAL]', error);
+    return new NextResponse(
+      JSON.stringify({ error: 'An internal error occurred' }),
+      { status: 500 }
+    );
+  }
+}
 
 // --- UPDATE a Goal (PATCH) ---
 export async function PATCH(
@@ -17,7 +55,7 @@ export async function PATCH(
       });
     }
     const userId = session.user.id;
-    const { goalId } = params;
+    const { goalId } = await params;
 
     const body = await request.json();
     // NOTE: You would use a Zod schema here for validation as well.
@@ -65,7 +103,7 @@ export async function DELETE(
       });
     }
     const userId = session.user.id;
-    const { goalId } = params;
+    const { goalId } = await params;
 
     // Security Check: Ensure the user owns this goal before deleting
     const goalToDelete = await prisma.goal.findFirst({

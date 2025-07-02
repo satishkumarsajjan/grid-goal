@@ -2,13 +2,15 @@
 
 import { GoalNavigator } from '@/components/goals/goal-navigator';
 import { TaskList } from '@/components/tasks/task-list';
+import { use } from 'react';
 
 export default function GoalsPage({
   params,
 }: {
-  params: { goalId?: string[] };
+  params: Promise<{ goalId?: string[] }>;
 }) {
-  const selectedGoalId = params.goalId?.[0] ?? null;
+  const resolvedParams = use(params);
+  const selectedGoalId = resolvedParams.goalId?.[0] ?? null;
 
   // The page now only sets up the structure.
   // The child components will fetch their own data.
