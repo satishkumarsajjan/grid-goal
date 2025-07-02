@@ -9,6 +9,7 @@ import { type GoalWithTasksCount } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { use } from 'react';
 
 const fetchGoals = async (): Promise<GoalWithTasksCount[]> => {
   const { data } = await axios.get('/api/goals');
@@ -18,10 +19,11 @@ const fetchGoals = async (): Promise<GoalWithTasksCount[]> => {
 export default function GoalsPage({
   params,
 }: {
-  params: { goalId?: string[] };
+  params: Promise<{ goalId?: string[] }>;
 }) {
   // Extract the selected goal ID from the URL. It will be null if at "/goals".
-  const selectedGoalId = params.goalId?.[0] ?? null;
+  const resolvedParams = use(params);
+  const selectedGoalId = resolvedParams.goalId?.[0] ?? null;
 
   // This query fetches the list of all goals. It runs on both views.
   const {
