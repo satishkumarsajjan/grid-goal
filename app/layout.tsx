@@ -1,5 +1,6 @@
 import { GoogleAnalytics } from '@next/third-parties/google';
-import { ThemeProvider } from '@/components/providers/theme-provider';
+import { Provider } from '@/components/providers/theme-provider';
+import { AuthProvider } from '@/components/providers/session-provider';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import type { Metadata } from 'next';
@@ -20,7 +21,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_URL as string),
   icons: {
-    icon: '/gridgoal-logo.svg',
+    icon: [
+      { url: '/logo.svg', type: 'image/svg', sizes: 'any' },
+      { url: '/logo.svg', type: 'image/svg' },
+      { url: '/logo.svg', sizes: '32x32', type: 'image/svg' },
+      { url: '/logo.svg', sizes: '16x16', type: 'image/svg' },
+    ],
   },
   title: {
     default: 'GridGoal',
@@ -56,14 +62,16 @@ export default function RootLayout({
           <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
         )}
         <Analytics />
-        <ThemeProvider
-          attribute='class'
-          defaultTheme='system'
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        <AuthProvider>
+          <Provider
+            attribute='class'
+            defaultTheme='system'
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </Provider>
+        </AuthProvider>
       </body>
     </html>
   );

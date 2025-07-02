@@ -1,0 +1,352 @@
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+ 
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==============================================================
+// ========= 1. AUTHENTICATION MODELS (from NextAuth.js) ========
+// ==============================================================
+// These models are standard for NextAuth.js with the Prisma Adapter.
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+ 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  @@id([provider, providerAccountId])
+}
+ 
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+ 
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+ 
+  @@id([identifier, token])
+}
+
+// ===========================================================
+// ========= 2. MERGED USER MODEL & APP-SPECIFIC DATA ========
+// ===========================================================
+
+model User {
+  // --- Standard NextAuth.js Fields ---
+  id            String          @id @default(cuid())
+  name          String?
+  email         String          @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+ 
+  // --- GridGoal Application-Specific Fields ---
+  hasCompletedOnboarding Boolean? @default(false) // For the onboarding flow (Phase 1).
+  lastResetAt            DateTime?               // For the Weekly Reset feature (Phase 2).
+ 
+  // --- GridGoal Application Relationships ---
+  // All user data is cascaded on delete for privacy and data integrity.
+  subscription    UserSubscription?
+  workspaces      Workspace[]       // Pro Feature
+  goals           Goal[]
+  tasks           Task[]
+  focusSessions   FocusSession[]
+  dailyQueue      DailyQueueItem[]  // For the Daily Focus Queue (Phase 2).
+  pausePeriods    PausePeriod[]     // For Vacation Mode (Phase 2).
+  squads          SquadMember[]     // Pro Feature
+  apiKeys         ApiKey[]          // Pro Feature
+  rewindSummaries RewindSummary[]
+  awards          UserAward[]
+  categories      Category[]
+  tags            Tag[]
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// =======================================================
+// ========= 3. HIERARCHICAL PLANNING MODELS =========
+// =======================================================
+
+model Goal {
+  id                   String     @id @default(cuid())
+  title                String
+  description          String?
+  status               GoalStatus @default(ACTIVE)
+  deadline             DateTime?
+  estimatedTimeSeconds Int?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  userId               String
+  user                 User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId          String?
+  workspace            Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  // Self-relation for Nested Goals (Phase 2).
+  parentId             String?
+  parent               Goal?      @relation("SubGoals", fields: [parentId], references: [id], onDelete: Cascade)
+  subGoals             Goal[]     @relation("SubGoals")
+
+  tasks                Task[]
+  focusSessions        FocusSession[]
+  categoryId           String?
+  category             Category?  @relation(fields: [categoryId], references: [id], onUpdate: NoAction, onDelete: SetNull)
+}
+
+model Task {
+  id                   String     @id @default(cuid())
+  title                String
+  status               TaskStatus @default(PENDING)
+  sortOrder            Int        
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  userId               String
+  user                 User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalId               String
+  goal                 Goal       @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  focusSessions        FocusSession[]
+  dailyQueueItems      DailyQueueItem[]
+}
+
+// ===================================================
+// ========= 4. CORE ACTION & DATA MODELS =========
+// ===================================================
+
+model FocusSession {
+  id                   String        @id @default(cuid())
+  startTime            DateTime
+  endTime              DateTime
+  durationSeconds      Int
+  noteAccomplished     String?
+  noteNextStep         String?
+  artifactUrl          String?       
+  vibe                 SessionVibe?  
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  userId               String
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalId               String        // Denormalized for query performance.
+  goal                 Goal          @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  taskId               String
+  task                 Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tags                 TagsOnFocusSessions[]
+}
+
+// For the Daily Focus Queue feature (Phase 2).
+model DailyQueueItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  sortOrder Int
+  createdAt DateTime @default(now())
+
+  @@unique([userId, taskId])
+}
+
+
+// ===========================================================
+// ========= 5. ORGANIZATION (TAGS & CATEGORIES) =========
+// ===========================================================
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goals     Goal[]
+
+  @@unique([userId, name])
+}
+
+model Tag {
+  id             String   @id @default(cuid())
+  name           String
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  focusSessions  TagsOnFocusSessions[]
+
+  @@unique([userId, name])
+}
+
+model TagsOnFocusSessions {
+  focusSession   FocusSession @relation(fields: [focusSessionId], references: [id], onDelete: Cascade)
+  focusSessionId String
+  tag            Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId          String
+
+  @@id([focusSessionId, tagId])
+}
+
+
+// ========================================================
+// ========= 6. MOTIVATION & REFLECTION MODELS =========
+// ========================================================
+
+model PausePeriod {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startDate DateTime
+  endDate   DateTime
+  note      String?
+  createdAt DateTime  @default(now())
+}
+
+model RewindSummary {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // "MONTHLY" or "ANNUAL"
+  period    String   
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@unique([userId, type, period])
+}
+
+model UserAward {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  awardId   AwardId
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, awardId])
+}
+
+// =========================================================
+// ========= 7. PRO & COLLABORATIVE FEATURES (Stubs) =========
+// =========================================================
+// These models are planned for Phase 3 but are included for completeness.
+
+model UserSubscription {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId       String    @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goals     Goal[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Squad {
+  id        String      @id @default(cuid())
+  name      String
+  creatorId String
+  members   SquadMember[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model SquadMember {
+  id      String    @id @default(cuid())
+  role    SquadRole @default(MEMBER)
+  squadId String
+  squad   Squad     @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([squadId, userId])
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  note      String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+// =====================================
+// ========= 8. ENUMS =========
+// =====================================
+
+enum GoalStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum SquadRole {
+  ADMIN
+  MEMBER
+}
+
+enum SessionVibe {
+  STRUGGLE
+  NEUTRAL
+  FLOW
+}
+
+enum AwardId {
+  FIRST_STEP
+  THE_ARCHITECT
+  IGNITION
+  PERFECT_HANDOFF
+  KINDLING
+  PERFECT_WEEK
+  IRON_WILL
+  WEEKEND_WARRIOR
+  JOURNEYMAN
+  CENTURION
+  DEEP_DIVE
+  MARATHONER
+  THE_FINISHER
+  AHEAD_OF_THE_CURVE
+  MASTER_PLANNER
+  SERIAL_ACHIEVER
+  THE_COMEBACK
+  GRIT
+  STRATEGIC_REST
+  THE_ANALYST
+}

@@ -2,17 +2,23 @@
 
 'use client';
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
+import { useSession } from 'next-auth/react';
 import { useRef } from 'react';
-import SignIn from '../auth/sign-in';
+import { SignInButton } from '../auth/sign-in-button';
+import { SignOutButton } from '../auth/sign-out-button';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import GridGoalLogo from './grid-goal-logo';
 import JoinButton from './join';
 import ThemeSwitch from './theme-switch';
-import { useSession } from 'next-auth/react';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
 gsap.registerPlugin(ScrollToPlugin);
 
@@ -98,12 +104,21 @@ export function Header() {
         <div className='flex items-center gap-2'>
           <ThemeSwitch />
           {data?.user ? (
-            <Avatar>
-              <AvatarImage src={data.user.image ?? undefined} />
-              <AvatarFallback>CN</AvatarFallback>
-            </Avatar>
+            <DropdownMenu>
+              <DropdownMenuTrigger>
+                <Avatar>
+                  <AvatarImage src={data.user.image ?? undefined} />
+                  <AvatarFallback>CN</AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem>
+                  <SignOutButton />
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <SignIn />
+            <SignInButton />
           )}
           <JoinButton text='Join waitlist' />
         </div>
