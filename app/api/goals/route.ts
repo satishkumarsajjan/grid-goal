@@ -3,6 +3,36 @@ import { auth } from '@/auth'; // Your NextAuth session handler
 import { prisma } from '@/prisma';
 import { createGoalSchema } from '@/lib/zod-schemas';
 
+export async function GET(request: Request) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+      });
+    }
+    const userId = session.user.id;
+
+    const goals = await prisma.goal.findMany({
+      where: { userId: userId },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        _count: {
+          select: { tasks: true },
+        },
+      },
+    });
+
+    return NextResponse.json(goals);
+  } catch (error) {
+    console.error('[API:GET_GOALS]', error);
+    return new NextResponse(
+      JSON.stringify({ error: 'An internal error occurred' }),
+      { status: 500 }
+    );
+  }
+}
+
 // This function handles POST requests to /api/goals
 export async function POST(request: Request) {
   try {
