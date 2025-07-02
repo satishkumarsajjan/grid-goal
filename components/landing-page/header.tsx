@@ -7,16 +7,18 @@ import gsap from 'gsap';
 
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import { useRef } from 'react';
-import { Button } from '../ui/button';
+import SignIn from '../auth/sign-in';
 import GridGoalLogo from './grid-goal-logo';
-import ThemeSwitch from './theme-switch';
 import JoinButton from './join';
+import ThemeSwitch from './theme-switch';
+import { useSession } from 'next-auth/react';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
 gsap.registerPlugin(ScrollToPlugin);
 
 export function Header() {
   const headerRef = useRef<HTMLElement>(null);
-
+  const { data } = useSession();
   useGSAP(
     () => {
       gsap.to(headerRef.current, {
@@ -95,9 +97,15 @@ export function Header() {
         </nav>
         <div className='flex items-center gap-2'>
           <ThemeSwitch />
-          <Button asChild>
-            <JoinButton text='Join waitlist' />
-          </Button>
+          {data?.user ? (
+            <Avatar>
+              <AvatarImage src={data.user.image ?? undefined} />
+              <AvatarFallback>CN</AvatarFallback>
+            </Avatar>
+          ) : (
+            <SignIn />
+          )}
+          <JoinButton text='Join waitlist' />
         </div>
       </div>
     </header>
