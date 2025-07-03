@@ -1,67 +1,65 @@
-import { differenceInCalendarDays, startOfToday } from 'date-fns';
+type Session = { startTime: Date };
+type PausePeriod = { startDate: Date; endDate: Date };
 
-export interface Streak {
-  currentStreak: number;
-  longestStreak: number;
-  todayInStreak: boolean;
-}
-
-export function calculateStreak(dates: Date[]): Streak {
-  if (dates.length === 0) {
-    return { currentStreak: 0, longestStreak: 0, todayInStreak: false };
+export function calculateStreak(
+  sessions: Session[],
+  pausePeriods: PausePeriod[]
+) {
+  if (sessions.length === 0) {
+    return { currentStreak: 0, todayInStreak: false };
   }
 
-  // Create a set of unique dates (in YYYY-MM-DD format) to handle multiple sessions on the same day
-  const uniqueDates = new Set(dates.map((d) => d.toISOString().split('T')[0]));
-  const sortedDates = Array.from(uniqueDates)
-    .map((d) => new Date(d))
-    .sort((a, b) => a.getTime() - b.getTime());
-
-  if (sortedDates.length === 0) {
-    return { currentStreak: 0, longestStreak: 0, todayInStreak: false };
-  }
+  const sessionDates = new Set(
+    sessions.map((s) => s.startTime.toISOString().split('T')[0])
+  );
+  const pauseDateRanges = pausePeriods.map((p) => ({
+    start: new Date(p.startDate.toISOString().split('T')[0]),
+    end: new Date(p.endDate.toISOString().split('T')[0]),
+  }));
 
   let currentStreak = 0;
-  let longestStreak = 0;
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const todayInStreak = sessionDates.has(todayStr);
 
-  const today = startOfToday();
-  const lastDate = sortedDates[sortedDates.length - 1];
+  for (let i = 0; ; i++) {
+    const d = new Date();
+    d.setDate(today.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
 
-  // Check if the streak is current
-  const diffFromToday = differenceInCalendarDays(today, lastDate);
-  const todayInStreak = diffFromToday === 0;
-  const streakIsActive = diffFromToday <= 1;
+    const isPaused = pauseDateRanges.some(
+      (range) => d >= range.start && d <= range.end
+    );
 
-  if (streakIsActive) {
-    currentStreak = 1;
-    for (let i = sortedDates.length - 2; i >= 0; i--) {
-      const diff = differenceInCalendarDays(sortedDates[i + 1], sortedDates[i]);
-      if (diff === 1) {
-        currentStreak++;
-      } else {
-        break; // The streak is broken
-      }
+    if (sessionDates.has(dateStr)) {
+      currentStreak++;
+    } else if (isPaused) {
+      continue;
+    } else {
+      break;
     }
   }
 
-  // Calculate the longest streak ever
-  if (sortedDates.length > 0) {
-    let localLongest = 1;
-    for (let i = 1; i < sortedDates.length; i++) {
-      const diff = differenceInCalendarDays(sortedDates[i], sortedDates[i - 1]);
-      if (diff === 1) {
-        localLongest++;
-      } else {
-        longestStreak = Math.max(longestStreak, localLongest);
-        localLongest = 1; // Reset for the new potential streak
-      }
+  if (!todayInStreak && currentStreak > 0) {
+    const d = new Date();
+    const isPausedToday = pauseDateRanges.some(
+      (range) => d >= range.start && d <= range.end
+    );
+    if (!isPausedToday) {
+      // If today wasn't a session and wasn't a pause, but the loop counted it, decrement.
+      // This happens when the streak ended yesterday.
+      if (currentStreak > 0) currentStreak--;
     }
-    longestStreak = Math.max(longestStreak, localLongest);
   }
 
-  return {
-    currentStreak: streakIsActive ? currentStreak : 0,
-    longestStreak,
-    todayInStreak,
-  };
+  return { currentStreak, todayInStreak };
+}
+
+export function calculateTodayFocus(
+  sessions: { startTime: Date; durationSeconds: number }[]
+): number {
+  const todayStr = new Date().toISOString().split('T')[0];
+  return sessions
+    .filter((s) => s.startTime.toISOString().startsWith(todayStr))
+    .reduce((total, session) => total + session.durationSeconds, 0);
 }
