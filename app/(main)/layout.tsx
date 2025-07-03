@@ -38,7 +38,7 @@ export default function MainLayout({
       ) : (
         <>
           <AppSidebar user={session.user as User} />
-          <main className='flex-1 lg:ml-64'>
+          <main className='flex-1'>
             <div className='p-4 sm:p-6 md:p-8'>
               <SidebarTrigger className='mb-4 lg:hidden' />
               {children}

@@ -10,21 +10,31 @@ import {
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress'; // Assuming you have this
 import { Skeleton } from '@/components/ui/skeleton';
+import { type Goal } from '@prisma/client';
+
+export type GoalWithProgress = Goal & {
+  _count: {
+    tasks: number;
+    completedTasks: number;
+  };
+};
 
 interface GoalCardProps {
-  goal: GoalWithTasksCount;
+  goal: GoalWithProgress;
 }
 
 export function GoalCard({ goal }: GoalCardProps) {
+  // FIX: Use the new counts passed from the server
   const totalTasks = goal._count.tasks;
-  // We'll add logic for completed tasks later for a real progress bar
-  const completedTasks = 0;
+  const completedTasks = goal._count.completedTasks;
+
+  // The progress calculation now works correctly.
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   return (
     <Link
       href={`/goals/${goal.id}`}
-      className='block hover:shadow-lg transition-shadow rounded-lg'
+      className='block hover:shadow-lg transition-shadow rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
     >
       <Card className='h-full flex flex-col'>
         <CardHeader>
@@ -36,20 +46,23 @@ export function GoalCard({ goal }: GoalCardProps) {
           )}
         </CardHeader>
         <CardContent className='flex-grow'>
-          {/* Content can go here in the future */}
+          {/* This space is still available for future content */}
         </CardContent>
         <CardFooter className='flex flex-col items-start'>
           <div className='flex w-full justify-between text-xs text-muted-foreground mb-1'>
             <span>Progress</span>
+            {/* Display the correct counts */}
             <span>{`${completedTasks} / ${totalTasks} tasks`}</span>
           </div>
-          <Progress value={progress} />
+          <Progress
+            value={progress}
+            aria-label={`${Math.round(progress)}% complete`}
+          />
         </CardFooter>
       </Card>
     </Link>
   );
 }
-
 // A skeleton component to provide a better loading experience
 export function GoalCardSkeleton() {
   return (
