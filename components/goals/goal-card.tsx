@@ -8,9 +8,10 @@ import {
   CardContent,
   CardFooter,
 } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress'; // Assuming you have this
+import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { type Goal } from '@prisma/client';
+import { DeadlineBadge } from './deadline-badge';
 
 export type GoalWithProgress = Goal & {
   _count: {
@@ -24,11 +25,8 @@ interface GoalCardProps {
 }
 
 export function GoalCard({ goal }: GoalCardProps) {
-  // FIX: Use the new counts passed from the server
   const totalTasks = goal._count.tasks;
   const completedTasks = goal._count.completedTasks;
-
-  // The progress calculation now works correctly.
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   return (
@@ -45,13 +43,18 @@ export function GoalCard({ goal }: GoalCardProps) {
             </CardDescription>
           )}
         </CardHeader>
-        <CardContent className='flex-grow'>
-          {/* This space is still available for future content */}
+
+        <CardContent className='flex-grow pb-4'>
+          {goal.deadline && (
+            <div className='flex'>
+              <DeadlineBadge deadline={goal.deadline} />
+            </div>
+          )}
         </CardContent>
+
         <CardFooter className='flex flex-col items-start'>
           <div className='flex w-full justify-between text-xs text-muted-foreground mb-1'>
             <span>Progress</span>
-            {/* Display the correct counts */}
             <span>{`${completedTasks} / ${totalTasks} tasks`}</span>
           </div>
           <Progress
@@ -63,7 +66,7 @@ export function GoalCard({ goal }: GoalCardProps) {
     </Link>
   );
 }
-// A skeleton component to provide a better loading experience
+
 export function GoalCardSkeleton() {
   return (
     <Card>

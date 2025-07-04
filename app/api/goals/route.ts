@@ -55,7 +55,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const { title, description, parentId } = validation.data;
+    const { title, description, parentId, deadline } = validation.data;
 
     // 3. Perform the database operation
     const newGoal = await prisma.goal.create({
@@ -64,6 +64,7 @@ export async function POST(request: Request) {
         title,
         description,
         parentId,
+        deadline,
       },
     });
 
