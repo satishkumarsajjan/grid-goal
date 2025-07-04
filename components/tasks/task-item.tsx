@@ -4,22 +4,48 @@ import { useState, useRef, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { type Task, TaskStatus } from '@prisma/client';
-import { GripVertical, Clock, Trash2 } from 'lucide-react';
+import {
+  Clock,
+  GripVertical,
+  PlayCircle,
+  Trash2,
+  CheckCircle2,
+  Circle,
+  Loader,
+} from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { type TaskWithTime } from '@/lib/types';
 
-// --- Type Definitions & API Functions ---
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { type TaskWithTime } from '@/lib/types';
+import { useTimerStore } from '@/store/timer-store';
+
+// A small helper component to render the correct status icon.
+function StatusIcon({ status }: { status: TaskStatus }) {
+  switch (status) {
+    case TaskStatus.COMPLETED:
+      return <CheckCircle2 className='h-5 w-5 text-green-500' />;
+    case TaskStatus.IN_PROGRESS:
+      return (
+        <Loader
+          className='h-5 w-5 text-blue-500 animate-spin'
+          style={{ animationDuration: '2s' }}
+        />
+      );
+    case TaskStatus.PENDING:
+    default:
+      return (
+        <Circle className='h-5 w-5 text-muted-foreground transition-colors' />
+      );
+  }
+}
+
 interface UpdateTaskPayload {
   status?: TaskStatus;
   title?: string;
-  estimatedTimeSeconds?: number | null;
 }
 const updateTask = async ({
   taskId,
@@ -31,24 +57,15 @@ const updateTask = async ({
   const { data } = await axios.patch(`/api/tasks/${taskId}`, payload);
   return data;
 };
-const deleteTask = async (taskId: string) => {
+const deleteTask = async (taskId: string) =>
   await axios.delete(`/api/tasks/${taskId}`);
-};
 
-// --- Main Component ---
 export function TaskItem({ task }: { task: TaskWithTime }) {
   const queryClient = useQueryClient();
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [isEditingTime, setIsEditingTime] = useState(false);
+  const startSession = useTimerStore((state) => state.startSession);
+  const [isEditing, setIsEditing] = useState(false);
   const [newTitle, setNewTitle] = useState(task.title);
-  const [newTime, setNewTime] = useState(
-    task.estimatedTimeSeconds
-      ? (task.estimatedTimeSeconds / 3600).toString()
-      : ''
-  );
-
-  const titleInputRef = useRef<HTMLInputElement>(null);
-  const timeInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const {
     attributes,
@@ -61,114 +78,74 @@ export function TaskItem({ task }: { task: TaskWithTime }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 10 : 'auto', // Ensure dragging item is on top
+    zIndex: isDragging ? 10 : 'auto',
     opacity: isDragging ? 0.5 : 1,
   };
 
   const updateMutation = useMutation({
     mutationFn: updateTask,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', task.goalId] });
-    },
-    onError: () => {
-      toast.error('Failed to update task.');
-      // Revert local state on error
-      setNewTitle(task.title);
-      setNewTime(
-        task.estimatedTimeSeconds
-          ? (task.estimatedTimeSeconds / 3600).toString()
-          : ''
-      );
-    },
-    onSettled: () => {
-      setIsEditingTitle(false);
-      setIsEditingTime(false);
-    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['tasks', task.goalId] }),
+    onError: () => toast.error('Failed to update task.'),
+    onSettled: () => setIsEditing(false),
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteTask,
     onSuccess: () => {
-      toast.success('Task deleted.');
       queryClient.invalidateQueries({ queryKey: ['tasks', task.goalId] });
+      toast.success('Task deleted.');
     },
     onError: () => toast.error('Failed to delete task.'),
   });
 
   useEffect(() => {
-    if (isEditingTitle) titleInputRef.current?.select();
-  }, [isEditingTitle]);
-  useEffect(() => {
-    if (isEditingTime) timeInputRef.current?.select();
-  }, [isEditingTime]);
+    if (isEditing) inputRef.current?.select();
+  }, [isEditing]);
 
   const handleSaveTitle = () => {
     const trimmedTitle = newTitle.trim();
-    if (isEditingTitle && trimmedTitle && trimmedTitle !== task.title) {
+    if (isEditing && trimmedTitle && trimmedTitle !== task.title) {
       updateMutation.mutate({
         taskId: task.id,
         payload: { title: trimmedTitle },
       });
-    } else {
-      setIsEditingTitle(false);
-      setNewTitle(task.title);
     }
+    setIsEditing(false);
   };
 
-  const handleSaveTime = () => {
-    const timeInHours = parseFloat(newTime);
-    // Only mutate if the state was 'editing' to avoid submits on blur from other actions
-    if (isEditingTime) {
-      const newSeconds =
-        !isNaN(timeInHours) && timeInHours > 0 ? timeInHours * 3600 : null;
-      // Check if value has actually changed to prevent unnecessary API calls
-      if (newSeconds !== task.estimatedTimeSeconds) {
-        updateMutation.mutate({
-          taskId: task.id,
-          payload: { estimatedTimeSeconds: newSeconds },
-        });
-      } else {
-        setIsEditingTime(false);
-      }
-    }
-  };
-
-  const handleCheckedChange = (isChecked: boolean) => {
-    updateMutation.mutate({
-      taskId: task.id,
-      payload: {
-        status: isChecked ? TaskStatus.COMPLETED : TaskStatus.PENDING,
-      },
-    });
+  const handleStatusChange = () => {
+    const newStatus =
+      task.status === TaskStatus.COMPLETED
+        ? TaskStatus.PENDING
+        : TaskStatus.COMPLETED;
+    updateMutation.mutate({ taskId: task.id, payload: { status: newStatus } });
   };
 
   const isCompleted = task.status === TaskStatus.COMPLETED;
 
-  // Helper to format seconds into a clean "1.5h" or "45m" string
   const formatTime = (seconds: number | null | undefined): string | null => {
-    if (seconds === null || seconds === undefined || seconds <= 0) return null;
-    const hours = seconds / 3600;
-    if (hours >= 1) {
-      return `${Math.round(hours * 10) / 10}h`;
-    }
-    const minutes = Math.round(seconds / 60);
-    return `${minutes}m`;
+    if (!seconds || seconds <= 0) return null;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
   };
 
-  const accumulatedTimeFormatted = formatTime(task.totalTimeSeconds);
-  const estimatedTimeFormatted = formatTime(task.estimatedTimeSeconds);
+  const loggedTime = formatTime(task.totalTimeSeconds);
+  const estimatedTime = formatTime(task.estimatedTimeSeconds);
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group flex items-center gap-2 rounded-lg p-2 my-1 transition-all duration-200 ease-in-out',
-        task.status === 'IN_PROGRESS' && 'bg-blue-900/10 dark:bg-blue-500/10',
-        isCompleted && 'opacity-60',
-        !isDragging && 'hover:bg-accent/50' // Apply hover effect only when not dragging
+        'group flex items-center gap-3 rounded-lg border border-transparent p-2 my-1 transition-all duration-200 ease-in-out',
+        isCompleted && 'opacity-50',
+        !isDragging && 'hover:bg-accent/50 hover:border-border'
       )}
     >
+      {/* INTERACTION ZONE (Left) */}
       <div
         {...attributes}
         {...listeners}
@@ -177,29 +154,33 @@ export function TaskItem({ task }: { task: TaskWithTime }) {
       >
         <GripVertical className='h-5 w-5' />
       </div>
-
-      <Checkbox
-        id={`task-${task.id}`}
-        checked={isCompleted}
-        onCheckedChange={handleCheckedChange}
+      <Button
+        variant='ghost'
+        size='icon'
+        onClick={handleStatusChange}
         disabled={updateMutation.isPending}
-      />
+        className='h-8 w-8 rounded-full'
+        aria-label={`Mark task as ${isCompleted ? 'pending' : 'completed'}`}
+      >
+        <StatusIcon status={task.status} />
+      </Button>
 
+      {/* CONTENT ZONE (Middle) */}
       <div
         className='flex-1'
         onDoubleClick={() => {
-          if (!isCompleted) setIsEditingTitle(true);
+          if (!isCompleted) setIsEditing(true);
         }}
       >
-        {isEditingTitle ? (
+        {isEditing ? (
           <Input
-            ref={titleInputRef}
+            ref={inputRef}
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             onBlur={handleSaveTitle}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSaveTitle();
-              if (e.key === 'Escape') setIsEditingTitle(false);
+              if (e.key === 'Escape') setIsEditing(false);
             }}
             className='h-8 bg-background text-sm'
             disabled={updateMutation.isPending}
@@ -216,59 +197,43 @@ export function TaskItem({ task }: { task: TaskWithTime }) {
         )}
       </div>
 
-      <div
-        className='flex items-center gap-1 text-xs font-mono text-muted-foreground'
-        onDoubleClick={() => {
-          if (!isCompleted) setIsEditingTime(true);
-        }}
-      >
-        {isEditingTime ? (
-          <Input
-            ref={timeInputRef}
-            type='number'
-            value={newTime}
-            onChange={(e) => setNewTime(e.target.value)}
-            onBlur={handleSaveTime}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSaveTime();
-              if (e.key === 'Escape') setIsEditingTime(false);
-            }}
-            className='h-7 w-20 text-xs text-center'
-            placeholder='Hours'
-            step='0.1'
-          />
-        ) : (
-          <>
-            {accumulatedTimeFormatted && (
-              <span className='text-foreground font-semibold'>
-                {accumulatedTimeFormatted}
-              </span>
-            )}
-            {accumulatedTimeFormatted && estimatedTimeFormatted && (
-              <span className='font-sans'>/</span>
-            )}
-            {estimatedTimeFormatted && (
-              <span className='cursor-text'>{estimatedTimeFormatted}</span>
-            )}
-            {!accumulatedTimeFormatted &&
-              !estimatedTimeFormatted &&
-              !isCompleted && (
-                <Clock className='h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity' />
-              )}
-          </>
-        )}
-      </div>
+      {/* ACTION ZONE (Right) */}
+      <div className='flex items-center gap-4'>
+        {/* The Time Block */}
+        <div className='flex items-center gap-1.5 text-xs font-mono text-muted-foreground w-24 justify-end'>
+          {loggedTime && <span>{loggedTime}</span>}
+          {loggedTime && estimatedTime && (
+            <span className='text-gray-600'>/</span>
+          )}
+          {estimatedTime && !loggedTime && <Clock className='h-3 w-3' />}
+          {estimatedTime && <span>{estimatedTime}</span>}
+        </div>
 
-      <Button
-        variant='ghost'
-        size='icon'
-        onClick={() => deleteMutation.mutate(task.id)}
-        className='h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-muted-foreground hover:text-destructive'
-        aria-label='Delete task'
-        disabled={deleteMutation.isPending}
-      >
-        <Trash2 className='h-4 w-4' />
-      </Button>
+        {/* Hover Actions */}
+        <div className='flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity'>
+          {!isCompleted && (
+            <Button
+              variant='ghost'
+              size='icon'
+              onClick={() => startSession(task.id, task.goalId)}
+              className='h-8 w-8 rounded-full text-muted-foreground hover:text-primary'
+              aria-label='Start focus session'
+            >
+              <PlayCircle className='h-5 w-5' />
+            </Button>
+          )}
+          <Button
+            variant='ghost'
+            size='icon'
+            onClick={() => deleteMutation.mutate(task.id)}
+            className='h-8 w-8 rounded-full text-muted-foreground hover:text-destructive'
+            aria-label='Delete task'
+            disabled={deleteMutation.isPending}
+          >
+            <Trash2 className='h-4 w-4' />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

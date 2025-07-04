@@ -1,70 +1,30 @@
 'use client';
 
-import axios from 'axios'; // Using axios for fetch requests is common and convenient
-import Link from 'next/link';
+import { type GoalWithChildren } from '@/lib/goal-helpers'; // Import our new type
+import { GoalNavigatorItem } from './goal-navigator-item';
 
-import { cn } from '@/lib/utils'; // A utility for combining class names
-import { useQuery } from '@tanstack/react-query';
-import { CreateGoalButton } from './create-goal-button'; // We will create this
-import { GoalWithTasksCount } from '@/lib/types';
-
-// Define the type for the props, including the task count from the server
 interface GoalNavigatorProps {
+  goalTree: GoalWithChildren[];
   activeGoalId: string | null;
 }
 
-const fetchGoals = async (): Promise<GoalWithTasksCount[]> => {
-  const { data } = await axios.get<GoalWithTasksCount[]>('/api/goals');
-  return data;
-};
-
-export function GoalNavigator({ activeGoalId }: GoalNavigatorProps) {
-  const {
-    data: goals,
-    isLoading,
-    isError,
-    error,
-  } = useQuery({
-    queryKey: ['goals'],
-    queryFn: fetchGoals,
-  });
-
-  if (isLoading) {
-    return <div>Loading goals...</div>;
-  }
-
-  if (isError) {
-    return <div>Error: {error.message}</div>;
-  }
-
+/**
+ * The main container for the goal navigation tree.
+ * It receives the pre-processed goal tree from a Server Component
+ * and renders the first level of goals.
+ */
+export function GoalNavigator({ goalTree, activeGoalId }: GoalNavigatorProps) {
   return (
-    <aside className='hidden w-64 flex-shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 lg:flex'>
-      <CreateGoalButton />
-
-      <nav className='p-2'>
-        {goals?.map((goal) => {
-          const isActive = activeGoalId === goal.id;
-
-          return (
-            <Link
-              key={goal.id}
-              href={`/goals/${goal.id}`}
-              className={cn(
-                'flex items-center rounded-md px-3 py-2 text-sm font-medium',
-                'hover:bg-gray-100 dark:hover:bg-gray-700',
-                isActive
-                  ? 'bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-white'
-                  : 'text-gray-600 dark:text-gray-300'
-              )}
-            >
-              <span className='flex-1 truncate'>{goal.title}</span>
-              <span className='text-xs text-gray-400 dark:text-gray-500'>
-                {goal._count.tasks}
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+    <nav className='flex-1 space-y-1 p-2'>
+      {goalTree.map((goal) => (
+        // The heavy lifting is delegated to the recursive item component.
+        <GoalNavigatorItem
+          key={goal.id}
+          goal={goal}
+          activeGoalId={activeGoalId}
+          level={0} // Top-level goals start at level 0 for indentation
+        />
+      ))}
+    </nav>
   );
 }
