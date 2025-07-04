@@ -2,11 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { type Goal } from '@prisma/client';
 
-import { buildGoalTree } from '@/lib/goal-helpers';
-import { GoalNavigator } from '@/components/goals/goal-navigator';
 import { type GoalCreationOptions } from '@/app/(main)/goals/[[...goalId]]/page';
+import { GoalNavigator } from '@/components/goals/goal-navigator';
+import { buildGoalTree } from '@/lib/goal-helpers';
+import { GoalWithProgress } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 
 interface GoalTreeProps {
@@ -18,7 +18,7 @@ interface GoalTreeProps {
  * A fetcher function for TanStack Query.
  * It calls our new API endpoint to get the flat list of goals.
  */
-const fetchGoals = async (): Promise<Goal[]> => {
+const fetchGoals = async (): Promise<GoalWithProgress[]> => {
   const { data } = await axios.get('/api/goals/tree');
   return data;
 };
@@ -33,8 +33,8 @@ export function GoalTree({ activeGoalId, openCreationDialog }: GoalTreeProps) {
     isLoading,
     isError,
     error,
-  } = useQuery<Goal[]>({
-    queryKey: ['goals'], // This query key will be used for caching and invalidation.
+  } = useQuery<GoalWithProgress[]>({
+    queryKey: ['goals'],
     queryFn: fetchGoals,
   });
 

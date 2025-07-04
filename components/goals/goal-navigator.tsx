@@ -1,11 +1,11 @@
 'use client';
 
 import { GoalNavigatorItem } from './goal-navigator-item';
-import { type GoalWithChildren } from '@/lib/goal-helpers';
+import { type GoalWithProgressAndChildren } from '@/lib/types'; // Using our new richer type
 import { type GoalCreationOptions } from '@/app/(main)/goals/[[...goalId]]/page';
 
 interface GoalNavigatorProps {
-  goalTree: GoalWithChildren[];
+  goalTree: GoalWithProgressAndChildren[]; // Use the richer type
   activeGoalId: string | null;
   openCreationDialog: (options: GoalCreationOptions) => void;
 }

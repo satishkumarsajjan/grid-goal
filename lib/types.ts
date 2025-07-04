@@ -9,3 +9,12 @@ export type GoalWithTasksCount = Goal & {
 export type TaskWithTime = Task & {
   totalTimeSeconds: number;
 };
+
+export type GoalWithProgress = Goal & {
+  totalTasks: number;
+  completedTasks: number;
+};
+
+export type GoalWithProgressAndChildren = GoalWithProgress & {
+  children: GoalWithProgressAndChildren[];
+};

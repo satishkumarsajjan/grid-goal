@@ -37,7 +37,7 @@ const createGoal = async (values: GoalFormValues) => {
 };
 
 interface CreateGoalFormProps {
-  parentId?: string;
+  parentId?: string | null;
   onFinished: () => void; // A function to close the dialog on success
 }
 
@@ -65,7 +65,7 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
   });
 
   function onSubmit(values: GoalFormValues) {
-    mutation.mutate({ ...values, parentId });
+    mutation.mutate({ ...values, parentId: parentId ?? undefined });
   }
 
   return (
