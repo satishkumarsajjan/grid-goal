@@ -8,6 +8,7 @@ import { useTimerStore } from '@/store/timer-store';
 import { FocusSessionUI } from '@/components/timer/focus-session-ui';
 import { useSession } from 'next-auth/react';
 import { CommandPalette } from '@/components/command/command-palette';
+import { WeeklyResetFlow } from '@/components/reset/weekly-reset-flow';
 
 export default function MainLayout({
   children,
@@ -25,7 +26,7 @@ export default function MainLayout({
   return (
     <SidebarProvider>
       <CommandPalette />
-
+      <WeeklyResetFlow />
       {isSessionActive ? (
         <FocusSessionUI />
       ) : (
