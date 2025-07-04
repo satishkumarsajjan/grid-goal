@@ -18,3 +18,10 @@ export type GoalWithProgress = Goal & {
 export type GoalWithProgressAndChildren = GoalWithProgress & {
   children: GoalWithProgressAndChildren[];
 };
+
+export type GoalWithSessions = Goal & {
+  focusSessions: {
+    startTime: Date;
+    durationSeconds: number;
+  }[];
+};

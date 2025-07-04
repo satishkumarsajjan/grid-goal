@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
 
-// This file handles requests to /api/goals/[SOME_ID]
+// This function handles GET requests to /api/goals/[goalId]
 export async function GET(
   request: Request,
   { params }: { params: { goalId: string } }
@@ -15,33 +15,58 @@ export async function GET(
       });
     }
     const userId = session.user.id;
-    const { goalId } = await params;
+    const goalId = params.goalId;
 
-    const goal = await prisma.goal.findFirst({
-      where: { id: goalId, userId },
-      include: {
-        _count: {
-          select: { tasks: true },
-        },
-      },
+    // First, verify the user owns the goal they are requesting.
+    const goalOwnerCheck = await prisma.goal.findFirst({
+      where: { id: goalId, userId: userId },
     });
 
-    if (!goal) {
+    if (!goalOwnerCheck) {
+      return new NextResponse(
+        JSON.stringify({ error: 'Goal not found or access denied' }),
+        { status: 404 }
+      );
+    }
+
+    // Use a recursive raw query to find the ID of the parent goal AND all its nested sub-goals.
+    const goalAndSubGoalIds = await prisma.$queryRaw<[{ id: string }]>`
+      WITH RECURSIVE "GoalHierarchy" AS (
+        SELECT id FROM "Goal" WHERE id = ${goalId}
+        UNION ALL
+        SELECT g.id FROM "Goal" g
+        INNER JOIN "GoalHierarchy" gh ON g."parentId" = gh.id
+      )
+      SELECT id FROM "GoalHierarchy";
+    `;
+    const allIds = goalAndSubGoalIds.map((g) => g.id);
+
+    // Fetch the main goal's details AND all focus sessions from the entire hierarchy in parallel.
+    const [goalDetails, sessions] = await Promise.all([
+      prisma.goal.findUnique({ where: { id: goalId } }),
+      prisma.focusSession.findMany({
+        where: { goalId: { in: allIds } },
+        orderBy: { startTime: 'asc' },
+        select: { startTime: true, durationSeconds: true },
+      }),
+    ]);
+
+    if (!goalDetails) {
       return new NextResponse(JSON.stringify({ error: 'Goal not found' }), {
         status: 404,
       });
     }
 
-    return NextResponse.json(goal);
+    // Return the goal details with the focus sessions nested inside.
+    return NextResponse.json({ ...goalDetails, focusSessions: sessions });
   } catch (error) {
-    console.error('[API:GET_SINGLE_GOAL]', error);
+    console.error('[API:GET_GOAL_DETAILS]', error);
     return new NextResponse(
       JSON.stringify({ error: 'An internal error occurred' }),
       { status: 500 }
     );
   }
 }
-
 // --- UPDATE a Goal (PATCH) ---
 export async function PATCH(
   request: Request,
