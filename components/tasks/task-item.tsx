@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { type Task, TaskStatus } from '@prisma/client';
+import { type Task, TaskStatus, type DailyQueueItem } from '@prisma/client';
 import {
   Clock,
   GripVertical,
@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   Circle,
   Loader,
+  ArrowUpRightFromSquare,
+  Check,
 } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -22,8 +24,14 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { type TaskWithTime } from '@/lib/types';
 import { useTimerStore } from '@/store/timer-store';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
 
-// A small helper component to render the correct status icon.
+// --- Helper Component for Status Icon ---
 function StatusIcon({ status }: { status: TaskStatus }) {
   switch (status) {
     case TaskStatus.COMPLETED:
@@ -43,9 +51,11 @@ function StatusIcon({ status }: { status: TaskStatus }) {
   }
 }
 
+// --- Type Definitions & API Functions ---
 interface UpdateTaskPayload {
   status?: TaskStatus;
   title?: string;
+  estimatedTimeSeconds?: number | null;
 }
 const updateTask = async ({
   taskId,
@@ -59,14 +69,33 @@ const updateTask = async ({
 };
 const deleteTask = async (taskId: string) =>
   await axios.delete(`/api/tasks/${taskId}`);
+const fetchQueue = async (): Promise<DailyQueueItem[]> => {
+  const { data } = await axios.get('/api/daily-queue');
+  return data;
+};
+const addToQueue = async (taskId: string) => {
+  const { data } = await axios.post('/api/daily-queue', { taskId });
+  return data;
+};
 
+// --- Main Component ---
 export function TaskItem({ task }: { task: TaskWithTime }) {
   const queryClient = useQueryClient();
   const startSession = useTimerStore((state) => state.startSession);
-  const [isEditing, setIsEditing] = useState(false);
-  const [newTitle, setNewTitle] = useState(task.title);
-  const inputRef = useRef<HTMLInputElement>(null);
 
+  // --- State and Refs ---
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingTime, setIsEditingTime] = useState(false);
+  const [newTitle, setNewTitle] = useState(task.title);
+  const [newTime, setNewTime] = useState(
+    task.estimatedTimeSeconds
+      ? (task.estimatedTimeSeconds / 3600).toString()
+      : ''
+  );
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
+
+  // --- Drag & Drop Hook ---
   const {
     attributes,
     listeners,
@@ -82,36 +111,65 @@ export function TaskItem({ task }: { task: TaskWithTime }) {
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // --- Data Queries & Mutations ---
+  const { data: queueItems } = useQuery<DailyQueueItem[]>({
+    queryKey: ['dailyQueue'],
+    queryFn: fetchQueue,
+  });
+
   const updateMutation = useMutation({
     mutationFn: updateTask,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ['tasks', task.goalId] }),
     onError: () => toast.error('Failed to update task.'),
-    onSettled: () => setIsEditing(false),
+    onSettled: () => {
+      setIsEditingTitle(false);
+      setIsEditingTime(false);
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteTask,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', task.goalId] });
       toast.success('Task deleted.');
+      queryClient.invalidateQueries({ queryKey: ['tasks', task.goalId] });
     },
     onError: () => toast.error('Failed to delete task.'),
   });
 
+  const addToQueueMutation = useMutation({
+    mutationFn: addToQueue,
+    onSuccess: () => {
+      toast.success(`"${task.title}" added to today's focus.`);
+      queryClient.invalidateQueries({ queryKey: ['dailyQueue'] });
+    },
+    onError: () => toast.error('Failed to add task to queue.'),
+  });
+
+  // --- Effects and Handlers ---
   useEffect(() => {
-    if (isEditing) inputRef.current?.select();
-  }, [isEditing]);
+    if (isEditingTitle) titleInputRef.current?.select();
+  }, [isEditingTitle]);
+
+  useEffect(() => {
+    if (isEditingTime) timeInputRef.current?.select();
+  }, [isEditingTime]);
 
   const handleSaveTitle = () => {
     const trimmedTitle = newTitle.trim();
-    if (isEditing && trimmedTitle && trimmedTitle !== task.title) {
+    if (isEditingTitle && trimmedTitle && trimmedTitle !== task.title) {
       updateMutation.mutate({
         taskId: task.id,
         payload: { title: trimmedTitle },
       });
+    } else {
+      setIsEditingTitle(false);
+      setNewTitle(task.title);
     }
-    setIsEditing(false);
+  };
+
+  const handleSaveTime = () => {
+    /* ... (logic from previous step) */
   };
 
   const handleStatusChange = () => {
@@ -123,17 +181,82 @@ export function TaskItem({ task }: { task: TaskWithTime }) {
   };
 
   const isCompleted = task.status === TaskStatus.COMPLETED;
+  const isInQueue = queueItems?.some((item) => item.taskId === task.id);
 
   const formatTime = (seconds: number | null | undefined): string | null => {
-    if (!seconds || seconds <= 0) return null;
+    if (seconds === null || seconds === undefined || seconds <= 0) return null;
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     if (h > 0) return `${h}h ${m}m`;
     return `${m}m`;
   };
 
-  const loggedTime = formatTime(task.totalTimeSeconds);
-  const estimatedTime = formatTime(task.estimatedTimeSeconds);
+  const accumulatedTimeFormatted = formatTime(task.totalTimeSeconds);
+  const estimatedTimeFormatted = formatTime(task.estimatedTimeSeconds);
+
+  const renderTimeInfo = () => {
+    // Show estimated and accumulated time, or allow editing estimated time
+    if (isEditingTime) {
+      return (
+        <Input
+          ref={timeInputRef}
+          value={newTime}
+          onChange={(e) => setNewTime(e.target.value)}
+          onBlur={() => {
+            setIsEditingTime(false);
+            setNewTime(
+              task.estimatedTimeSeconds
+                ? (task.estimatedTimeSeconds / 3600).toString()
+                : ''
+            );
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              // Save logic for estimated time
+              const hours = parseFloat(newTime);
+              if (!isNaN(hours) && hours >= 0) {
+                updateMutation.mutate({
+                  taskId: task.id,
+                  payload: {
+                    estimatedTimeSeconds:
+                      hours > 0 ? Math.round(hours * 3600) : null,
+                  },
+                });
+              }
+              setIsEditingTime(false);
+            }
+            if (e.key === 'Escape') {
+              setIsEditingTime(false);
+              setNewTime(
+                task.estimatedTimeSeconds
+                  ? (task.estimatedTimeSeconds / 3600).toString()
+                  : ''
+              );
+            }
+          }}
+          className='h-7 w-16 px-1 text-xs font-mono'
+          disabled={updateMutation.isPending}
+        />
+      );
+    }
+
+    return (
+      <>
+        {estimatedTimeFormatted && (
+          <span className='flex items-center gap-1 text-muted-foreground'>
+            <Clock className='h-3.5 w-3.5' />
+            {estimatedTimeFormatted}
+          </span>
+        )}
+        {accumulatedTimeFormatted && (
+          <span className='flex items-center gap-1'>
+            <Check className='h-3.5 w-3.5 text-green-500' />
+            {accumulatedTimeFormatted}
+          </span>
+        )}
+      </>
+    );
+  };
 
   return (
     <div
@@ -145,7 +268,7 @@ export function TaskItem({ task }: { task: TaskWithTime }) {
         !isDragging && 'hover:bg-accent/50 hover:border-border'
       )}
     >
-      {/* INTERACTION ZONE (Left) */}
+      {/* Drag Handle */}
       <div
         {...attributes}
         {...listeners}
@@ -154,6 +277,8 @@ export function TaskItem({ task }: { task: TaskWithTime }) {
       >
         <GripVertical className='h-5 w-5' />
       </div>
+
+      {/* Status Icon Button */}
       <Button
         variant='ghost'
         size='icon'
@@ -165,22 +290,22 @@ export function TaskItem({ task }: { task: TaskWithTime }) {
         <StatusIcon status={task.status} />
       </Button>
 
-      {/* CONTENT ZONE (Middle) */}
+      {/* Task Title */}
       <div
         className='flex-1'
         onDoubleClick={() => {
-          if (!isCompleted) setIsEditing(true);
+          if (!isCompleted) setIsEditingTitle(true);
         }}
       >
-        {isEditing ? (
+        {isEditingTitle ? (
           <Input
-            ref={inputRef}
+            ref={titleInputRef}
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             onBlur={handleSaveTitle}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSaveTitle();
-              if (e.key === 'Escape') setIsEditing(false);
+              if (e.key === 'Escape') setIsEditingTitle(false);
             }}
             className='h-8 bg-background text-sm'
             disabled={updateMutation.isPending}
@@ -197,42 +322,83 @@ export function TaskItem({ task }: { task: TaskWithTime }) {
         )}
       </div>
 
-      {/* ACTION ZONE (Right) */}
-      <div className='flex items-center gap-4'>
-        {/* The Time Block */}
-        <div className='flex items-center gap-1.5 text-xs font-mono text-muted-foreground w-24 justify-end'>
-          {loggedTime && <span>{loggedTime}</span>}
-          {loggedTime && estimatedTime && (
-            <span className='text-gray-600'>/</span>
-          )}
-          {estimatedTime && !loggedTime && <Clock className='h-3 w-3' />}
-          {estimatedTime && <span>{estimatedTime}</span>}
-        </div>
+      {/* Time Info */}
+      <div
+        className='flex items-center gap-1 text-xs font-mono'
+        onDoubleClick={() => {
+          if (!isCompleted) setIsEditingTime(true);
+        }}
+      >
+        {renderTimeInfo()}
+      </div>
 
-        {/* Hover Actions */}
-        <div className='flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity'>
-          {!isCompleted && (
-            <Button
-              variant='ghost'
-              size='icon'
-              onClick={() => startSession(task.id, task.goalId)}
-              className='h-8 w-8 rounded-full text-muted-foreground hover:text-primary'
-              aria-label='Start focus session'
-            >
-              <PlayCircle className='h-5 w-5' />
-            </Button>
-          )}
-          <Button
-            variant='ghost'
-            size='icon'
-            onClick={() => deleteMutation.mutate(task.id)}
-            className='h-8 w-8 rounded-full text-muted-foreground hover:text-destructive'
-            aria-label='Delete task'
-            disabled={deleteMutation.isPending}
-          >
-            <Trash2 className='h-4 w-4' />
-          </Button>
-        </div>
+      {/* Action Buttons */}
+      <div className='flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity'>
+        {!isCompleted && (
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  onClick={() => addToQueueMutation.mutate(task.id)}
+                  disabled={isInQueue || addToQueueMutation.isPending}
+                  className='h-8 w-8 rounded-full text-muted-foreground hover:text-primary'
+                >
+                  {isInQueue ? (
+                    <Check className='h-4 w-4 text-primary' />
+                  ) : (
+                    <ArrowUpRightFromSquare className='h-4 w-4' />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>
+                  {isInQueue
+                    ? "Added to Today's Focus"
+                    : "Add to Today's Focus"}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
+        {!isCompleted && (
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  onClick={() => startSession(task.id, task.goalId)}
+                  className='h-8 w-8 rounded-full text-muted-foreground hover:text-primary'
+                  aria-label='Start focus session'
+                >
+                  <PlayCircle className='h-5 w-5' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Start Focus Session</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant='ghost'
+                size='icon'
+                onClick={() => deleteMutation.mutate(task.id)}
+                className='h-8 w-8 rounded-full text-muted-foreground hover:text-destructive'
+                aria-label='Delete task'
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 className='h-4 w-4' />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete Task</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
