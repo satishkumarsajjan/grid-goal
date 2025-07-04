@@ -47,7 +47,16 @@ export default async function DashboardPage() {
         streakData={streakData}
         totalFocusTodayInSeconds={totalFocusTodayInSeconds}
       />
-
+      <div className='flex items-center justify-between mb-8'>
+        <div>
+          <h1 className='text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50'>
+            Activity Grid
+          </h1>
+          <p className='mt-1 text-lg text-gray-600 dark:text-gray-400'>
+            Visualise your daily effort.
+          </p>
+        </div>
+      </div>
       <ActivityGrid totalHours={totalHours} processedMonths={processedMonths} />
     </div>
   );
