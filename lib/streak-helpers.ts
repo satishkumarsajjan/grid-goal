@@ -1,65 +1,91 @@
+import { isWithinInterval, startOfDay } from 'date-fns';
+
+// Define the types for clarity and type safety
 type Session = { startTime: Date };
 type PausePeriod = { startDate: Date; endDate: Date };
+type StreakData = { currentStreak: number; todayInStreak: boolean };
 
+/**
+ * Calculates the user's current activity streak, intelligently handling
+ * scheduled pause periods (vacations).
+ * @param sessions - A sorted array of the user's focus sessions.
+ * @param pausePeriods - An array of the user's scheduled pause periods.
+ * @returns An object containing the current streak count and whether today is part of it.
+ */
 export function calculateStreak(
   sessions: Session[],
   pausePeriods: PausePeriod[]
-) {
+): StreakData {
   if (sessions.length === 0) {
     return { currentStreak: 0, todayInStreak: false };
   }
 
-  const sessionDates = new Set(
-    sessions.map((s) => s.startTime.toISOString().split('T')[0])
+  // 1. Create a set of unique dates (YYYY-MM-DD) where the user was active.
+  // Using startOfDay ensures we ignore the time part of the date.
+  const activeDays = new Set(
+    sessions.map((s) => startOfDay(s.startTime).toISOString())
   );
-  const pauseDateRanges = pausePeriods.map((p) => ({
-    start: new Date(p.startDate.toISOString().split('T')[0]),
-    end: new Date(p.endDate.toISOString().split('T')[0]),
-  }));
+
+  // 2. Define today and check if the user was active today.
+  const today = startOfDay(new Date());
+  let todayInStreak = activeDays.has(today.toISOString());
 
   let currentStreak = 0;
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const todayInStreak = sessionDates.has(todayStr);
+  let currentDate = today;
 
-  for (let i = 0; ; i++) {
-    const d = new Date();
-    d.setDate(today.getDate() - i);
-    const dateStr = d.toISOString().split('T')[0];
+  // 3. Loop backwards from today for up to 365 days.
+  for (let i = 0; i < 365; i++) {
+    const dateToCheck = currentDate;
+    const dateToCheckISO = dateToCheck.toISOString();
 
-    const isPaused = pauseDateRanges.some(
-      (range) => d >= range.start && d <= range.end
+    // Check if the current date falls within any scheduled pause period.
+    const isPaused = pausePeriods.some((period) =>
+      isWithinInterval(dateToCheck, {
+        start: startOfDay(period.startDate),
+        end: startOfDay(period.endDate),
+      })
     );
 
-    if (sessionDates.has(dateStr)) {
+    const isActive = activeDays.has(dateToCheckISO);
+
+    if (isActive) {
+      // If the user was active, increment the streak.
       currentStreak++;
     } else if (isPaused) {
+      // If the day was a scheduled break, we don't increment,
+      // but we also don't break the loop. The streak is preserved.
+      // However, if today is a pause day, it shouldn't count as part of an active streak.
+      if (i === 0) {
+        // If today is the first day we are checking
+        todayInStreak = false;
+      }
       continue;
     } else {
+      // If the day was not active and not paused, the streak is broken. Stop counting.
+      // We must correct if the loop breaks on the first day (today).
+      if (i === 0) {
+        todayInStreak = false;
+      }
       break;
     }
-  }
 
-  if (!todayInStreak && currentStreak > 0) {
-    const d = new Date();
-    const isPausedToday = pauseDateRanges.some(
-      (range) => d >= range.start && d <= range.end
-    );
-    if (!isPausedToday) {
-      // If today wasn't a session and wasn't a pause, but the loop counted it, decrement.
-      // This happens when the streak ended yesterday.
-      if (currentStreak > 0) currentStreak--;
-    }
+    // Move to the previous day for the next iteration.
+    currentDate.setDate(currentDate.getDate() - 1);
   }
 
   return { currentStreak, todayInStreak };
 }
 
+/**
+ * Calculates the total focus time for the current day. This function remains unchanged.
+ * @param sessions - An array of focus sessions.
+ * @returns Total focus time for today in seconds.
+ */
 export function calculateTodayFocus(
   sessions: { startTime: Date; durationSeconds: number }[]
 ): number {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStart = startOfDay(new Date());
   return sessions
-    .filter((s) => s.startTime.toISOString().startsWith(todayStr))
+    .filter((s) => startOfDay(s.startTime).getTime() === todayStart.getTime())
     .reduce((total, session) => total + session.durationSeconds, 0);
 }
