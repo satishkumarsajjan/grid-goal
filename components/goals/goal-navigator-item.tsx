@@ -19,6 +19,7 @@ interface GoalNavigatorItemProps {
   goal: GoalWithChildren;
   activeGoalId: string | null;
   level: number;
+  openCreationDialog: (options: { open: boolean; parentId?: string }) => void;
 }
 
 /**
@@ -29,6 +30,7 @@ export function GoalNavigatorItem({
   goal,
   activeGoalId,
   level,
+  openCreationDialog,
 }: GoalNavigatorItemProps) {
   const pathname = usePathname();
 
@@ -49,8 +51,7 @@ export function GoalNavigatorItem({
 
   const handleAddSubGoal = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // TODO: This should open the CreateGoalModal and pass `goal.id` as the parentId.
-    console.log('Add sub-goal to:', goal.id);
+    openCreationDialog({ open: true, parentId: goal.id });
   };
 
   return (
@@ -120,6 +121,7 @@ export function GoalNavigatorItem({
               goal={childGoal}
               activeGoalId={activeGoalId}
               level={level + 1} // Increment the indentation level for children
+              openCreationDialog={openCreationDialog}
             />
           ))}
         </div>

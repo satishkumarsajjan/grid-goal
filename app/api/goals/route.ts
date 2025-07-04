@@ -56,7 +56,17 @@ export async function POST(request: Request) {
       );
     }
     const { title, description, parentId, deadline } = validation.data;
-
+    if (parentId) {
+      const parentGoal = await prisma.goal.findFirst({
+        where: { id: parentId, userId: userId },
+      });
+      if (!parentGoal) {
+        return new NextResponse(
+          JSON.stringify({ error: 'Parent goal not found or access denied.' }),
+          { status: 404 }
+        );
+      }
+    }
     // 3. Perform the database operation
     const newGoal = await prisma.goal.create({
       data: {

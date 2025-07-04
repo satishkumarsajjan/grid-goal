@@ -37,10 +37,11 @@ const createGoal = async (values: GoalFormValues) => {
 };
 
 interface CreateGoalFormProps {
+  parentId?: string;
   onFinished: () => void; // A function to close the dialog on success
 }
 
-export function CreateGoalForm({ onFinished }: CreateGoalFormProps) {
+export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
   const queryClient = useQueryClient();
   const form = useForm<GoalFormValues>({
     resolver: zodResolver(createGoalSchema),
@@ -64,7 +65,7 @@ export function CreateGoalForm({ onFinished }: CreateGoalFormProps) {
   });
 
   function onSubmit(values: GoalFormValues) {
-    mutation.mutate(values);
+    mutation.mutate({ ...values, parentId });
   }
 
   return (
