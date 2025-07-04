@@ -2,12 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
 import { z } from 'zod';
-
-// Zod schema for validation
-const createTaskSchema = z.object({
-  title: z.string().min(1, 'Title cannot be empty').max(255),
-  goalId: z.string().cuid('Invalid Goal ID'),
-});
+import { createTaskSchema } from '@/lib/zod-schemas';
 
 // This function handles POST requests to /api/tasks
 export async function POST(request: Request) {
@@ -31,7 +26,10 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const { title, goalId } = validation.data;
+    const { title, goalId, estimatedTimeInHours } = validation.data;
+    const estimatedTimeSeconds = estimatedTimeInHours
+      ? estimatedTimeInHours * 3600
+      : null;
 
     // Security Check: Verify that the user owns the goal they are adding a task to.
     const parentGoal = await prisma.goal.findFirst({
@@ -60,6 +58,7 @@ export async function POST(request: Request) {
         userId,
         goalId,
         title,
+        estimatedTimeSeconds,
         sortOrder: newSortOrder,
       },
     });

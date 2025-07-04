@@ -5,3 +5,7 @@ export type GoalWithTasksCount = Goal & {
     tasks: number;
   };
 };
+
+export type TaskWithTime = Task & {
+  totalTimeSeconds: number;
+};
