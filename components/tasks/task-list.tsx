@@ -29,6 +29,7 @@ import { CreateTaskForm } from './create-task-form';
 import { TaskListSkeleton } from './task-list-skeleton';
 import { TaskStats } from './task-stats';
 import { PaceIndicatorChart } from '@/components/shared/pace-indicator-chart';
+import { TaskSelectionModal } from '@/components/timer/task-selection-modal'; // <-- IMPORT THE MODAL
 import { calculatePaceData } from '@/lib/pace-helpers';
 import { type GoalWithSessions, type TaskWithTime } from '@/lib/types';
 
@@ -37,11 +38,10 @@ interface TaskListProps {
   goalId: string | null;
 }
 
-// NEW: A single, unified fetcher for all data related to the task list view.
+// A single, unified fetcher for all data related to the task list view.
 const fetchTaskListData = async (
   goalId: string
 ): Promise<{ goal: GoalWithSessions; tasks: TaskWithTime[] }> => {
-  // We make two API calls in parallel for efficiency.
   const [goalRes, tasksRes] = await Promise.all([
     axios.get(`/api/goals/${goalId}`),
     axios.get(`/api/goals/${goalId}/tasks`),
@@ -59,14 +59,19 @@ export function TaskList({ goalId }: TaskListProps) {
   const queryClient = useQueryClient();
   const [orderedTasks, setOrderedTasks] = useState<TaskWithTime[]>([]);
 
-  // NEW: A single useQuery hook to manage all data for this component.
+  // --- NEW: State management for the session modal ---
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [taskForSession, setTaskForSession] = useState<TaskWithTime | null>(
+    null
+  );
+
+  // A single useQuery hook to manage all data for this component.
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['taskListData', goalId], // A new, more descriptive query key
+    queryKey: ['taskListData', goalId],
     queryFn: () => fetchTaskListData(goalId!),
     enabled: !!goalId,
   });
 
-  // Extract the goal and tasks from the fetched data
   const goal = data?.goal;
   const fetchedTasks = data?.tasks;
 
@@ -76,7 +81,7 @@ export function TaskList({ goalId }: TaskListProps) {
     }
   }, [fetchedTasks]);
 
-  // This logic remains the same, but now it depends on `fetchedTasks`.
+  // All useMemo hooks for calculations remain the same.
   const taskStats = useMemo(() => {
     if (!fetchedTasks)
       return { total: 0, completed: 0, inProgress: 0, pending: 0 };
@@ -93,7 +98,11 @@ export function TaskList({ goalId }: TaskListProps) {
   }, [fetchedTasks]);
 
   const paceData = useMemo(() => {
-    if (goal?.deadline && goal.estimatedTimeSeconds) {
+    if (
+      goal?.deadline &&
+      goal.estimatedTimeSeconds &&
+      goal.estimatedTimeSeconds > 0
+    ) {
       return calculatePaceData(goal, goal.focusSessions);
     }
     return null;
@@ -113,6 +122,12 @@ export function TaskList({ goalId }: TaskListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
+
+  // --- NEW: Handler to open the modal, passed to each TaskItem ---
+  const handleStartSessionRequest = (task: TaskWithTime) => {
+    setTaskForSession(task);
+    setIsModalOpen(true);
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -159,60 +174,74 @@ export function TaskList({ goalId }: TaskListProps) {
   }
 
   return (
-    <div className='flex h-full flex-col bg-card rounded-lg border'>
-      {/* Header Section */}
-      <div className='p-4 border-b'>
-        <h1 className='text-2xl font-bold'>{goal.title}</h1>
-        {goal.description && (
-          <p className='mt-1 text-sm text-muted-foreground'>
-            {goal.description}
-          </p>
-        )}
-
-        {/* Render the Pace Indicator chart if data is available */}
-        {paceData && paceData.length > 0 && (
+    // We use a React Fragment to render the list and the modal as siblings.
+    <>
+      <div className='flex h-full flex-col bg-card rounded-lg border'>
+        {/* Header Section */}
+        <div className='p-4 border-b'>
+          <h1 className='text-2xl font-bold'>{goal.title}</h1>
+          {goal.description && (
+            <p className='mt-1 text-sm text-muted-foreground'>
+              {goal.description}
+            </p>
+          )}
+          {paceData && paceData.length > 0 && (
+            <div className='mt-4'>
+              <h3 className='text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wider'>
+                Pace
+              </h3>
+              <PaceIndicatorChart data={paceData} />
+            </div>
+          )}
           <div className='mt-4'>
-            <h3 className='text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wider'>
-              Pace
-            </h3>
-            <PaceIndicatorChart data={paceData} />
+            <TaskStats {...taskStats} />
           </div>
-        )}
+        </div>
 
-        <div className='mt-4'>
-          <TaskStats {...taskStats} />
+        {/* Task List Section */}
+        <div className='flex-1 overflow-y-auto p-2'>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={orderedTasks.map((t) => t.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {orderedTasks.length > 0 ? (
+                orderedTasks.map((task) => (
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    // Pass the handler down to each item
+                    onStartSession={handleStartSessionRequest}
+                  />
+                ))
+              ) : (
+                <div className='text-center text-muted-foreground p-10'>
+                  <p>This goal has no tasks yet.</p>
+                  <p className='text-sm'>
+                    Add the first task below to get started.
+                  </p>
+                </div>
+              )}
+            </SortableContext>
+          </DndContext>
+        </div>
+
+        {/* Footer Section */}
+        <div className='p-4 border-t bg-background/50 sticky bottom-0'>
+          <CreateTaskForm goalId={goal.id} />
         </div>
       </div>
 
-      {/* Task List Section */}
-      <div className='flex-1 overflow-y-auto p-2'>
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={orderedTasks.map((t) => t.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            {orderedTasks.length > 0 ? (
-              orderedTasks.map((task) => <TaskItem key={task.id} task={task} />)
-            ) : (
-              <div className='text-center text-muted-foreground p-10'>
-                <p>This goal has no tasks yet.</p>
-                <p className='text-sm'>
-                  Add the first task below to get started.
-                </p>
-              </div>
-            )}
-          </SortableContext>
-        </DndContext>
-      </div>
-
-      {/* Footer Section */}
-      <div className='p-4 border-t bg-background/50 sticky bottom-0'>
-        <CreateTaskForm goalId={goal.id} />
-      </div>
-    </div>
+      {/* The Modal is rendered here, controlled by this component's state */}
+      <TaskSelectionModal
+        isOpen={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        preselectedTask={taskForSession || undefined}
+      />
+    </>
   );
 }
