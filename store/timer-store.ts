@@ -1,134 +1,119 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { type Task } from '@prisma/client';
+import { useSettingsStore } from './settings-store'; // <-- Import the new settings store
 
-// Define the possible modes and states for clarity
-export type TimerMode = 'stopwatch' | 'pomodoro';
-export type PomodoroState = 'work' | 'short_break' | 'long_break';
+export type TimerMode = 'STOPWATCH' | 'POMODORO';
+export type PomodoroCycle = 'WORK' | 'SHORT_BREAK' | 'LONG_BREAK';
 
-// Define the shape of our state
 interface TimerState {
-  // Existing State
   isActive: boolean;
   startTime: number | null;
-  elapsedTime: number; // For stopwatch, this counts up. For pomodoro, it will count down.
-  activeTaskId: string | null;
-  activeGoalId: string | null;
-
-  // --- NEW STATE FOR POMODORO ---
+  activeTask: { id: string; title: string; goalId: string } | null;
   mode: TimerMode;
-  pomodoroState: PomodoroState;
-  pomodorosCompleted: number; // Tracks how many work cycles are done
-
-  // Actions
-  startSession: (taskId: string, goalId: string, mode?: TimerMode) => void;
-  stopSession: () => void;
-  tick: () => void;
-  // --- NEW ACTIONS FOR POMODORO ---
-  nextPomodoroStep: () => void; // Moves from 'work' to 'break' and vice-versa
+  pomodoroCycle: PomodoroCycle;
+  pomodorosCompletedInCycle: number;
 }
 
-// --- POMODORO CONFIGURATION ---
-// We can store durations in seconds for easy calculations
-const POMODORO_DURATIONS = {
-  work: 25 * 60, // 25 minutes
-  short_break: 5 * 60, // 5 minutes
-  long_break: 15 * 60, // 15 minutes
-};
-const POMODOROS_UNTIL_LONG_BREAK = 4;
+interface TimerActions {
+  startSession: (
+    task: Pick<Task, 'id' | 'title' | 'goalId'>,
+    mode?: TimerMode
+  ) => void;
+  pauseSession: () => void;
+  resumeSession: () => void;
+  // This is the key action that drives the automated flow
+  finishIntervalAndProceed: () => {
+    durationSeconds: number;
+    mode: TimerMode;
+    pomodoroCycle: PomodoroCycle;
+  } | null;
+  reset: () => void;
+}
 
-export const useTimerStore = create<TimerState>()(
-  // Use the 'persist' middleware to save the state to localStorage
+const initialState: TimerState = {
+  isActive: false,
+  startTime: null,
+  activeTask: null,
+  mode: 'STOPWATCH',
+  pomodoroCycle: 'WORK',
+  pomodorosCompletedInCycle: 0,
+};
+
+export const useTimerStore = create<TimerState & TimerActions>()(
   persist(
     (set, get) => ({
-      // --- Initial State ---
-      isActive: false,
-      startTime: null,
-      elapsedTime: 0,
-      activeTaskId: null,
-      activeGoalId: null,
-      mode: 'stopwatch',
-      pomodoroState: 'work',
-      pomodorosCompleted: 0,
+      ...initialState,
 
-      // --- Actions ---
-      startSession: (taskId, goalId, mode = 'stopwatch') => {
-        const now = Date.now();
+      startSession: (task, mode = 'STOPWATCH') => {
         set({
           isActive: true,
-          startTime: now,
-          activeTaskId: taskId,
-          activeGoalId: goalId,
-          mode: mode,
-          // If starting a pomodoro, reset elapsedTime to the work duration
-          elapsedTime: mode === 'pomodoro' ? POMODORO_DURATIONS.work : 0,
-          // Reset pomodoro state if starting a new pomodoro session
-          pomodoroState: mode === 'pomodoro' ? 'work' : get().pomodoroState,
-          pomodorosCompleted:
-            mode === 'pomodoro' ? 0 : get().pomodorosCompleted,
-        });
-      },
-
-      stopSession: () => {
-        set({
-          isActive: false,
-          startTime: null,
-          elapsedTime: 0,
-          activeTaskId: null,
-          activeGoalId: null,
-        });
-      },
-
-      tick: () => {
-        if (!get().isActive) return;
-
-        const { mode, elapsedTime } = get();
-        if (mode === 'stopwatch') {
-          // Stopwatch counts up
-          set({ elapsedTime: Date.now() - (get().startTime ?? Date.now()) });
-        } else {
-          // Pomodoro mode
-          // Pomodoro counts down
-          const newElapsedTime = elapsedTime - 1;
-          if (newElapsedTime <= 0) {
-            // When timer hits zero, stop it and wait for user to start the next step
-            set({ isActive: false, elapsedTime: 0 });
-            // We could play a sound or show a notification here
-          } else {
-            set({ elapsedTime: newElapsedTime });
-          }
-        }
-      },
-
-      // --- NEW POMODORO ACTION ---
-      nextPomodoroStep: () => {
-        const { pomodoroState, pomodorosCompleted } = get();
-        let nextState: PomodoroState = 'work';
-        let nextPomodorosCompleted = pomodorosCompleted;
-
-        if (pomodoroState === 'work') {
-          // Finished a work session
-          nextPomodorosCompleted++;
-          if (nextPomodorosCompleted % POMODOROS_UNTIL_LONG_BREAK === 0) {
-            nextState = 'long_break';
-          } else {
-            nextState = 'short_break';
-          }
-        } else {
-          // Finished a break, go back to work
-          nextState = 'work';
-        }
-
-        set({
-          isActive: true, // Automatically start the next timer
           startTime: Date.now(),
-          pomodoroState: nextState,
-          pomodorosCompleted: nextPomodorosCompleted,
-          elapsedTime: POMODORO_DURATIONS[nextState],
+          activeTask: task,
+          mode: mode,
+          pomodoroCycle: 'WORK',
+          pomodorosCompletedInCycle: 0,
         });
+      },
+
+      pauseSession: () => set({ isActive: false }),
+      resumeSession: () => set({ isActive: true }),
+
+      // This action now handles both finishing an interval AND starting the next one.
+      finishIntervalAndProceed: () => {
+        const { startTime, mode, pomodoroCycle, pomodorosCompletedInCycle } =
+          get();
+        if (!startTime) return null;
+
+        // --- Part 1: Log the completed interval ---
+        const endTime = Date.now();
+        const durationSeconds = Math.round((endTime - startTime) / 1000);
+        const loggedData = { durationSeconds, mode, pomodoroCycle };
+
+        // --- Part 2: Calculate and start the NEXT interval ---
+        // Get the latest settings from the settings store
+        const settings = useSettingsStore.getState().pomodoro;
+
+        let nextCycle: PomodoroCycle = 'WORK';
+        let nextCompletedCount = pomodorosCompletedInCycle;
+
+        if (pomodoroCycle === 'WORK') {
+          nextCompletedCount++;
+          if (nextCompletedCount % settings.cyclesUntilLongBreak === 0) {
+            nextCycle = 'LONG_BREAK';
+          } else {
+            nextCycle = 'SHORT_BREAK';
+          }
+        } else {
+          // If we just finished a break
+          nextCycle = 'WORK';
+        }
+
+        set({
+          isActive: true, // Automatically start the next interval
+          startTime: Date.now(),
+          pomodoroCycle: nextCycle,
+          pomodorosCompletedInCycle: nextCompletedCount,
+        });
+
+        // Return the data for the interval that just finished, so it can be logged.
+        return loggedData;
+      },
+
+      reset: () => {
+        set(initialState);
       },
     }),
     {
-      name: 'gridgoal-timer-storage', // Name for the localStorage item
+      name: 'gridgoal-timer-storage-v2',
+      partialize: (state) => ({
+        isActive: state.isActive,
+        startTime: state.startTime,
+        activeTask: state.activeTask,
+        mode: state.mode,
+        pomodoroCycle: state.pomodoroCycle,
+        pomodorosCompletedInCycle: state.pomodorosCompletedInCycle,
+      }),
     }
   )
 );

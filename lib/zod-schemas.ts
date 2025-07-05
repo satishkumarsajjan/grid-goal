@@ -18,3 +18,10 @@ export const createTaskSchema = z.object({
 // You would create other schemas here as you build more features
 // export const updateGoalSchema = ...
 // export const createTaskSchema = ...
+
+export const sessionSummarySchema = z.object({
+  vibe: z.string(),
+  noteAccomplished: z.string().optional(),
+  noteNextStep: z.string().optional(),
+  artifactUrl: z.string().url().optional(),
+});

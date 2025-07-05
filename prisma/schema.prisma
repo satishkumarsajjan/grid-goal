@@ -148,16 +148,36 @@ model FocusSession {
   noteNextStep     String?
   artifactUrl      String?
   vibe             SessionVibe?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
 
+  // --- NEW FIELDS TO FIX FLAW #13 ---
+  // Store the mode that was used for this session.
+  mode          TimerMode      @default(STOPWATCH)
+  // For pomodoro sessions, store which part of the cycle it was.
+  pomodoroCycle PomodoroCycle? // e.g., "work", "short_break"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // --- Relationships remain the same ---
   userId String
   user   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  goalId String // Denormalized for query performance.
+  goalId String
   goal   Goal                  @relation(fields: [goalId], references: [id], onDelete: Cascade)
   taskId String
   task   Task                  @relation(fields: [taskId], references: [id], onDelete: Cascade)
   tags   TagsOnFocusSessions[]
+}
+
+// --- NEW ENUMS TO SUPPORT THE NEW FIELDS ---
+enum TimerMode {
+  STOPWATCH
+  POMODORO
+}
+
+enum PomodoroCycle {
+  WORK
+  SHORT_BREAK
+  LONG_BREAK
 }
 
 // For the Daily Focus Queue feature (Phase 2).
