@@ -23,5 +23,9 @@ export const sessionSummarySchema = z.object({
   vibe: z.string(),
   noteAccomplished: z.string().optional(),
   noteNextStep: z.string().optional(),
-  artifactUrl: z.string().url().optional(),
+  artifactUrl: z
+    .string()
+    .url({ message: 'Please enter a valid URL.' })
+    .optional()
+    .or(z.literal('')),
 });

@@ -1,61 +1,52 @@
-import { useState, useEffect, useMemo } from 'react';
-import {
-  useTimerStore,
-  type TimerMode,
-  type PomodoroCycle,
-} from '@/store/timer-store';
 import { useSettingsStore } from '@/store/settings-store';
-import { toast } from 'sonner';
-
-// A simple function to play a notification sound
-const playSound = (sound: 'work' | 'break') => {
-  console.log(`Playing sound for: ${sound}`);
-  // In a real app, you'd have audio files in /public
-  // const audio = new Audio(`/sounds/${sound}-start.mp3`);
-  // audio.play().catch(e => console.error("Error playing sound:", e));
-};
+import { useTimerStore } from '@/store/timer-store';
+import { useEffect, useMemo, useState } from 'react';
 
 /**
- * Custom hook to manage the visual timer display.
- * It uses requestAnimationFrame for a smooth, efficient countdown/up.
- * @param isActive - Whether the timer is currently running.
- * @param startTime - The UTC timestamp of when the timer started.
- * @returns The elapsed time in milliseconds.
+ * Custom hook to manage the visual timer display and trigger pomodoro checks.
+ * @returns The total elapsed time in milliseconds for display purposes.
  */
-export function useTimerDisplay(isActive: boolean, startTime: number | null) {
-  const [elapsedMs, setElapsedMs] = useState(0);
+export function useTimerDisplay() {
+  // Get all necessary state and actions from the stores
+  const {
+    isActive,
+    accumulatedTime,
+    intervalStartTime,
+    mode,
+    pomodoroCycle,
+    tick,
+  } = useTimerStore();
+  const pomodoroSettings = useSettingsStore((state) => state.pomodoro);
+
+  // This is the total time to be displayed on the UI
+  const [displayMs, setDisplayMs] = useState(accumulatedTime);
 
   useEffect(() => {
-    if (!isActive || !startTime) {
-      // If paused or stopped, ensure display doesn't change
+    if (!isActive) {
+      // When paused, the display time is exactly the accumulated time.
+      setDisplayMs(accumulatedTime);
       return;
     }
 
+    // If active, the display time is the accumulated time PLUS the current interval's progress.
     let animationFrameId: number;
     const updateTimer = () => {
-      setElapsedMs(Date.now() - startTime);
+      if (intervalStartTime) {
+        setDisplayMs(accumulatedTime + (Date.now() - intervalStartTime));
+      }
+      // On every frame, also call the store's tick function to check for Pomodoro completion.
+      tick();
       animationFrameId = requestAnimationFrame(updateTimer);
     };
 
     animationFrameId = requestAnimationFrame(updateTimer);
 
     return () => cancelAnimationFrame(animationFrameId);
-  }, [isActive, startTime]);
+  }, [isActive, intervalStartTime, accumulatedTime, tick]);
 
-  return elapsedMs;
-}
-
-/**
- * Custom hook to handle the logic for automatically transitioning
- * between Pomodoro cycles.
- */
-export function usePomodoroAutomation() {
-  const { isActive, startTime, mode, pomodoroCycle, finishIntervalAndProceed } =
-    useTimerStore();
-  const pomodoroSettings = useSettingsStore((state) => state.pomodoro);
-
+  // This memo is still useful for calculating the total duration of the current interval
   const currentIntervalDuration = useMemo(() => {
-    if (mode !== 'POMODORO') return Infinity; // Stopwatch never ends
+    if (mode !== 'POMODORO') return 0;
     switch (pomodoroCycle) {
       case 'WORK':
         return pomodoroSettings.durationWork * 1000;
@@ -63,35 +54,10 @@ export function usePomodoroAutomation() {
         return pomodoroSettings.durationShortBreak * 1000;
       case 'LONG_BREAK':
         return pomodoroSettings.durationLongBreak * 1000;
+      default:
+        return 0;
     }
   }, [mode, pomodoroCycle, pomodoroSettings]);
 
-  useEffect(() => {
-    if (isActive && startTime && mode === 'POMODORO') {
-      const elapsed = Date.now() - startTime;
-      if (elapsed >= currentIntervalDuration) {
-        // Log the finished work interval
-        if (pomodoroCycle === 'WORK') {
-          toast.success('Work interval complete!');
-          // You would call a server action here to log this interval automatically
-          console.log('LOGGING FINISHED WORK INTERVAL');
-          playSound('break');
-        } else {
-          playSound('work');
-        }
-
-        // Proceed to the next step automatically
-        finishIntervalAndProceed();
-      }
-    }
-  }, [
-    isActive,
-    startTime,
-    mode,
-    pomodoroCycle,
-    currentIntervalDuration,
-    finishIntervalAndProceed,
-  ]);
-
-  return { currentIntervalDuration };
+  return { displayMs, currentIntervalDuration };
 }
