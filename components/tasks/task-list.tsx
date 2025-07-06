@@ -238,7 +238,16 @@ export function TaskList({ goalId }: TaskListProps) {
       <TaskSelectionModal
         isOpen={isModalOpen}
         onOpenChange={setIsModalOpen}
-        preselectedTask={taskForSession || undefined}
+        preselectedTask={
+          taskForSession
+            ? {
+                id: taskForSession.id,
+                title: taskForSession.title,
+                goalId: taskForSession.goalId,
+                goalTitle: goal?.title ?? '',
+              }
+            : undefined
+        }
       />
     </>
   );

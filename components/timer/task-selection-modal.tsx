@@ -108,7 +108,12 @@ export function TaskSelectionModal({
         // Construct the payload required by the timer store
         console.log('TASK', task);
 
-        taskPayload = task;
+        taskPayload = {
+          id: task.id,
+          title: task.title,
+          goalId: task.goalId,
+          goalTitle: task.goal.title,
+        };
       }
     }
 
