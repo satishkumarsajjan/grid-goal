@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,7 +10,7 @@ import { SessionVibe, TimerMode, PomodoroCycle } from '@prisma/client';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
-import { sessionSummarySchema } from '@/lib/zod-schemas'; // Assuming you have this
+import { sessionSummarySchema } from '@/lib/zod-schemas';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -22,8 +23,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
-import { TagInput } from '../ui/tag-input';
+import { TagInput } from '@/components/ui/tag-input';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,9 +34,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '../ui/alert-dialog';
+} from '@/components/ui/alert-dialog';
 
-// --- Type Definitions, Zod Schema, and API Function ---
 interface SessionSummaryViewProps {
   task: { id: string; title: string; goalId: string };
   sessionData: {
@@ -44,14 +43,13 @@ interface SessionSummaryViewProps {
     mode: TimerMode;
     pomodoroCycle: PomodoroCycle;
   };
-  onSessionSaved: () => void; // Function to call to exit this view
-  onDiscard: () => void; // Function to call if user cancels
+  onSessionSaved: () => void;
+  onDiscard: () => void;
 }
 
 type SummaryFormValues = z.infer<typeof sessionSummarySchema>;
 
 const createFocusSession = async (payload: any) => {
-  // This payload should match your backend API/server action
   const { data } = await axios.post('/api/focus-sessions', payload);
   return data;
 };
@@ -75,7 +73,6 @@ export function SessionSummaryView({
 }: SessionSummaryViewProps) {
   const queryClient = useQueryClient();
   const [tags, setTags] = useState<string[]>([]);
-
   const { data: existingTags } = useQuery({
     queryKey: ['userTags'],
     queryFn: fetchUserTags,
@@ -91,15 +88,17 @@ export function SessionSummaryView({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', task.goalId] });
       queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
-      queryClient.invalidateQueries({ queryKey: ['userTags'] }); // Invalidate tags to get new ones
+      queryClient.invalidateQueries({ queryKey: ['userTags'] });
       toast.success('Session saved successfully!');
       onSessionSaved();
     },
     onError: () => toast.error('Failed to save session. Please try again.'),
   });
+
   function onSubmit(values: SummaryFormValues) {
     const payload = {
       ...values,
+      artifactUrl: values.artifactUrl || null,
       startTime: new Date(
         Date.now() - sessionData.durationSeconds * 1000
       ).toISOString(),
@@ -118,18 +117,20 @@ export function SessionSummaryView({
     if (seconds < 60) return `${seconds}s`;
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
-    return [h > 0 ? `${h}h` : null, m > 0 ? `${m}m` : null]
-      .filter(Boolean)
-      .join(' ');
+    return (
+      [h > 0 ? `${h}h` : null, m > 0 ? `${m}m` : null]
+        .filter(Boolean)
+        .join(' ') || '0s'
+    );
   };
 
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className='fixed inset-0 bg-background z-50 flex justify-center items-center'
+      className='fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex justify-center items-center'
     >
-      <div className='w-full max-w-lg h-full max-h-[90vh] bg-card border rounded-lg shadow-2xl flex flex-col'>
+      <div className='w-full max-w-lg h-full max-h-[95vh] sm:max-h-[90vh] bg-card border rounded-xl shadow-2xl flex flex-col'>
         <div className='p-6 border-b'>
           <h2 className='text-xl font-bold'>Session Summary</h2>
           <p className='text-muted-foreground'>
@@ -141,13 +142,12 @@ export function SessionSummaryView({
             .
           </p>
         </div>
-
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
             className='flex-1 flex flex-col overflow-hidden'
           >
-            <div className='flex-1 space-y-6 px-6 mt-4 overflow-y-auto'>
+            <div className='flex-1 space-y-6 p-6 mt-4 overflow-y-auto'>
               <FormField
                 control={form.control}
                 name='vibe'
@@ -236,7 +236,6 @@ export function SessionSummaryView({
               </FormItem>
             </div>
             <div className='p-6 border-t mt-auto bg-background/50 flex justify-between'>
-              {/* This button now triggers a confirmation dialog, fixing Flaw #6 */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
@@ -244,17 +243,16 @@ export function SessionSummaryView({
                     variant='ghost'
                     disabled={mutation.isPending}
                   >
-                    Discard Session
+                    Discard
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>
-                      Are you absolutely sure?
+                      Discard this session log?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will permanently discard this focus session. Your
-                      time will not be logged.
+                      You can't undo this. Your focused time will not be logged.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -268,7 +266,6 @@ export function SessionSummaryView({
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-
               <Button type='submit' disabled={mutation.isPending}>
                 {mutation.isPending ? 'Saving...' : 'Save & Finish'}
               </Button>

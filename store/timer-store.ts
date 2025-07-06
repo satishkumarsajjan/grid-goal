@@ -1,37 +1,36 @@
-import { type Task } from '@prisma/client';
+import type { PomodoroCycle, TimerMode } from '@prisma/client';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { useSettingsStore } from './settings-store';
 
-export type TimerMode = 'STOPWATCH' | 'POMODORO';
-export type PomodoroCycle = 'WORK' | 'SHORT_BREAK' | 'LONG_BREAK';
+// Define the full shape of the task object we'll store
+export interface ActiveTask {
+  id: string;
+  title: string;
+  goalId: string;
+  goalTitle: string;
+}
 
-interface TimerState {
+// The shape of the state managed by this store
+export interface TimerState {
   isActive: boolean;
   accumulatedTime: number; // in milliseconds
   intervalStartTime: number | null;
-  activeTask: { id: string; title: string; goalId: string } | null;
+  activeTask: ActiveTask | null; // Use the new, more detailed type
   mode: TimerMode;
   pomodoroCycle: PomodoroCycle;
   pomodorosCompletedInCycle: number;
 }
 
+// The actions that can be dispatched to modify the state
 interface TimerActions {
-  startSession: (
-    task: Pick<Task, 'id' | 'title' | 'goalId'>,
-    mode?: TimerMode
-  ) => void;
+  // The signature of startSession now expects the full ActiveTask object
+  startSession: (task: ActiveTask, mode: TimerMode) => void;
   pauseSession: () => void;
   resumeSession: () => void;
-  finishIntervalAndProceed: () => {
-    durationSeconds: number;
-    mode: TimerMode;
-    pomodoroCycle: PomodoroCycle;
-  } | null;
   reset: () => void;
-  tick: () => void;
 }
 
+// The initial, default state for the store
 const initialState: TimerState = {
   isActive: false,
   accumulatedTime: 0,
@@ -47,15 +46,18 @@ export const useTimerStore = create<TimerState & TimerActions>()(
     (set, get) => ({
       ...initialState,
 
-      startSession: (task, mode = 'STOPWATCH') => {
+      startSession: (task, mode) => {
+        const isNewPomodoroSession = mode === 'POMODORO';
         set({
           isActive: true,
           intervalStartTime: Date.now(),
           accumulatedTime: 0,
-          activeTask: task,
+          activeTask: task, // Store the full task object with goalTitle
           mode: mode,
-          pomodoroCycle: 'WORK',
-          pomodorosCompletedInCycle: 0,
+          pomodoroCycle: isNewPomodoroSession ? 'WORK' : get().pomodoroCycle,
+          pomodorosCompletedInCycle: isNewPomodoroSession
+            ? 0
+            : get().pomodorosCompletedInCycle,
         });
       },
 
@@ -80,76 +82,17 @@ export const useTimerStore = create<TimerState & TimerActions>()(
         }
       },
 
-      tick: () => {
-        // This function's implementation remains correct
-        const {
-          isActive,
-          mode,
-          accumulatedTime,
-          intervalStartTime,
-          pomodoroCycle,
-          finishIntervalAndProceed,
-        } = get();
-        if (!isActive || !intervalStartTime) return;
-        // ... Pomodoro end-check logic
-      },
-
-      finishIntervalAndProceed: () => {
-        const {
-          mode,
-          pomodoroCycle,
-          accumulatedTime,
-          isActive,
-          intervalStartTime,
-        } = get();
-
-        let finalAccumulatedTime = accumulatedTime;
-        if (isActive && intervalStartTime) {
-          finalAccumulatedTime += Date.now() - intervalStartTime;
-        }
-
-        const durationSeconds = Math.round(finalAccumulatedTime / 1000);
-        const loggedData = { durationSeconds, mode, pomodoroCycle };
-
-        if (mode === 'POMODORO') {
-          const settings = useSettingsStore.getState().pomodoro;
-          let nextCycle: PomodoroCycle = 'WORK';
-          let nextCompletedCount = get().pomodorosCompletedInCycle;
-
-          if (pomodoroCycle === 'WORK') {
-            nextCompletedCount++;
-            nextCycle =
-              nextCompletedCount % settings.cyclesUntilLongBreak === 0
-                ? 'LONG_BREAK'
-                : 'SHORT_BREAK';
-          }
-
-          set({
-            isActive: true,
-            // --- THIS IS THE FIX ---
-            // 'startTime' was incorrect. It should be 'intervalStartTime'.
-            intervalStartTime: Date.now(),
-            // --- END OF FIX ---
-            accumulatedTime: 0,
-            pomodoroCycle: nextCycle,
-            pomodorosCompletedInCycle: nextCompletedCount,
-          });
-        }
-
-        return loggedData;
-      },
-
       reset: () => {
         set(initialState);
       },
     }),
     {
-      name: 'gridgoal-timer-storage-v3',
+      name: 'gridgoal-timer-storage-v4',
       partialize: (state) => ({
         isActive: state.isActive,
         accumulatedTime: state.accumulatedTime,
         intervalStartTime: state.intervalStartTime,
-        activeTask: state.activeTask,
+        activeTask: state.activeTask, // This now includes goalTitle
         mode: state.mode,
         pomodoroCycle: state.pomodoroCycle,
         pomodorosCompletedInCycle: state.pomodorosCompletedInCycle,

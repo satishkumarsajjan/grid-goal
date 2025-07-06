@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// Define the shape of the user's configurable settings
+// Define the shape of the user's configurable settings for Pomodoro
 export interface PomodoroSettings {
   durationWork: number; // in seconds
   durationShortBreak: number; // in seconds
@@ -11,20 +11,22 @@ export interface PomodoroSettings {
 
 interface SettingsState {
   pomodoro: PomodoroSettings;
-  // We can add other settings here in the future, e.g., for sound, notifications
+  // In the future, we can add other settings here:
+  // notifications: { volume: number; sound: string; };
+  // theme: 'light' | 'dark' | 'system';
 }
 
 interface SettingsActions {
-  // Actions to update settings will be added when we build the settings UI
+  // We will implement these actions when we build the user-facing settings page
   // updatePomodoroSettings: (newSettings: Partial<PomodoroSettings>) => void;
 }
 
-// Default values for a new user
+// Default values for any new user of the application
 const defaultSettings: SettingsState = {
   pomodoro: {
-    durationWork: 25 * 60,
-    durationShortBreak: 5 * 60,
-    durationLongBreak: 15 * 60,
+    durationWork: 25 * 60, // 25 minutes
+    durationShortBreak: 5 * 60, // 5 minutes
+    durationLongBreak: 15 * 60, // 15 minutes
     cyclesUntilLongBreak: 4,
   },
 };
@@ -33,13 +35,13 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
   persist(
     (set) => ({
       ...defaultSettings,
-      // Example of an update action for the future:
+      // Example for the future:
       // updatePomodoroSettings: (newSettings) => set(state => ({
       //   pomodoro: { ...state.pomodoro, ...newSettings }
       // })),
     }),
     {
-      name: 'gridgoal-user-settings',
+      name: 'gridgoal-user-settings-v1', // Unique name for localStorage
     }
   )
 );

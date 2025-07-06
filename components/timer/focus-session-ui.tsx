@@ -1,37 +1,33 @@
 'use client';
 
-import { useTimerDisplay } from '@/hooks/use-timer-logic';
-import {
-  useTimerStore,
-  type PomodoroCycle,
-  type TimerMode,
-} from '@/store/timer-store';
 import { useState } from 'react';
+import { useTimerStore } from '@/store/timer-store';
+import { useTimerEngine } from '@/hooks/use-timer-engine';
+import { calculateFinalDuration } from '@/lib/timer-machine';
 
-import { SessionSummaryView } from '../session/session-summary-view';
 import { SessionControls } from './session-controls';
+import { SessionSummaryView } from '../session/session-summary-view';
 import { SessionHeader } from './session-header';
 import { TimerDisplay } from './timer-display';
+import { PomodoroTransition } from './pomodoro-transition';
+import { PomodoroCycle, TimerMode } from '@prisma/client';
 
 export function FocusSessionUI() {
-  // --- State and Logic from Hooks ---
-  // Get the state directly from the main store.
-  const {
-    activeTask,
-    mode,
-    pomodoroCycle,
-    reset,
-    // IMPORTANT: The function to get the final duration is now part of finishIntervalAndProceed
-  } = useTimerStore();
+  // --- State from Global Store ---
+  const { isActive, activeTask, mode, pomodoroCycle, reset } = useTimerStore();
 
-  // Get the visual display time from our custom hook.
-  const { displayMs, currentIntervalDuration } = useTimerDisplay();
+  // --- Logic from Custom Hook ---
+  const {
+    displayTime,
+    currentIntervalDuration,
+    isTransitioning,
+    transitionTo,
+    startNextInterval,
+    skipBreak,
+  } = useTimerEngine();
 
   // --- Local UI State ---
-  // This state is only for controlling the visibility of the summary view.
   const [showSummary, setShowSummary] = useState(false);
-
-  // This state will hold the final, accurate data for the completed session.
   const [finalSessionData, setFinalSessionData] = useState<{
     durationSeconds: number;
     mode: TimerMode;
@@ -39,81 +35,73 @@ export function FocusSessionUI() {
   } | null>(null);
 
   // --- Event Handlers ---
-
-  /**
-   * This function is now the single source of truth for finishing a session manually.
-   * It calls the store's logic to get the final, accurate duration.
-   */
   const handleFinishSession = () => {
-    // We get a fresh reference to the store's state and actions here.
-    const {
-      finishIntervalAndProceed: finishAndProceed,
-      mode: currentMode,
-      pomodoroCycle: currentCycle,
-    } = useTimerStore.getState();
+    const timerState = useTimerStore.getState();
+    const finalDurationSeconds = calculateFinalDuration(timerState);
 
-    // The logic for calculating the duration is now entirely inside the store.
-    // We just need to call the action that returns the final data.
-    // For a manual stop, we will create a temporary action that doesn't proceed to the next pomodoro cycle.
-    const { accumulatedTime, isActive, intervalStartTime } =
-      useTimerStore.getState();
-    let finalAccumulatedTime = accumulatedTime;
-    if (isActive && intervalStartTime) {
-      finalAccumulatedTime += Date.now() - intervalStartTime;
-    }
-    const finalDurationSeconds = Math.round(finalAccumulatedTime / 1000);
-
-    const dataToLog = {
-      durationSeconds: finalDurationSeconds,
-      mode: currentMode,
-      pomodoroCycle: currentCycle,
-    };
-
-    // We only show the summary if they finished a work session.
-    // If they finish during a break, we just end the session.
-    if (currentMode === 'STOPWATCH' || currentCycle === 'WORK') {
-      setFinalSessionData(dataToLog);
+    if (
+      timerState.mode === 'STOPWATCH' ||
+      timerState.pomodoroCycle === 'WORK'
+    ) {
+      setFinalSessionData({
+        durationSeconds: finalDurationSeconds,
+        mode: timerState.mode,
+        pomodoroCycle: timerState.pomodoroCycle,
+      });
       setShowSummary(true);
     } else {
-      reset(); // Just discard the break and end the session.
+      reset();
     }
   };
 
-  /**
-   * This handler is called when the summary view is closed,
-   * either by saving or discarding. It resets everything.
-   */
   const handleSessionSavedOrDiscarded = () => {
     setShowSummary(false);
     setFinalSessionData(null);
-    reset(); // Fully reset the global timer state.
+    reset();
   };
 
-  // --- Render ---
-
-  // This is a safeguard. The component shouldn't even be mounted if there's no active task,
-  // thanks to our logic in layout.tsx.
   if (!activeTask) return null;
+
+  // --- RENDER LOGIC ---
+  if (isTransitioning && transitionTo) {
+    return (
+      <PomodoroTransition
+        nextCycle={transitionTo}
+        onStartNext={startNextInterval}
+        onSkipBreak={skipBreak}
+      />
+    );
+  }
 
   return (
     <>
-      {/* Main Timer / Zen Mode View */}
       <div
         className='fixed inset-0 bg-background z-40 flex flex-col items-center justify-center p-8 transition-all duration-300'
         style={{
           opacity: showSummary ? 0.2 : 1,
           filter: showSummary ? 'blur(8px)' : 'none',
           transform: showSummary ? 'scale(0.98)' : 'scale(1)',
-          // Prevent interacting with the background timer UI when the summary is open
           pointerEvents: showSummary ? 'none' : 'auto',
         }}
       >
-        <SessionHeader taskTitle={activeTask.title} />
+        {/* The PAUSED overlay - solves Flaw #10 */}
+        {!isActive && (
+          <div className='absolute inset-0 bg-black/10 dark:bg-black/30 flex items-center justify-center backdrop-blur-sm'>
+            <span className='text-white text-2xl font-bold tracking-widest uppercase bg-black/50 px-4 py-2 rounded-lg'>
+              Paused
+            </span>
+          </div>
+        )}
+
+        <SessionHeader
+          taskTitle={activeTask.title}
+          goalTitle={activeTask.goalTitle}
+        />
 
         <TimerDisplay
           mode={mode}
           pomodoroCycle={pomodoroCycle}
-          displayMs={displayMs}
+          displayMs={displayTime}
           intervalDurationMs={currentIntervalDuration}
         />
 
@@ -122,7 +110,6 @@ export function FocusSessionUI() {
         </div>
       </div>
 
-      {/* Summary View (conditionally rendered on top) */}
       {showSummary && finalSessionData && (
         <SessionSummaryView
           task={activeTask}

@@ -149,11 +149,10 @@ model FocusSession {
   artifactUrl      String?
   vibe             SessionVibe?
 
-  // --- NEW FIELDS TO FIX FLAW #13 ---
-  // Store the mode that was used for this session.
+
   mode          TimerMode      @default(STOPWATCH)
-  // For pomodoro sessions, store which part of the cycle it was.
-  pomodoroCycle PomodoroCycle? // e.g., "work", "short_break"
+ 
+  pomodoroCycle PomodoroCycle?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

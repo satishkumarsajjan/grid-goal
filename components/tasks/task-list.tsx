@@ -1,37 +1,35 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { TaskStatus } from '@prisma/client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { type Task, TaskStatus } from '@prisma/client';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 // DND-Kit imports
 import {
-  DndContext,
   closestCenter,
+  DndContext,
   PointerSensor,
-  KeyboardSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
   arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
 // Our project's components and types
-import { TaskItem } from './task-item';
-import { CreateTaskForm } from './create-task-form';
-import { TaskListSkeleton } from './task-list-skeleton';
-import { TaskStats } from './task-stats';
 import { PaceIndicatorChart } from '@/components/shared/pace-indicator-chart';
 import { TaskSelectionModal } from '@/components/timer/task-selection-modal'; // <-- IMPORT THE MODAL
 import { calculatePaceData } from '@/lib/pace-helpers';
 import { type GoalWithSessions, type TaskWithTime } from '@/lib/types';
+import { CreateTaskForm } from './create-task-form';
+import { TaskItem } from './task-item';
+import { TaskListSkeleton } from './task-list-skeleton';
+import { TaskStats } from './task-stats';
 
 // --- Type Definition & API Functions ---
 interface TaskListProps {

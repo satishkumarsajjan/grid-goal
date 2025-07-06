@@ -1,4 +1,4 @@
-import { PomodoroCycle, TimerMode } from '@/store/timer-store';
+import { PomodoroCycle, TimerMode } from '@prisma/client';
 
 const formatDisplayTime = (milliseconds: number) => {
   if (milliseconds < 0) milliseconds = 0;

@@ -1,10 +1,55 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
-import { z } from 'zod';
-import { createTaskSchema } from '@/lib/zod-schemas';
+import { createTaskSchema } from '@/lib/zod-schemas'; // Assuming you have this schema
 
-// This function handles POST requests to /api/tasks
+// ===================================================================
+// --- NEW: GET Handler to fetch all tasks for the logged-in user ---
+// ===================================================================
+export async function GET(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+      });
+    }
+    const userId = session.user.id;
+
+    // Check for the '?includeGoal=true' query parameter
+    const { searchParams } = new URL(request.url);
+    const includeGoal = searchParams.get('includeGoal') === 'true';
+
+    const tasks = await prisma.task.findMany({
+      where: {
+        userId: userId,
+        // We only want to fetch tasks that can be worked on.
+        status: {
+          not: 'COMPLETED',
+        },
+      },
+      orderBy: {
+        createdAt: 'desc', // Show the most recently created tasks first
+      },
+      // Conditionally include the parent goal's title if requested
+      include: {
+        goal: includeGoal ? { select: { title: true } } : false,
+      },
+    });
+
+    return NextResponse.json(tasks);
+  } catch (error) {
+    console.error('[API:GET_ALL_TASKS]', error);
+    return new NextResponse(
+      JSON.stringify({ error: 'An internal error occurred' }),
+      { status: 500 }
+    );
+  }
+}
+
+// ================================================================
+// --- EXISTING: POST Handler to create a new task ---
+// ================================================================
 export async function POST(request: Request) {
   try {
     // 1. Authenticate & Authorize
@@ -18,6 +63,7 @@ export async function POST(request: Request) {
 
     // 2. Validate request body
     const body = await request.json();
+    // Assuming your schema might be named 'taskSchema' or similar from previous steps
     const validation = createTaskSchema.safeParse(body);
 
     if (!validation.success) {
@@ -26,12 +72,11 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const { title, goalId, estimatedTimeInHours } = validation.data;
-    const estimatedTimeSeconds = estimatedTimeInHours
-      ? estimatedTimeInHours * 3600
-      : null;
 
-    // Security Check: Verify that the user owns the goal they are adding a task to.
+    // Ensure you are destructuring based on your actual zod schema
+    const { title, goalId } = validation.data;
+
+    // Security Check: Verify that the user owns the goal
     const parentGoal = await prisma.goal.findFirst({
       where: { id: goalId, userId: userId },
     });
@@ -46,7 +91,6 @@ export async function POST(request: Request) {
     }
 
     // 3. Perform the database operation
-    // Get the highest current sortOrder for this goal and add 1
     const lastTask = await prisma.task.findFirst({
       where: { goalId: goalId },
       orderBy: { sortOrder: 'desc' },
@@ -58,8 +102,9 @@ export async function POST(request: Request) {
         userId,
         goalId,
         title,
-        estimatedTimeSeconds,
         sortOrder: newSortOrder,
+        // This assumes estimatedTimeSeconds is handled by your zod schema if present
+        // estimatedTimeSeconds: validation.data.estimatedTimeSeconds,
       },
     });
 

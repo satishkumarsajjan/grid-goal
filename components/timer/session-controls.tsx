@@ -25,18 +25,18 @@ export function SessionControls({ onFinish }: SessionControlsProps) {
     isActive,
     pauseSession,
     resumeSession,
-    reset: discardSession, // We will use the 'reset' action to discard
+    reset: discardSession, // We alias the 'reset' action to 'discardSession' for clarity
   } = useTimerStore();
 
   return (
     <div className='flex items-center justify-center gap-4'>
-      {/* DISCARD BUTTON */}
+      {/* DISCARD BUTTON with confirmation dialog */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button
-            variant='destructive'
+            variant='outline'
             size='lg'
-            className='w-28 h-14 rounded-full'
+            className='w-28 h-14 rounded-full border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive'
             aria-label='Discard Session'
           >
             <X className='h-6 w-6' />
@@ -52,7 +52,10 @@ export function SessionControls({ onFinish }: SessionControlsProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Focusing</AlertDialogCancel>
-            <AlertDialogAction onClick={discardSession}>
+            <AlertDialogAction
+              onClick={discardSession}
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+            >
               Yes, Discard It
             </AlertDialogAction>
           </AlertDialogFooter>

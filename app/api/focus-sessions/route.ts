@@ -96,7 +96,6 @@ export async function POST(request: Request) {
           data: { status: TaskStatus.IN_PROGRESS },
         });
       }
-
       return [createdSession];
     });
 
