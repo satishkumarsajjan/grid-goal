@@ -8,13 +8,14 @@ import { isToday } from 'date-fns';
 import { CalendarCheck2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '../ui/skeleton';
+import { DailyQueueItemWithTaskAndGoal } from '@/lib/types';
+import { StatusIcon } from '@/lib/status-icon';
 
 // Combine the types for easier use
-type QueueItemWithTask = DailyQueueItem & { task: Task };
 
 // --- API Functions ---
-const fetchQueue = async (): Promise<QueueItemWithTask[]> => {
-  const { data } = await axios.get('/api/daily-queue');
+const fetchQueue = async (): Promise<DailyQueueItemWithTaskAndGoal[]> => {
+  const { data } = await axios.get('/api/daily-queue?includeGoal=true');
   return data;
 };
 const removeItem = async (itemId: string) =>
@@ -30,7 +31,7 @@ export function DailyFocusQueue() {
     data: items,
     isLoading,
     isError,
-  } = useQuery<QueueItemWithTask[]>({
+  } = useQuery<DailyQueueItemWithTaskAndGoal[]>({
     queryKey: ['dailyQueue'],
     queryFn: fetchQueue,
   });
@@ -107,20 +108,41 @@ export function DailyFocusQueue() {
 
     // --- The Standard Queue List UI ---
     return (
-      <ul className='space-y-2'>
+      <ul className='space-y-1.5'>
+        {' '}
+        {/* Slightly reduced gap for a tighter list */}
         {items.map((item) => (
           <li
             key={item.id}
-            className='flex items-center gap-2 group p-2 rounded-md hover:bg-accent/50'
+            // Added focus-within to the group for keyboard accessibility
+            // Added smooth transitions for background color
+            className='group flex items-center gap-3 rounded-lg p-3 transition-colors duration-150 hover:bg-accent'
           >
-            <span className='flex-1 text-sm font-medium truncate'>
-              {item.task.title}
-            </span>
+            {/* The StatusIcon is now outside the text block for better alignment control */}
+            {StatusIcon({ status: item.task.status })}
+
+            <div className='flex-1 min-w-0'>
+              <p className='text-sm font-medium text-foreground truncate'>
+                {item.task.title}
+              </p>
+              {item.task.goal && (
+                // Added a subtle top margin for better separation
+                <p className='text-xs text-muted-foreground truncate pt-0.5'>
+                  {item.task.goal.title}
+                </p>
+              )}
+            </div>
+
             <Button
               variant='ghost'
               size='icon'
-              className='h-6 w-6 rounded-full opacity-0 group-hover:opacity-100'
+              // Increased size for easier clicking (better Fitts's Law)
+              // Added smooth transitions for opacity and transform
+              // The button will now also show when the list item is focused via keyboard
+              className='h-7 w-7 shrink-0 rounded-full opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100'
               onClick={() => removeItemMutation.mutate(item.id)}
+              // CRITICAL: Added aria-label for accessibility
+              aria-label={`Remove "${item.task.title}" from queue`}
             >
               <X className='h-4 w-4' />
             </Button>

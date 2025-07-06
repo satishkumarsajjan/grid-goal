@@ -28,26 +28,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
+import { StatusIcon } from '@/lib/status-icon';
 
 // --- Helper Component for Status Icon (Unchanged) ---
-function StatusIcon({ status }: { status: TaskStatus }) {
-  switch (status) {
-    case TaskStatus.COMPLETED:
-      return <CheckCircle2 className='h-5 w-5 text-green-500' />;
-    case TaskStatus.IN_PROGRESS:
-      return (
-        <Loader
-          className='h-5 w-5 text-blue-500 animate-spin'
-          style={{ animationDuration: '2s' }}
-        />
-      );
-    case TaskStatus.PENDING:
-    default:
-      return (
-        <Circle className='h-5 w-5 text-muted-foreground transition-colors' />
-      );
-  }
-}
 
 // --- Type Definitions & API Functions ---
 interface UpdateTaskPayload {
