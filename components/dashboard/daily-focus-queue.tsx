@@ -131,7 +131,7 @@ export function DailyFocusQueue() {
   };
 
   return (
-    <div className='p-4 border rounded-lg bg-card'>
+    <div className='p-4 border rounded-lg bg-card h-full'>
       <h3 className='text-lg font-bold mb-4'>Today's Focus</h3>
       {renderContent()}
     </div>

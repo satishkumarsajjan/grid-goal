@@ -1,3 +1,5 @@
+// components/dashboard/activity-grid.tsx
+
 'use client';
 
 import useDeviceDetect from '@/lib/hooks/use-hover-support';
@@ -10,33 +12,29 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
+import { GridCellData, ProcessedGridData } from '@/lib/grid-helpers';
 
-type GridCellData = {
-  date: string;
-  totalSeconds: number;
-  level: 0 | 1 | 2 | 3 | 4;
-};
-type MonthData = {
-  year: number;
-  month: number;
-  monthName: string;
-  days: (GridCellData | null)[];
-};
+// Props now reflect the new data structure
+interface ActivityGridProps extends ProcessedGridData {}
 
-interface ActivityGridProps {
-  totalHours: number;
-  processedMonths: MonthData[];
-}
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const getColorClass = (level: 0 | 1 | 2 | 3 | 4): string => {
-  const colors = [
-    'bg-gray-200 dark:bg-gray-800',
-    'bg-green-500/40',
-    'bg-green-500/60',
-    'bg-green-500/80',
-    'bg-green-500',
-  ];
-  return colors[level];
+// --- Helper Functions & Sub-components ---
+
+const getColorClass = (level: GridCellData['level']): string => {
+  switch (level) {
+    case 1:
+      return 'bg-green-500/40';
+    case 2:
+      return 'bg-green-500/60';
+    case 3:
+      return 'bg-green-500/80';
+    case 4:
+      return 'bg-green-500';
+    case 0:
+    default:
+      return 'bg-muted';
+  }
 };
 
 const formatFocusTime = (totalSeconds: number): string => {
@@ -50,125 +48,146 @@ const formatFocusTime = (totalSeconds: number): string => {
   return parts.join(' ');
 };
 
+const Cell = React.memo(function Cell({
+  cell,
+  isTouch,
+}: {
+  cell: GridCellData;
+  isTouch: boolean;
+}) {
+  // A padding cell, render an empty div
+  if (cell.totalSeconds === -1) {
+    return <div className='size-3.5' />;
+  }
+
+  const { date, totalSeconds, level } = cell;
+  const formattedDate = new Date(date).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC', // Ensure UTC for consistency
+  });
+
+  const timeText = formatFocusTime(totalSeconds);
+  const tooltipText =
+    level === 0
+      ? `No activity on ${formattedDate}`
+      : `${timeText} of focus on ${formattedDate}`;
+
+  const cellElement = (
+    <div
+      className={cn(
+        'size-3.5 rounded-[3px] transition-transform duration-150 ease-in-out hover:scale-125',
+        getColorClass(level)
+      )}
+      // For a11y, provides a label for screen readers
+      aria-label={tooltipText}
+    />
+  );
+
+  if (isTouch) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>{cellElement}</PopoverTrigger>
+        <PopoverContent className='w-auto p-2'>
+          <p className='text-sm'>{tooltipText}</p>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{cellElement}</TooltipTrigger>
+      <TooltipContent>
+        <p>{tooltipText}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+});
+
+// --- Main Component ---
+
 export function ActivityGrid({
   totalHours,
-  processedMonths,
+  gridData,
+  monthBoundaries,
 }: ActivityGridProps) {
-  const containerRef = React.useRef<HTMLDivElement>(null);
   const { isTouch } = useDeviceDetect();
 
-  if (!processedMonths.length)
+  if (!gridData || gridData.length === 0) {
     return (
       <div className='text-center p-8 bg-card rounded-lg border'>
         No activity to display yet. Start a focus session!
       </div>
     );
+  }
+
+  // Calculate the total number of columns for the CSS grid layout
+  const totalColumns = Math.ceil(gridData.length / 7);
 
   return (
-    <div className='flex flex-col items-center p-4 sm:p-6 bg-card/15 backdrop-blur-sm rounded-lg border w-full  mx-auto'>
-      <div className='w-full text-left mb-4 px-2'>
+    <div className='flex flex-col p-4 sm:p-6 bg-card rounded-lg border w-full mx-auto'>
+      <div className='w-full text-left mb-4'>
         <h2 className='text-base font-semibold text-card-foreground'>
           {totalHours.toLocaleString()} hours dedicated in the last year
         </h2>
       </div>
-      <div className='w-full flex'>
-        <div className='hidden pr-4 xl:flex flex-col text-xs text-muted-foreground justify-end'>
-          <span>Sun</span>
-          <span>Mon</span>
-          <span>Tue</span>
-          <span>Wed</span>
-          <span>Thu</span>
-          <span>Fri</span>
-          <span>Sat</span>
-        </div>
-        <div
-          ref={containerRef}
-          className={cn(
-            'grid flex-1 gap-x-3 gap-y-5',
-            'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12'
-          )}
-        >
-          {processedMonths.map(({ monthName, days }, monthIndex) => (
-            <div key={monthName + monthIndex}>
-              <div className='text-xs text-muted-foreground h-7 flex items-center justify-center pb-1'>
-                {monthName}
-              </div>
-              <div className='grid grid-rows-7 grid-flow-col gap-1'>
-                {days.map((cell, dayIndex) => {
-                  if (!cell) {
-                    return <div key={`pad-${dayIndex}`} className='size-3' />;
-                  }
 
-                  const { date, totalSeconds, level } = cell;
-                  const formattedDate = new Date(date).toLocaleDateString(
-                    'en-US',
-                    {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      timeZone: 'UTC',
-                    }
-                  );
-                  const timeText = formatFocusTime(totalSeconds);
-                  const tooltipText =
-                    timeText === 'No activity'
-                      ? `${timeText} on ${formattedDate}`
-                      : `${timeText} of focus on ${formattedDate}`;
+      {/* Use a single TooltipProvider for performance */}
+      <TooltipProvider delayDuration={150}>
+        <div className='relative flex  overflow-x-auto pb-4'>
+          {/* Day Labels (Left Gutter) */}
 
-                  const cellElement = (
-                    <div
-                      className={cn(
-                        'size-3 rounded-[3px] cursor-pointer hover:border-2 border-foreground',
-                        getColorClass(level)
-                      )}
-                    />
-                  );
-
-                  return (
-                    <div key={date}>
-                      {!isTouch ? (
-                        <TooltipProvider key={date} delayDuration={150}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              {cellElement}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{tooltipText}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <Popover key={date}>
-                          <PopoverTrigger asChild>{cellElement}</PopoverTrigger>
-                          <PopoverContent>
-                            <p className='text-sm'>{tooltipText}</p>
-                          </PopoverContent>
-                        </Popover>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+          <div className='relative'>
+            {/* Month Labels (Top) */}
+            <div
+              className='grid h-6'
+              style={{
+                gridTemplateColumns: `repeat(${totalColumns}, minmax(0, 1fr))`,
+              }}
+            >
+              {monthBoundaries.map(({ name, columnStart }) => (
+                <div
+                  key={name + columnStart}
+                  className='text-xs text-muted-foreground'
+                  style={{ gridColumnStart: columnStart }}
+                >
+                  {name}
+                </div>
+              ))}
             </div>
-          ))}
+
+            {/* The Activity Grid */}
+            <div
+              className='grid grid-flow-col grid-rows-7 gap-1'
+              style={{ gridTemplateColumns: `repeat(${totalColumns}, 14px)` }}
+            >
+              {gridData.map((cell, index) => (
+                <Cell
+                  key={cell.date || `pad-${index}`}
+                  cell={cell}
+                  isTouch={isTouch}
+                />
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-      <div className='w-full flex items-center justify-between mt-4'>
-        <p className='flex items-center justify-center text-center text-xs text-muted-foreground'>
-          {!isTouch
-            ? `Hover on the cells for details`
-            : 'Touch the cells for details'}
-        </p>
-        <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+      </TooltipProvider>
+
+      {/* Legend */}
+      <div className='w-full flex items-center justify-between mt-4 text-xs text-muted-foreground'>
+        <p>{isTouch ? 'Tap a cell for details' : 'Hover a cell for details'}</p>
+        <div className='flex items-center gap-2'>
           <span>Less</span>
           <div className='flex gap-1'>
             {[0, 1, 2, 3, 4].map((level) => (
               <div
                 key={level}
                 className={cn(
-                  'size-3 rounded-xs',
-                  getColorClass(level as 0 | 1 | 2 | 3 | 4)
+                  'size-3 rounded-sm',
+                  getColorClass(level as GridCellData['level'])
                 )}
               />
             ))}

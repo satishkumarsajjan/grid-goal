@@ -47,7 +47,7 @@ export default async function DashboardPage() {
   // --- Data Processing ---
   const streakData = calculateStreak(sessions, pausePeriods);
   const totalFocusTodayInSeconds = calculateTodayFocus(sessions);
-  const { totalHours, processedMonths } = processSessionsForGrid(sessions);
+  const gridProps = processSessionsForGrid(sessions);
 
   // --- NEW: Logic to decide if the Weekly Reset prompt should be shown ---
   const lastReset = user.lastResetAt;
@@ -72,22 +72,18 @@ export default async function DashboardPage() {
       {/* This component is rendered conditionally based on our server-side logic */}
       <WeeklyResetPrompt shouldShow={shouldShowResetPrompt} />
 
-      {/* --- Main Content Layout (Grid + Queue) --- */}
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
+      <div className='grid grid-cols-1 lg:grid-cols-3 gap-8 h-full'>
         {/* Left Column */}
         <div className='lg:col-span-2 space-y-8'>
           <StatsCards
             streakData={streakData}
             totalFocusTodayInSeconds={totalFocusTodayInSeconds}
           />
-          <ActivityGrid
-            totalHours={totalHours}
-            processedMonths={processedMonths}
-          />
+          <ActivityGrid {...gridProps} />
         </div>
 
         {/* Right Column */}
-        <div className='lg:col-span-1'>
+        <div className='lg:col-span-1 h-full'>
           <DailyFocusQueue />
         </div>
       </div>
