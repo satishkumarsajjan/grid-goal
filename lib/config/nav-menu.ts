@@ -11,18 +11,8 @@ export interface NavItem {
 // This is the definitive list of main navigation links for the app.
 export const mainNav: NavItem[] = [
   {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
     title: 'Goals',
     href: '/goals',
     icon: Target,
-  },
-  {
-    title: 'Settings',
-    href: '/settings',
-    icon: Settings,
   },
 ];

@@ -17,6 +17,8 @@ import { type User } from 'next-auth';
 
 import { mainNav } from '@/lib/config/nav-menu';
 import GridGoalLogo from '../landing-page/grid-goal-logo';
+import { LayoutDashboardIcon, Settings } from 'lucide-react';
+import { Separator } from '../ui/separator';
 
 interface AppSidebarProps {
   user: User;
@@ -33,6 +35,20 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
       <SidebarContent>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              variant={
+                pathname.startsWith('/dashboard') ? 'outline' : 'default'
+              }
+            >
+              <Link href={'/dashboard'}>
+                <LayoutDashboardIcon className='h-4 w-4' />
+                <span>Dashboard</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <Separator className='my-2' />
           {mainNav.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -56,7 +72,15 @@ export function AppSidebar({ user }: AppSidebarProps) {
       </SidebarContent>
 
       <SidebarFooter>
-        {/* The UserButton will show the user's avatar and name */}
+        <SidebarMenuButton
+          asChild
+          variant={pathname.startsWith('/settings') ? 'outline' : 'default'}
+        >
+          <Link href={'/settings'}>
+            <Settings className='h-4 w-4' />
+            <span>Settings</span>
+          </Link>
+        </SidebarMenuButton>
         <UserButton user={user} />
       </SidebarFooter>
     </Sidebar>
