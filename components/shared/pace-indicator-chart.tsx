@@ -1,117 +1,110 @@
 'use client';
 
+import { TrendingUp } from 'lucide-react';
+import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
+
 import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
 
-// Type for the data points our chart component receives.
-interface PaceDataPoint {
-  date: string;
-  ideal: number | null;
-  actual: number | null;
-}
+export const description = 'An area chart with a legend';
 
-interface PaceIndicatorChartProps {
-  data: PaceDataPoint[];
-}
+const chartData = [
+  { month: 'January', desktop: 186, mobile: 80 },
+  { month: 'February', desktop: 305, mobile: 200 },
+  { month: 'March', desktop: 237, mobile: 120 },
+  { month: 'April', desktop: 73, mobile: 190 },
+  { month: 'May', desktop: 209, mobile: 130 },
+  { month: 'June', desktop: 214, mobile: 140 },
+];
 
-export function PaceIndicatorChart({ data }: PaceIndicatorChartProps) {
+const chartConfig = {
+  desktop: {
+    label: 'Desktop',
+    color: 'var(--chart-1)',
+  },
+  mobile: {
+    label: 'Mobile',
+    color: 'var(--chart-2)',
+  },
+} satisfies ChartConfig;
+
+export function ChartAreaLegend() {
   return (
-    <div className='h-24 w-full -ml-4'>
-      {' '}
-      {/* Negative margin to align with grid */}
-      <ResponsiveContainer width='100%' height='100%'>
-        <AreaChart
-          data={data}
-          margin={{ top: 5, right: 20, left: 10, bottom: 0 }}
-        >
-          <defs>
-            <linearGradient id='colorActual' x1='0' y1='0' x2='0' y2='1'>
-              <stop
-                offset='5%'
-                stopColor='hsl(var(--primary))'
-                stopOpacity={0.4}
-              />
-              <stop
-                offset='95%'
-                stopColor='hsl(var(--primary))'
-                stopOpacity={0}
-              />
-            </linearGradient>
-            <linearGradient id='colorIdeal' x1='0' y1='0' x2='0' y2='1'>
-              <stop
-                offset='5%'
-                stopColor='hsl(var(--muted-foreground))'
-                stopOpacity={0.2}
-              />
-              <stop
-                offset='95%'
-                stopColor='hsl(var(--muted-foreground))'
-                stopOpacity={0}
-              />
-            </linearGradient>
-          </defs>
-          <CartesianGrid
-            strokeDasharray='3 3'
-            stroke='hsl(var(--border))'
-            strokeOpacity={0.5}
-          />
-          <XAxis
-            dataKey='date'
-            tick={{ fontSize: 10 }}
-            tickLine={false}
-            axisLine={false}
-            hide
-          />
-          <YAxis
-            tick={{ fontSize: 10 }}
-            tickLine={false}
-            axisLine={false}
-            domain={['dataMin', 'dataMax']}
-          />
-          <Tooltip
-            contentStyle={{
-              background: 'hsl(var(--popover))',
-              borderColor: 'hsl(var(--border))',
-              color: 'hsl(var(--popover-foreground))',
-              fontSize: '12px',
-              borderRadius: '0.5rem',
+    <Card>
+      <CardHeader>
+        <CardTitle>Area Chart - Legend</CardTitle>
+        <CardDescription>
+          Showing total visitors for the last 6 months
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ChartContainer config={chartConfig}>
+          <AreaChart
+            accessibilityLayer
+            data={chartData}
+            margin={{
+              left: 12,
+              right: 12,
             }}
-            labelFormatter={(label) =>
-              new Date(label).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })
-            }
-            formatter={(value: number, name: string) => [
-              `${value.toFixed(1)}h`,
-              name.charAt(0).toUpperCase() + name.slice(1),
-            ]}
-          />
-          <Area
-            type='monotone'
-            dataKey='ideal'
-            stroke='hsl(var(--muted-foreground))'
-            fill='url(#colorIdeal)'
-            strokeWidth={2}
-            dot={false}
-          />
-          <Area
-            type='monotone'
-            dataKey='actual'
-            stroke='hsl(var(--primary))'
-            fill='url(#colorActual)'
-            strokeWidth={2}
-            dot={false}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
+          >
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey='month'
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(value) => value.slice(0, 3)}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator='line' />}
+            />
+            <Area
+              dataKey='mobile'
+              type='natural'
+              fill='var(--color-mobile)'
+              fillOpacity={0.4}
+              stroke='var(--color-mobile)'
+              stackId='a'
+            />
+            <Area
+              dataKey='desktop'
+              type='natural'
+              fill='var(--color-desktop)'
+              fillOpacity={0.4}
+              stroke='var(--color-desktop)'
+              stackId='a'
+            />
+            <ChartLegend content={<ChartLegendContent payload={'satish'} />} />
+          </AreaChart>
+        </ChartContainer>
+      </CardContent>
+      <CardFooter>
+        <div className='flex w-full items-start gap-2 text-sm'>
+          <div className='grid gap-2'>
+            <div className='flex items-center gap-2 leading-none font-medium'>
+              Trending up by 5.2% this month <TrendingUp className='h-4 w-4' />
+            </div>
+            <div className='text-muted-foreground flex items-center gap-2 leading-none'>
+              January - June 2024
+            </div>
+          </div>
+        </div>
+      </CardFooter>
+    </Card>
   );
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth'; // Your NextAuth session handler
+import { auth } from '@/auth';
 import { prisma } from '@/prisma';
 import { createGoalSchema } from '@/lib/zod-schemas';
 
@@ -33,10 +33,8 @@ export async function GET(request: Request) {
   }
 }
 
-// This function handles POST requests to /api/goals
 export async function POST(request: Request) {
   try {
-    // 1. Authenticate the user
     const session = await auth();
     if (!session?.user?.id) {
       return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
@@ -45,7 +43,6 @@ export async function POST(request: Request) {
     }
     const userId = session.user.id;
 
-    // 2. Parse and validate the request body
     const body = await request.json();
     const validation = createGoalSchema.safeParse(body);
 
@@ -55,7 +52,10 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const { title, description, parentId, deadline } = validation.data;
+
+    const { title, description, parentId, deadline, estimatedTimeSeconds } =
+      validation.data;
+
     if (parentId) {
       const parentGoal = await prisma.goal.findFirst({
         where: { id: parentId, userId: userId },
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
         );
       }
     }
-    // 3. Perform the database operation
+
     const newGoal = await prisma.goal.create({
       data: {
         userId,
@@ -75,11 +75,12 @@ export async function POST(request: Request) {
         description,
         parentId,
         deadline,
+
+        estimatedTimeSeconds,
       },
     });
 
-    // 4. Return a successful response
-    return NextResponse.json(newGoal, { status: 201 }); // 201 Created
+    return NextResponse.json(newGoal, { status: 201 });
   } catch (error) {
     console.error('[API:CREATE_GOAL]', error);
     return new NextResponse(

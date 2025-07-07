@@ -1,3 +1,5 @@
+// src/components/goals/CreateGoalForm.tsx
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -7,11 +9,13 @@ import axios from 'axios';
 import { z } from 'zod';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -26,29 +30,55 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { createGoalSchema } from '@/lib/zod-schemas'; // Import our updated schema
-import { toast } from 'sonner';
 
-type GoalFormValues = z.infer<typeof createGoalSchema>;
+// Form-specific schema for user-friendly inputs (hours/minutes)
+const goalFormSchema = z.object({
+  title: z.string().min(1, 'Title is required.').max(100),
+  description: z.string().max(500).optional(),
+  deadline: z.date().optional(),
+  estimatedHours: z.coerce.number().int().min(0).optional(),
+  estimatedMinutes: z.coerce.number().int().min(0).max(59).optional(),
+});
 
-const createGoal = async (values: GoalFormValues) => {
-  const { data } = await axios.post('/api/goals', values);
+type GoalFormValues = z.infer<typeof goalFormSchema>;
+
+// The mutation function now handles the transformation from form values to API payload
+const createGoal = async (values: GoalFormValues & { parentId?: string }) => {
+  // Transform hours and minutes into total seconds
+  const estimatedTimeSeconds =
+    (values.estimatedHours || 0) * 3600 + (values.estimatedMinutes || 0) * 60;
+
+  // Build the object that our backend API expects
+  const apiPayload = {
+    title: values.title,
+    description: values.description,
+    deadline: values.deadline,
+    parentId: values.parentId,
+    // If the estimate is 0, send `undefined` so Prisma saves it as `null`.
+    // Otherwise, send the calculated number.
+    estimatedTimeSeconds:
+      estimatedTimeSeconds > 0 ? estimatedTimeSeconds : undefined,
+  };
+
+  const { data } = await axios.post('/api/goals', apiPayload);
   return data;
 };
 
 interface CreateGoalFormProps {
   parentId?: string | null;
-  onFinished: () => void; // A function to close the dialog on success
+  onFinished: () => void; // Function to close the dialog/modal on success
 }
 
 export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
   const queryClient = useQueryClient();
   const form = useForm<GoalFormValues>({
-    resolver: zodResolver(createGoalSchema),
+    resolver: zodResolver(goalFormSchema),
     defaultValues: {
       title: '',
       description: '',
       deadline: undefined,
+      estimatedHours: undefined,
+      estimatedMinutes: undefined,
     },
   });
 
@@ -57,9 +87,10 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
     onSuccess: () => {
       toast.success('Goal successfully created!');
       queryClient.invalidateQueries({ queryKey: ['goals'] });
-      onFinished(); // Close the dialog
+      onFinished();
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Failed to create goal:', error);
       toast.error('Failed to create goal. Please try again.');
     },
   });
@@ -102,7 +133,53 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
           )}
         />
 
-        {/* --- NEW DATE PICKER FIELD --- */}
+        {/* Time Estimate Input Section */}
+        <div>
+          <FormLabel>Time Estimate (Optional)</FormLabel>
+          <div className='flex items-center gap-2 pt-2'>
+            <FormField
+              control={form.control}
+              name='estimatedHours'
+              render={({ field }) => (
+                <FormItem className='flex-1'>
+                  <FormControl>
+                    <Input
+                      type='number'
+                      placeholder='Hours'
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='estimatedMinutes'
+              render={({ field }) => (
+                <FormItem className='flex-1'>
+                  <FormControl>
+                    <Input
+                      type='number'
+                      placeholder='Minutes'
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+          <FormMessage>
+            {form.formState.errors.estimatedHours?.message ||
+              form.formState.errors.estimatedMinutes?.message}
+          </FormMessage>
+          <FormDescription className='pt-2 text-xs'>
+            How long do you estimate this goal will take to complete?
+          </FormDescription>
+        </div>
+
+        {/* Deadline Picker Field */}
         <FormField
           control={form.control}
           name='deadline'
@@ -134,9 +211,9 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
                     selected={field.value}
                     onSelect={field.onChange}
                     disabled={(date) =>
-                      date < new Date() || date < new Date('1900-01-01')
+                      date < new Date(new Date().setHours(0, 0, 0, 0))
                     }
-                    autoFocus
+                    initialFocus
                   />
                 </PopoverContent>
               </Popover>

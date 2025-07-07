@@ -98,7 +98,6 @@ export function CreateTaskForm({ goalId }: CreateTaskFormProps) {
                     disabled={mutation.isPending}
                     step='0.1'
                     {...field}
-                    // Ensure empty string is treated as undefined, not 0
                     onChange={(e) =>
                       field.onChange(
                         e.target.value === '' ? undefined : e.target.value

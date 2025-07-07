@@ -1,10 +1,27 @@
 import { z } from 'zod';
 
 export const createGoalSchema = z.object({
-  title: z.string().min(1, 'Goal title cannot be empty.').max(255),
-  description: z.string().max(1000).optional(),
-  parentId: z.string().optional(),
+  title: z
+    .string()
+    .min(1, { message: 'Title is required.' })
+    .max(100, { message: 'Title must be 100 characters or less.' }),
+
+  description: z
+    .string()
+    .max(500, { message: 'Description must be 500 characters or less.' })
+    .optional(),
+
+  parentId: z
+    .string()
+    .cuid({ message: 'Invalid parent ID format.' })
+    .optional(),
+
+  // Use z.coerce.date() to safely handle date strings from JSON
   deadline: z.coerce.date().optional(),
+
+  // This is the crucial field for backend validation.
+  // It ensures that if the frontend sends the estimate, it's a valid number.
+  estimatedTimeSeconds: z.number().int().positive().optional(),
 });
 
 export const createTaskSchema = z.object({

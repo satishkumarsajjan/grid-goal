@@ -6,7 +6,6 @@ import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-// DND-Kit imports
 import {
   closestCenter,
   DndContext,
@@ -21,8 +20,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
-// Our project's components and types
-import { PaceIndicatorChart } from '@/components/shared/pace-indicator-chart';
+import { ChartAreaLegend } from '@/components/shared/pace-indicator-chart';
 import { TaskSelectionModal } from '@/components/timer/task-selection-modal'; // <-- IMPORT THE MODAL
 import { calculatePaceData } from '@/lib/pace-helpers';
 import { type GoalWithSessions, type TaskWithTime } from '@/lib/types';
@@ -31,12 +29,10 @@ import { TaskItem } from './task-item';
 import { TaskListSkeleton } from './task-list-skeleton';
 import { TaskStats } from './task-stats';
 
-// --- Type Definition & API Functions ---
 interface TaskListProps {
   goalId: string | null;
 }
 
-// A single, unified fetcher for all data related to the task list view.
 const fetchTaskListData = async (
   goalId: string
 ): Promise<{ goal: GoalWithSessions; tasks: TaskWithTime[] }> => {
@@ -52,18 +48,15 @@ const updateTaskOrder = async (tasks: { id: string; sortOrder: number }[]) => {
   return data;
 };
 
-// --- Main Component ---
 export function TaskList({ goalId }: TaskListProps) {
   const queryClient = useQueryClient();
   const [orderedTasks, setOrderedTasks] = useState<TaskWithTime[]>([]);
 
-  // --- NEW: State management for the session modal ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskForSession, setTaskForSession] = useState<TaskWithTime | null>(
     null
   );
 
-  // A single useQuery hook to manage all data for this component.
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['taskListData', goalId],
     queryFn: () => fetchTaskListData(goalId!),
@@ -79,7 +72,6 @@ export function TaskList({ goalId }: TaskListProps) {
     }
   }, [fetchedTasks]);
 
-  // All useMemo hooks for calculations remain the same.
   const taskStats = useMemo(() => {
     if (!fetchedTasks)
       return { total: 0, completed: 0, inProgress: 0, pending: 0 };
@@ -101,12 +93,12 @@ export function TaskList({ goalId }: TaskListProps) {
       goal.estimatedTimeSeconds &&
       goal.estimatedTimeSeconds > 0
     ) {
+      console.log(calculatePaceData(goal, goal.focusSessions));
       return calculatePaceData(goal, goal.focusSessions);
     }
     return null;
   }, [goal]);
 
-  // The mutation and drag-and-drop logic remain unchanged.
   const orderMutation = useMutation({
     mutationFn: updateTaskOrder,
     onSuccess: () =>
@@ -121,7 +113,6 @@ export function TaskList({ goalId }: TaskListProps) {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  // --- NEW: Handler to open the modal, passed to each TaskItem ---
   const handleStartSessionRequest = (task: TaskWithTime) => {
     setTaskForSession(task);
     setIsModalOpen(true);
@@ -141,8 +132,6 @@ export function TaskList({ goalId }: TaskListProps) {
       orderMutation.mutate(tasksToUpdate);
     }
   };
-
-  // --- Render Logic ---
 
   if (!goalId) {
     return (
@@ -172,10 +161,8 @@ export function TaskList({ goalId }: TaskListProps) {
   }
 
   return (
-    // We use a React Fragment to render the list and the modal as siblings.
     <>
       <div className='flex h-full flex-col rounded-lg'>
-        {/* Header Section */}
         <div className='p-4'>
           <h1 className='text-2xl font-bold'>{goal.title}</h1>
           {goal.description && (
@@ -188,7 +175,7 @@ export function TaskList({ goalId }: TaskListProps) {
               <h3 className='text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wider'>
                 Pace
               </h3>
-              <PaceIndicatorChart data={paceData} />
+              <ChartAreaLegend />
             </div>
           )}
           <div className='mt-4'>
@@ -196,7 +183,6 @@ export function TaskList({ goalId }: TaskListProps) {
           </div>
         </div>
 
-        {/* Task List Section */}
         <div className='flex-1 overflow-y-auto overflow-x-clip p-2'>
           <DndContext
             sensors={sensors}
@@ -212,7 +198,6 @@ export function TaskList({ goalId }: TaskListProps) {
                   <TaskItem
                     key={task.id}
                     task={task}
-                    // Pass the handler down to each item
                     onStartSession={handleStartSessionRequest}
                   />
                 ))
@@ -228,13 +213,11 @@ export function TaskList({ goalId }: TaskListProps) {
           </DndContext>
         </div>
 
-        {/* Footer Section */}
         <div className='p-4 border-t bg-background/50 sticky bottom-0'>
           <CreateTaskForm goalId={goal.id} />
         </div>
       </div>
 
-      {/* The Modal is rendered here, controlled by this component's state */}
       <TaskSelectionModal
         isOpen={isModalOpen}
         onOpenChange={setIsModalOpen}

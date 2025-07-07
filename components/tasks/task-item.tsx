@@ -52,17 +52,14 @@ const fetchQueue = async (): Promise<DailyQueueItem[]> =>
 const addToQueue = async (taskId: string) =>
   (await axios.post('/api/daily-queue', { taskId })).data;
 
-// --- Component Props ---
 interface TaskItemProps {
   task: TaskWithTime;
-  onStartSession: (task: TaskWithTime) => void; // The new required prop
+  onStartSession: (task: TaskWithTime) => void;
 }
 
-// --- Main Component ---
 export function TaskItem({ task, onStartSession }: TaskItemProps) {
   const queryClient = useQueryClient();
 
-  // State and Refs
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [newTitle, setNewTitle] = useState(task.title);
@@ -74,7 +71,6 @@ export function TaskItem({ task, onStartSession }: TaskItemProps) {
   const titleInputRef = useRef<HTMLInputElement>(null);
   const timeInputRef = useRef<HTMLInputElement>(null);
 
-  // Drag & Drop Hook
   const {
     attributes,
     listeners,
@@ -90,7 +86,6 @@ export function TaskItem({ task, onStartSession }: TaskItemProps) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  // Data Queries & Mutations
   const { data: queueItems } = useQuery<DailyQueueItem[]>({
     queryKey: ['dailyQueue'],
     queryFn: fetchQueue,
@@ -180,7 +175,6 @@ export function TaskItem({ task, onStartSession }: TaskItemProps) {
 
   const accumulatedTimeFormatted = formatTime(task.totalTimeSeconds);
   const estimatedTimeFormatted = formatTime(task.estimatedTimeSeconds);
-  console.log('ESTIMATED:', estimatedTimeFormatted);
 
   return (
     <div
@@ -202,7 +196,6 @@ export function TaskItem({ task, onStartSession }: TaskItemProps) {
         <GripVertical className='h-5 w-5' />
       </div>
 
-      {/* Status Icon Button */}
       <Button
         variant='ghost'
         size='icon'
@@ -214,7 +207,6 @@ export function TaskItem({ task, onStartSession }: TaskItemProps) {
         <StatusIcon status={task.status} />
       </Button>
 
-      {/* Task Title */}
       <div
         className='flex-1'
         onDoubleClick={() => {
@@ -246,7 +238,6 @@ export function TaskItem({ task, onStartSession }: TaskItemProps) {
         )}
       </div>
 
-      {/* Time Info */}
       <div
         className='flex items-center gap-1.5 text-xs font-mono w-24 justify-end'
         onDoubleClick={() => {
@@ -284,7 +275,6 @@ export function TaskItem({ task, onStartSession }: TaskItemProps) {
         )}
       </div>
 
-      {/* Action Buttons */}
       <div className='flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity'>
         {!isCompleted && (
           <TooltipProvider delayDuration={200}>
@@ -319,7 +309,6 @@ export function TaskItem({ task, onStartSession }: TaskItemProps) {
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
-                {/* THIS IS THE KEY CHANGE: onClick now calls the prop from the parent */}
                 <Button
                   variant='ghost'
                   size='icon'
