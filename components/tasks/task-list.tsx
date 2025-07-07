@@ -20,7 +20,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
-import { ChartAreaLegend } from '@/components/shared/pace-indicator-chart';
+import { PaceProgressChart } from '@/components/shared/pace-indicator-chart';
 import { TaskSelectionModal } from '@/components/timer/task-selection-modal'; // <-- IMPORT THE MODAL
 import { calculatePaceData } from '@/lib/pace-helpers';
 import { type GoalWithSessions, type TaskWithTime } from '@/lib/types';
@@ -175,7 +175,7 @@ export function TaskList({ goalId }: TaskListProps) {
               <h3 className='text-xs font-semibold text-muted-foreground mb-1 uppercase tracking-wider'>
                 Pace
               </h3>
-              <ChartAreaLegend />
+              <PaceProgressChart data={paceData} />
             </div>
           )}
           <div className='mt-4'>

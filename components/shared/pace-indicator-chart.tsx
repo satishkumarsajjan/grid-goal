@@ -1,110 +1,151 @@
 'use client';
 
-import { TrendingUp } from 'lucide-react';
-import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import {
   ChartConfig,
   ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
 
-export const description = 'An area chart with a legend';
+interface PaceDataPoint {
+  date: string;
+  targetPace: number;
+  actualPace: number | null;
+}
 
-const chartData = [
-  { month: 'January', desktop: 186, mobile: 80 },
-  { month: 'February', desktop: 305, mobile: 200 },
-  { month: 'March', desktop: 237, mobile: 120 },
-  { month: 'April', desktop: 73, mobile: 190 },
-  { month: 'May', desktop: 209, mobile: 130 },
-  { month: 'June', desktop: 214, mobile: 140 },
-];
+interface PaceProgressChartProps {
+  data: PaceDataPoint[];
+}
 
 const chartConfig = {
-  desktop: {
-    label: 'Desktop',
-    color: 'var(--chart-1)',
-  },
-  mobile: {
-    label: 'Mobile',
+  targetPace: {
+    label: 'Target Pace',
     color: 'var(--chart-2)',
+  },
+  actualPace: {
+    label: 'Actual Pace',
+    color: 'var(--chart-1)',
   },
 } satisfies ChartConfig;
 
-export function ChartAreaLegend() {
+export function PaceProgressChart({ data }: PaceProgressChartProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Area Chart - Legend</CardTitle>
-        <CardDescription>
-          Showing total visitors for the last 6 months
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig}>
-          <AreaChart
-            accessibilityLayer
-            data={chartData}
-            margin={{
-              left: 12,
-              right: 12,
-            }}
-          >
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey='month'
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) => value.slice(0, 3)}
+    <ChartContainer config={chartConfig} className='h-[250px] w-full'>
+      <AreaChart
+        accessibilityLayer
+        data={data}
+        margin={{
+          left: 12,
+          right: 12,
+          top: 10,
+          bottom: 20,
+        }}
+      >
+        <defs>
+          <linearGradient id='fillTargetPace' x1='0' y1='0' x2='0' y2='1'>
+            <stop
+              offset='5%'
+              stopColor='var(--color-targetPace)'
+              stopOpacity={0.4}
             />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator='line' />}
+            <stop
+              offset='95%'
+              stopColor='var(--color-targetPace)'
+              stopOpacity={0.1}
             />
-            <Area
-              dataKey='mobile'
-              type='natural'
-              fill='var(--color-mobile)'
-              fillOpacity={0.4}
-              stroke='var(--color-mobile)'
-              stackId='a'
+          </linearGradient>
+          <linearGradient id='fillActualPace' x1='0' y1='0' x2='0' y2='1'>
+            <stop
+              offset='5%'
+              stopColor='var(--color-actualPace)'
+              stopOpacity={0.8}
             />
-            <Area
-              dataKey='desktop'
-              type='natural'
-              fill='var(--color-desktop)'
-              fillOpacity={0.4}
-              stroke='var(--color-desktop)'
-              stackId='a'
+            <stop
+              offset='95%'
+              stopColor='var(--color-actualPace)'
+              stopOpacity={0.1}
             />
-            <ChartLegend content={<ChartLegendContent payload={'satish'} />} />
-          </AreaChart>
-        </ChartContainer>
-      </CardContent>
-      <CardFooter>
-        <div className='flex w-full items-start gap-2 text-sm'>
-          <div className='grid gap-2'>
-            <div className='flex items-center gap-2 leading-none font-medium'>
-              Trending up by 5.2% this month <TrendingUp className='h-4 w-4' />
-            </div>
-            <div className='text-muted-foreground flex items-center gap-2 leading-none'>
-              January - June 2024
-            </div>
-          </div>
-        </div>
-      </CardFooter>
-    </Card>
+          </linearGradient>
+        </defs>
+
+        <CartesianGrid vertical={false} />
+
+        <XAxis
+          dataKey='date'
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          tickFormatter={(value) => {
+            const date = new Date(value);
+            return date.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            });
+          }}
+          label={{
+            value: 'Goal Timeline',
+            position: 'insideBottom',
+            offset: -15,
+            style: { textAnchor: 'middle' },
+          }}
+        />
+
+        <YAxis
+          // This label is important for context!
+          label={{
+            value: 'Hours Completed',
+            angle: -90,
+            position: 'insideLeft',
+            style: { textAnchor: 'middle' },
+            offset: -5,
+          }}
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          tickFormatter={(value) => `${Math.round(value)}h`}
+        />
+
+        <ChartTooltip
+          cursor
+          content={
+            <ChartTooltipContent
+              labelFormatter={(label) => {
+                return new Date(label).toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                });
+              }}
+              formatter={(value) =>
+                `${typeof value === 'number' ? value.toFixed(1) : value} hrs`
+              }
+              indicator='line'
+            />
+          }
+        />
+
+        {/* The "Target Pace" line - dashed to indicate it's a guide */}
+        <Area
+          dataKey='targetPace'
+          type='natural'
+          fill='url(#fillTargetPace)'
+          stroke='var(--color-targetPace)'
+          strokeWidth={2}
+          strokeDasharray='4 4'
+          dot={false}
+        />
+
+        <Area
+          dataKey='actualPace'
+          type='natural'
+          fill='url(#fillActualPace)'
+          stroke='var(--color-actualPace)'
+          strokeWidth={2}
+          dot={false}
+        />
+      </AreaChart>
+    </ChartContainer>
   );
 }

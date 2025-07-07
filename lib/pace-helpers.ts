@@ -1,19 +1,18 @@
 import { addDays, differenceInDays, startOfDay } from 'date-fns';
 
-// Type for the data points our chart component will use.
+// A more intuitive data structure for a "burn-up" chart
 interface PaceDataPoint {
   date: string;
-  ideal: number | null; // Ideal remaining hours
-  actual: number | null; // Actual remaining hours
+  targetPace: number; // The target cumulative hours completed by this date
+  actualPace: number | null; // The actual cumulative hours completed by this date
 }
 
-// Type for the raw session data we expect.
 type SessionData = { startTime: Date; durationSeconds: number };
 
 /**
- * Calculates the data points for the Pace Indicator burndown chart.
+ * Calculates the data points for a CUMULATIVE PROGRESS (burn-up) chart.
  * @param goal - The goal object, must include deadline, createdAt, and estimatedTimeSeconds.
- * @param sessions - All focus sessions associated with the goal and its sub-goals.
+ * @param sessions - All focus sessions associated with the goal.
  * @returns An array of data points for the chart.
  */
 export function calculatePaceData(
@@ -24,7 +23,6 @@ export function calculatePaceData(
   },
   sessions: SessionData[]
 ): PaceDataPoint[] {
-  // Ensure we have all necessary data to proceed.
   if (
     !goal.deadline ||
     !goal.estimatedTimeSeconds ||
@@ -40,17 +38,18 @@ export function calculatePaceData(
   const totalDays = differenceInDays(endDate, startDate);
   if (totalDays <= 0) return [];
 
-  const idealBurnRatePerDay = estimatedHours / totalDays;
-  let cumulativeBurnedHours = 0;
+  // This is now the ideal "rate of completion" per day
+  const idealRatePerDay = estimatedHours / totalDays;
+  let cumulativeActualHours = 0;
 
-  // Create a map of actual hours burned per day for quick lookups.
-  const actualBurnMap = new Map<string, number>();
+  // This part remains the same: create a map for efficient lookups
+  const actualHoursMap = new Map<string, number>();
   sessions.forEach((session) => {
     const dateStr = startOfDay(new Date(session.startTime))
       .toISOString()
       .split('T')[0];
     const hours = session.durationSeconds / 3600;
-    actualBurnMap.set(dateStr, (actualBurnMap.get(dateStr) || 0) + hours);
+    actualHoursMap.set(dateStr, (actualHoursMap.get(dateStr) || 0) + hours);
   });
 
   const data: PaceDataPoint[] = [];
@@ -60,19 +59,17 @@ export function calculatePaceData(
     const currentDate = addDays(startDate, i);
     const dateStr = currentDate.toISOString().split('T')[0];
 
-    // Only add to cumulative burn if the date is in the past or today.
+    // Update cumulative actual hours only for past/present dates
     if (currentDate <= today) {
-      cumulativeBurnedHours += actualBurnMap.get(dateStr) || 0;
+      cumulativeActualHours += actualHoursMap.get(dateStr) || 0;
     }
 
     data.push({
       date: dateStr,
-      ideal: Math.max(0, estimatedHours - i * idealBurnRatePerDay),
-      // Only show actual progress up to the current day.
-      actual:
-        currentDate <= today
-          ? Math.max(0, estimatedHours - cumulativeBurnedHours)
-          : null,
+      // The target pace is a straight line climbing up from 0
+      targetPace: i * idealRatePerDay,
+      // The actual pace climbs up, but only shown up to today
+      actualPace: currentDate <= today ? cumulativeActualHours : null,
     });
   }
   return data;
