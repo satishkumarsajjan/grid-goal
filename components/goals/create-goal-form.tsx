@@ -1,7 +1,6 @@
-// src/components/goals/CreateGoalForm.tsx
-
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -30,6 +29,43 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { GOAL_COLORS } from '@/lib/constants';
+
+// A simple, reusable color picker component for the form
+interface GoalColorPickerProps {
+  selectedColor: string | null;
+  onSelectColor: (color: string) => void;
+}
+function GoalColorPicker({
+  selectedColor,
+  onSelectColor,
+}: GoalColorPickerProps) {
+  return (
+    <div>
+      <FormLabel>Color (Optional)</FormLabel>
+      <FormDescription className='text-xs pb-2'>
+        Pick a color for your goal, or we'll assign one for you.
+      </FormDescription>
+      <div className='flex flex-wrap gap-2'>
+        {GOAL_COLORS.map((color) => (
+          <button
+            key={color}
+            type='button'
+            onClick={() => onSelectColor(color)}
+            className={cn(
+              'w-8 h-8 rounded-full border-2 transition-transform duration-150 ease-in-out',
+              selectedColor === color
+                ? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background'
+                : 'border-transparent hover:scale-110'
+            )}
+            style={{ backgroundColor: color }}
+            aria-label={`Select color ${color}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // Form-specific schema for user-friendly inputs (hours/minutes)
 const goalFormSchema = z.object({
@@ -43,7 +79,9 @@ const goalFormSchema = z.object({
 type GoalFormValues = z.infer<typeof goalFormSchema>;
 
 // The mutation function now handles the transformation from form values to API payload
-const createGoal = async (values: GoalFormValues & { parentId?: string }) => {
+const createGoal = async (
+  values: GoalFormValues & { parentId?: string; color?: string | null }
+) => {
   // Transform hours and minutes into total seconds
   const estimatedTimeSeconds =
     (values.estimatedHours || 0) * 3600 + (values.estimatedMinutes || 0) * 60;
@@ -54,8 +92,7 @@ const createGoal = async (values: GoalFormValues & { parentId?: string }) => {
     description: values.description,
     deadline: values.deadline,
     parentId: values.parentId,
-    // If the estimate is 0, send `undefined` so Prisma saves it as `null`.
-    // Otherwise, send the calculated number.
+    color: values.color, // Pass the color (or null) to the API
     estimatedTimeSeconds:
       estimatedTimeSeconds > 0 ? estimatedTimeSeconds : undefined,
   };
@@ -71,6 +108,8 @@ interface CreateGoalFormProps {
 
 export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
   const queryClient = useQueryClient();
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+
   const form = useForm<GoalFormValues>({
     resolver: zodResolver(goalFormSchema),
     defaultValues: {
@@ -96,7 +135,11 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
   });
 
   function onSubmit(values: GoalFormValues) {
-    mutation.mutate({ ...values, parentId: parentId ?? undefined });
+    mutation.mutate({
+      ...values,
+      parentId: parentId ?? undefined,
+      color: selectedColor,
+    });
   }
 
   return (
@@ -131,6 +174,14 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
               <FormMessage />
             </FormItem>
           )}
+        />
+
+        {/* Color Picker Component */}
+        <GoalColorPicker
+          selectedColor={selectedColor}
+          onSelectColor={(color) =>
+            setSelectedColor(color === selectedColor ? null : color)
+          }
         />
 
         {/* Time Estimate Input Section */}
