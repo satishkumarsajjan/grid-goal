@@ -17,18 +17,18 @@ export function DeadlineBadge({ deadline }: DeadlineBadgeProps) {
   const isOverdue = isPast(deadline) && !isToday(deadline);
   const daysRemaining = differenceInDays(deadline, now);
 
-  let colorClass = 'bg-secondary text-secondary-foreground'; // Default/neutral color
+  let colorClass = 'bg-secondary '; // Default/neutral color
   let tooltipText = `Due in ${daysRemaining + 1} days`;
 
   if (isOverdue) {
-    colorClass = 'bg-destructive/20 text-destructive-foreground';
+    colorClass = 'bg-destructive/20 ';
     tooltipText = `Overdue by ${Math.abs(daysRemaining)} days`;
   } else if (daysRemaining < 0) {
     // isToday
-    colorClass = 'bg-yellow-500/20 text-yellow-foreground';
+    colorClass = 'bg-yellow-500/20 ';
     tooltipText = 'Due today';
   } else if (daysRemaining < 7) {
-    colorClass = 'bg-yellow-500/20 text-yellow-foreground';
+    colorClass = 'bg-yellow-500/20 ';
     tooltipText = `Due in ${daysRemaining + 1} days`;
   }
 
@@ -47,7 +47,7 @@ export function DeadlineBadge({ deadline }: DeadlineBadgeProps) {
         <TooltipTrigger>
           <div
             className={cn(
-              'flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold',
+              'flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold text-foreground',
               colorClass
             )}
           >

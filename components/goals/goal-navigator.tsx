@@ -16,7 +16,7 @@ export function GoalNavigator({
   openCreationDialog,
 }: GoalNavigatorProps) {
   return (
-    <nav className='flex-1 space-y-1 p-2'>
+    <nav className='flex-1 space-y-1 p-2 overflow-x-auto'>
       {goalTree.map((goal) => (
         <GoalNavigatorItem
           key={goal.id}

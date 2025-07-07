@@ -1,3 +1,5 @@
+// src/components/goals/GoalNavigatorItem.tsx
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -14,12 +16,12 @@ import {
   Play,
   Archive,
   ArchiveRestore,
+  CheckCircle2,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { type GoalWithProgressAndChildren } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,9 +29,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { DeadlineBadge } from './deadline-badge';
 
-// --- API Function for the mutation ---
-// This function will be called by the useMutation hook to update the goal's status.
+const INDENT_SIZE_REM = 1.25;
+
 const updateGoalStatus = async ({
   goalId,
   status,
@@ -37,12 +45,10 @@ const updateGoalStatus = async ({
   goalId: string;
   status: GoalStatus;
 }) => {
-  // Assuming you have an API route at /api/goals/[goalId] that accepts PATCH requests
   const { data } = await axios.patch(`/api/goals/${goalId}`, { status });
   return data;
 };
 
-// --- The props interface remains the same ---
 interface GoalNavigatorItemProps {
   goal: GoalWithProgressAndChildren;
   activeGoalId: string | null;
@@ -74,17 +80,13 @@ export function GoalNavigatorItem({
 
   const hasChildren = goal.children.length > 0;
   const isActive = goal.id === activeGoalId;
+  const isPaused = goal.status === 'PAUSED';
+  const isArchived = goal.status === 'ARCHIVED';
 
-  const totalTasks = goal.totalTasks;
-  const completedTasks = goal.completedTasks;
-  const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-
-  // --- Mutation hook to handle all status changes ---
   const statusMutation = useMutation({
     mutationFn: updateGoalStatus,
     onSuccess: (data) => {
-      toast.success(`Goal has been ${data.status.toLowerCase()}.`);
-      // Invalidate the 'goals' query to refetch the entire tree with the new status
+      toast.success(`Goal status updated to ${data.status.toLowerCase()}.`);
       queryClient.invalidateQueries({ queryKey: ['goals'] });
     },
     onError: (error) => {
@@ -93,148 +95,95 @@ export function GoalNavigatorItem({
     },
   });
 
-  // --- Handlers for menu actions ---
-  const handleStatusUpdate = (e: React.MouseEvent, status: GoalStatus) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleStatusUpdate = (status: GoalStatus) => {
     statusMutation.mutate({ goalId: goal.id, status });
   };
 
-  const handleAddSubGoal = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleAddSubGoal = () => {
     openCreationDialog({ open: true, parentId: goal.id });
   };
 
-  // --- Determine status properties for styling ---
-  const isPaused = goal.status === 'PAUSED';
-  const isArchived = goal.status === 'ARCHIVED';
-
   return (
-    <div>
+    <div
+      className='relative'
+      style={{ paddingLeft: `${level * INDENT_SIZE_REM}rem` }}
+    >
       <div
         className={cn(
-          'group flex items-center justify-between rounded-md text-sm font-medium transition-colors w-full',
+          'group rounded-md w-full transition-colors py-1 pr-2',
           isActive && !isArchived
             ? 'bg-accent text-accent-foreground'
-            : 'hover:bg-accent/50 hover:text-accent-foreground',
-          (isPaused || isArchived) && 'text-muted-foreground',
-          'pl-[calc(var(--indent-level)_*_1rem)]'
+            : 'hover:bg-accent/60',
+          (isPaused || isArchived) && 'text-muted-foreground opacity-75'
         )}
-        style={{ '--indent-level': level } as React.CSSProperties}
       >
-        <div className='flex items-center flex-1 truncate min-w-0'>
-          {/* Expander Button or Status Icon */}
-          <div className='flex h-7 w-7 items-center justify-center'>
-            {isPaused ? (
-              <PauseCircle className='h-4 w-4 text-yellow-500' />
-            ) : isArchived ? (
-              <Archive className='h-4 w-4' />
-            ) : (
-              <Button
-                variant='ghost'
-                size='icon'
-                className={cn('h-7 w-7', !hasChildren && 'invisible')}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsExpanded(!isExpanded);
-                }}
-                aria-label={isExpanded ? 'Collapse' : 'Expand'}
-              >
-                <ChevronRight
-                  className={cn(
-                    'h-4 w-4 transition-transform duration-200',
-                    isExpanded && 'rotate-90'
-                  )}
-                />
-              </Button>
-            )}
+        {/* --- ROW 1: Icon, Title, and Actions --- */}
+        <div className='flex h-8 items-center gap-1 w-full'>
+          {/* Expander / Status Icon */}
+          <div className='flex h-full w-8 items-center justify-center flex-shrink-0'>
+            <GoalStatusIcon
+              hasChildren={hasChildren}
+              isExpanded={isExpanded}
+              isPaused={isPaused}
+              isArchived={isArchived}
+              onToggle={() => setIsExpanded(!isExpanded)}
+            />
           </div>
 
-          {/* Goal Link - Wraps Title and Progress Bar */}
+          {/* Title Link (Takes up all available space) */}
           <Link
             href={`/goals/${goal.id}`}
-            className='flex-1 truncate py-2 pr-2'
+            className='flex-1 min-w-0 flex items-center gap-2.5'
           >
             <span
-              className={cn('block truncate', isArchived && 'line-through')}
+              className='h-2 w-2 flex-shrink-0 rounded-full'
+              style={{ backgroundColor: goal.color || 'hsl(var(--border))' }}
+            />
+            <span
+              className={cn(
+                'truncate font-medium text-sm',
+                isArchived && 'line-through'
+              )}
             >
               {goal.title}
             </span>
-
-            {totalTasks > 0 && !isArchived && (
-              <div className='flex items-center gap-2 mt-1.5'>
-                <Progress value={progress} className='h-1 flex-1' />
-                <span className='text-xs text-muted-foreground font-mono'>
-                  {Math.round(progress)}%
-                </span>
-              </div>
-            )}
           </Link>
+
+          {/* Actions Menu */}
+          <div className='flex-shrink-0 opacity-0 transition-opacity group-hover:opacity-100'>
+            <GoalActionsMenu
+              goal={goal}
+              onStatusUpdate={handleStatusUpdate}
+              onAddSubGoal={handleAddSubGoal}
+            />
+          </div>
         </div>
 
-        {/* Hover Actions Menu */}
-        <div className='pr-2 opacity-0 group-hover:opacity-100 transition-opacity'>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant='ghost' size='icon' className='h-7 w-7'>
-                <MoreHorizontal className='h-4 w-4' />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align='end'
-              onClick={(e) => e.stopPropagation()}
-            >
-              {!isArchived && !isPaused && (
-                <DropdownMenuItem onClick={handleAddSubGoal}>
-                  <PlusCircle className='mr-2 h-4 w-4' />
-                  <span>Add Sub-Goal</span>
-                </DropdownMenuItem>
-              )}
-
-              {!isArchived && <DropdownMenuSeparator />}
-
-              {goal.status === 'ACTIVE' && (
-                <DropdownMenuItem
-                  onClick={(e) => handleStatusUpdate(e, GoalStatus.PAUSED)}
-                >
-                  <PauseCircle className='mr-2 h-4 w-4' />
-                  <span>Pause Goal</span>
-                </DropdownMenuItem>
-              )}
-              {goal.status === 'PAUSED' && (
-                <DropdownMenuItem
-                  onClick={(e) => handleStatusUpdate(e, GoalStatus.ACTIVE)}
-                >
-                  <Play className='mr-2 h-4 w-4' />
-                  <span>Resume Goal</span>
-                </DropdownMenuItem>
-              )}
-
-              {goal.status !== 'ARCHIVED' ? (
-                <DropdownMenuItem
-                  onClick={(e) => handleStatusUpdate(e, GoalStatus.ARCHIVED)}
-                  className='focus:bg-destructive/80 focus:text-destructive-foreground'
-                >
-                  <Archive className='mr-2 h-4 w-4' />
-                  <span>Archive Goal</span>
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem
-                  onClick={(e) => handleStatusUpdate(e, GoalStatus.ACTIVE)}
-                >
-                  <ArchiveRestore className='mr-2 h-4 w-4' />
-                  <span>Restore Goal</span>
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        {/* --- ROW 2: Metadata (Indented) --- */}
+        {!isArchived && (goal.deadline || goal.totalTasks > 0) && (
+          <div className='pl-9 flex items-center gap-4 text-xs mt-0.5'>
+            {goal.totalTasks > 0 && (
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <div className='flex items-center gap-1.5 text-muted-foreground'>
+                    <CheckCircle2 className='h-3.5 w-3.5' />
+                    <span className='font-mono'>
+                      {goal.completedTasks}/{goal.totalTasks}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>Tasks Completed</TooltipContent>
+              </Tooltip>
+            )}
+            {goal.deadline && <DeadlineBadge deadline={goal.deadline} />}
+          </div>
+        )}
       </div>
 
-      {/* Recursive Rendering of Children */}
+      {/* --- Recursive Children Rendering --- */}
       {hasChildren && isExpanded && !isArchived && (
-        <div className='mt-1 space-y-1'>
+        <div className='relative mt-1 space-y-1'>
+          <div className='absolute left-[16px] -top-1 bottom-0 w-px bg-border/60' />
           {goal.children.map((childGoal) => (
             <GoalNavigatorItem
               key={childGoal.id}
@@ -247,5 +196,126 @@ export function GoalNavigatorItem({
         </div>
       )}
     </div>
+  );
+}
+
+// Helper components remain the same
+function GoalStatusIcon({
+  hasChildren,
+  isExpanded,
+  isPaused,
+  isArchived,
+  onToggle,
+}: {
+  hasChildren: boolean;
+  isExpanded: boolean;
+  isPaused: boolean;
+  isArchived: boolean;
+  onToggle: () => void;
+}) {
+  if (isPaused) return <PauseCircle className='h-4 w-4 text-amber-500' />;
+  if (isArchived) return <Archive className='h-4 w-4' />;
+  if (hasChildren) {
+    return (
+      <Button
+        variant='ghost'
+        size='icon'
+        className='h-7 w-7'
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        aria-label={isExpanded ? 'Collapse' : 'Expand'}
+      >
+        <ChevronRight
+          className={cn(
+            'h-4 w-4 transition-transform duration-200',
+            isExpanded && 'rotate-90'
+          )}
+        />
+      </Button>
+    );
+  }
+  return <div className='h-7 w-7' />;
+}
+
+function GoalActionsMenu({
+  goal,
+  onStatusUpdate,
+  onAddSubGoal,
+}: {
+  goal: GoalWithProgressAndChildren;
+  onStatusUpdate: (status: GoalStatus) => void;
+  onAddSubGoal: () => void;
+}) {
+  const isPaused = goal.status === 'PAUSED';
+  const isArchived = goal.status === 'ARCHIVED';
+  const handleActionClick = (e: React.MouseEvent, action: () => void) => {
+    e.stopPropagation();
+    e.preventDefault();
+    action();
+  };
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant='ghost'
+          size='icon'
+          className='h-7 w-7'
+          onClick={(e) => e.preventDefault()}
+        >
+          <MoreHorizontal className='h-4 w-4' />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align='end' onClick={(e) => e.stopPropagation()}>
+        {!isArchived && !isPaused && (
+          <DropdownMenuItem onClick={(e) => handleActionClick(e, onAddSubGoal)}>
+            <PlusCircle className='mr-2 h-4 w-4' />
+            <span>Add Sub-Goal</span>
+          </DropdownMenuItem>
+        )}
+        {!isArchived && <DropdownMenuSeparator />}
+        {goal.status === 'ACTIVE' && (
+          <DropdownMenuItem
+            onClick={(e) =>
+              handleActionClick(e, () => onStatusUpdate(GoalStatus.PAUSED))
+            }
+          >
+            <PauseCircle className='mr-2 h-4 w-4' />
+            <span>Pause Goal</span>
+          </DropdownMenuItem>
+        )}
+        {isPaused && (
+          <DropdownMenuItem
+            onClick={(e) =>
+              handleActionClick(e, () => onStatusUpdate(GoalStatus.ACTIVE))
+            }
+          >
+            <Play className='mr-2 h-4 w-4' />
+            <span>Resume Goal</span>
+          </DropdownMenuItem>
+        )}
+        {!isArchived ? (
+          <DropdownMenuItem
+            onClick={(e) =>
+              handleActionClick(e, () => onStatusUpdate(GoalStatus.ARCHIVED))
+            }
+            className='focus:bg-destructive/80 focus:text-destructive-foreground'
+          >
+            <Archive className='mr-2 h-4 w-4' />
+            <span>Archive Goal</span>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem
+            onClick={(e) =>
+              handleActionClick(e, () => onStatusUpdate(GoalStatus.ACTIVE))
+            }
+          >
+            <ArchiveRestore className='mr-2 h-4 w-4' />
+            <span>Restore Goal</span>
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

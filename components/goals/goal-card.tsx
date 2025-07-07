@@ -1,17 +1,17 @@
-import Link from 'next/link';
-import { type GoalWithTasksCount } from '@/lib/types';
 import {
   Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { type Goal } from '@prisma/client';
+import Link from 'next/link';
 import { DeadlineBadge } from './deadline-badge';
+import { GoalWithProgressAndChildren } from '@/lib/types';
 
 export type GoalWithProgress = Goal & {
   _count: {
@@ -21,12 +21,12 @@ export type GoalWithProgress = Goal & {
 };
 
 interface GoalCardProps {
-  goal: GoalWithProgress;
+  goal: GoalWithProgressAndChildren;
 }
 
 export function GoalCard({ goal }: GoalCardProps) {
-  const totalTasks = goal._count.tasks;
-  const completedTasks = goal._count.completedTasks;
+  const totalTasks = goal.totalTasks;
+  const completedTasks = goal.completedTasks;
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   return (
