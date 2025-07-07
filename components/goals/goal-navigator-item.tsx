@@ -110,15 +110,23 @@ export function GoalNavigatorItem({
     >
       <div
         className={cn(
-          'group rounded-md w-full transition-colors py-1 pr-2',
+          // --- CHANGED ---: Added pl-4 to make space for the color bar
+          'group relative rounded-md w-full transition-colors py-1 pr-2 pl-4',
           isActive && !isArchived
             ? 'bg-accent text-accent-foreground'
             : 'hover:bg-accent/60',
           (isPaused || isArchived) && 'text-muted-foreground opacity-75'
         )}
       >
+        {/* --- CHANGED: Added Color Accent Bar --- */}
+        {/* This bar is positioned absolutely within the padded space */}
+        <div
+          className='absolute left-0 top-0 h-full w-1 rounded-l-md'
+          style={{ backgroundColor: goal.color || 'transparent' }}
+        />
+
         {/* --- ROW 1: Icon, Title, and Actions --- */}
-        <div className='flex h-8 items-center gap-1 w-full'>
+        <div className='flex h-8 items-center gap-2 w-full'>
           {/* Expander / Status Icon */}
           <div className='flex h-full w-8 items-center justify-center flex-shrink-0'>
             <GoalStatusIcon
@@ -133,12 +141,10 @@ export function GoalNavigatorItem({
           {/* Title Link (Takes up all available space) */}
           <Link
             href={`/goals/${goal.id}`}
-            className='flex-1 min-w-0 flex items-center gap-2.5'
+            // --- CHANGED ---: Removed gap-2.5 as the color dot is gone.
+            className='flex-1 min-w-0 flex items-center'
           >
-            <span
-              className='h-2 w-2 flex-shrink-0 rounded-full'
-              style={{ backgroundColor: goal.color || 'hsl(var(--border))' }}
-            />
+            {/* --- CHANGED ---: Removed the small color dot span */}
             <span
               className={cn(
                 'truncate font-medium text-sm',
@@ -160,8 +166,9 @@ export function GoalNavigatorItem({
         </div>
 
         {/* --- ROW 2: Metadata (Indented) --- */}
+        {/* --- CHANGED ---: Adjusted indentation from pl-9 to pl-10 to align with title */}
         {!isArchived && (goal.deadline || goal.totalTasks > 0) && (
-          <div className='pl-9 flex items-center gap-4 text-xs mt-0.5'>
+          <div className='pl-10 flex items-center gap-4 text-xs mt-0.5'>
             {goal.totalTasks > 0 && (
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
@@ -183,7 +190,8 @@ export function GoalNavigatorItem({
       {/* --- Recursive Children Rendering --- */}
       {hasChildren && isExpanded && !isArchived && (
         <div className='relative mt-1 space-y-1'>
-          <div className='absolute left-[16px] -top-1 bottom-0 w-px bg-border/60' />
+          {/* --- CHANGED ---: Adjusted left position to align with icons */}
+          <div className='absolute left-[18px] -top-1 bottom-0 w-px bg-border/60' />
           {goal.children.map((childGoal) => (
             <GoalNavigatorItem
               key={childGoal.id}
@@ -199,7 +207,8 @@ export function GoalNavigatorItem({
   );
 }
 
-// Helper components remain the same
+// ... (Helper components GoalStatusIcon and GoalActionsMenu remain unchanged) ...
+
 function GoalStatusIcon({
   hasChildren,
   isExpanded,
@@ -236,6 +245,8 @@ function GoalStatusIcon({
       </Button>
     );
   }
+  // --- CHANGED ---: Placed div inside button for consistent sizing and alignment
+  // This ensures the space is identical to when the expander button is present.
   return <div className='h-7 w-7' />;
 }
 

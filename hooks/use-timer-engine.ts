@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useTimerStore } from '@/store/timer-store';
-import { useSettingsStore } from '@/store/settings-store';
 import { calculateNextPomodoroState } from '@/lib/timer-machine';
-import { toast } from 'sonner';
+import { useSettingsStore } from '@/store/settings-store';
+import { useTimerStore } from '@/store/timer-store';
 import type { PomodoroCycle } from '@prisma/client';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 // This hook encapsulates all the complex, real-time logic of the timer.
 export function useTimerEngine() {
@@ -22,14 +22,8 @@ export function useTimerEngine() {
 
   // --- Memos for Derived Data ---
   // We use a selector to get the values needed for display
-  const {
-    isActive,
-    accumulatedTime,
-    intervalStartTime,
-    mode,
-    pomodoroCycle,
-    activeTask,
-  } = useTimerStore();
+  const { isActive, accumulatedTime, intervalStartTime, mode, pomodoroCycle } =
+    useTimerStore();
   const displayTime = accumulatedTime + currentIntervalElapsed;
 
   const currentIntervalDuration = useMemo(() => {

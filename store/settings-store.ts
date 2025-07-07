@@ -24,10 +24,10 @@ interface SettingsActions {
 // Default values for any new user of the application
 const defaultSettings: SettingsState = {
   pomodoro: {
-    durationWork: 25 * 60, // 25 minutes
-    durationShortBreak: 5 * 60, // 5 minutes
-    durationLongBreak: 15 * 60, // 15 minutes
-    cyclesUntilLongBreak: 4,
+    durationWork: 1 * 60, // 25 minutes
+    durationShortBreak: 1 * 60, // 5 minutes
+    durationLongBreak: 1 * 60, // 15 minutes
+    cyclesUntilLongBreak: 2,
   },
 };
 
