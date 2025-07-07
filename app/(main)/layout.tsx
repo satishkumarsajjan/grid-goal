@@ -44,8 +44,8 @@ export default function MainLayout({
       ) : (
         <>
           <AppSidebar user={user} />
-          <main className='flex-1 overflow-y-auto'>
-            <div className='p-4 sm:p-6 md:p-8'>
+          <main className='flex-1 h-screen pb-8'>
+            <div className='p-4 sm:p-6 md:p-8 h-full'>
               <SidebarTrigger className='mb-4' />
               {children}
             </div>

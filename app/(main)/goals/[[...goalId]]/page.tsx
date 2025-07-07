@@ -26,7 +26,7 @@ export default function GoalsLayoutAndPage({
 
   return (
     <>
-      <div className='flex h-full border rounded-lg bg-card text-card-foreground'>
+      <div className='flex h-full rounded-lg'>
         <aside className='w-1/3 min-w-[280px] max-w-xs border-r'>
           <div className='p-4 flex items-center justify-between border-b'>
             <h2 className='text-lg font-semibold'>All Goals</h2>

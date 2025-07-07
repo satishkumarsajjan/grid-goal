@@ -73,8 +73,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Ensure you are destructuring based on your actual zod schema
-    const { title, goalId } = validation.data;
+    const { title, goalId, estimatedTimeInHours } = validation.data;
+    const estimatedTimeInSeconds = (estimatedTimeInHours ?? 0) * 3600;
 
     // Security Check: Verify that the user owns the goal
     const parentGoal = await prisma.goal.findFirst({
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
         title,
         sortOrder: newSortOrder,
         // This assumes estimatedTimeSeconds is handled by your zod schema if present
-        // estimatedTimeSeconds: validation.data.estimatedTimeSeconds,
+        estimatedTimeSeconds: estimatedTimeInSeconds,
       },
     });
 

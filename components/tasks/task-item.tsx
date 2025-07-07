@@ -180,6 +180,7 @@ export function TaskItem({ task, onStartSession }: TaskItemProps) {
 
   const accumulatedTimeFormatted = formatTime(task.totalTimeSeconds);
   const estimatedTimeFormatted = formatTime(task.estimatedTimeSeconds);
+  console.log('ESTIMATED:', estimatedTimeFormatted);
 
   return (
     <div

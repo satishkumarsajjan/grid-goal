@@ -146,7 +146,7 @@ export function TaskList({ goalId }: TaskListProps) {
 
   if (!goalId) {
     return (
-      <div className='flex h-full flex-col items-center justify-center bg-secondary/20 text-center rounded-lg p-8'>
+      <div className='flex h-full flex-col items-center justify-center text-center rounded-lg p-8'>
         <h2 className='text-xl font-semibold text-foreground'>Select a goal</h2>
         <p className='mt-2 text-muted-foreground'>
           Choose a goal from the list to see its tasks and progress.
@@ -174,9 +174,9 @@ export function TaskList({ goalId }: TaskListProps) {
   return (
     // We use a React Fragment to render the list and the modal as siblings.
     <>
-      <div className='flex h-full flex-col bg-card rounded-lg border'>
+      <div className='flex h-full flex-col rounded-lg'>
         {/* Header Section */}
-        <div className='p-4 border-b'>
+        <div className='p-4'>
           <h1 className='text-2xl font-bold'>{goal.title}</h1>
           {goal.description && (
             <p className='mt-1 text-sm text-muted-foreground'>
@@ -197,7 +197,7 @@ export function TaskList({ goalId }: TaskListProps) {
         </div>
 
         {/* Task List Section */}
-        <div className='flex-1 overflow-y-auto p-2'>
+        <div className='flex-1 overflow-y-auto overflow-x-clip p-2'>
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
