@@ -33,7 +33,7 @@ const defaultSettings: SettingsState = {
 
 export const useSettingsStore = create<SettingsState & SettingsActions>()(
   persist(
-    (set) => ({
+    () => ({
       ...defaultSettings,
       // Example for the future:
       // updatePomodoroSettings: (newSettings) => set(state => ({
