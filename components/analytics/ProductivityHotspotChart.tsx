@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// The improved data shape from our new API endpoint.
 type PeakTime = { day: number; hour: number } | null;
 type ProductivityHotspotData = {
   heatmap: number[][];
@@ -31,7 +30,6 @@ type ProductivityHotspotData = {
   totalHours: number;
 };
 
-// --- Helper Functions & Constants ---
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const TIME_LABELS = ['12AM', '6AM', '12PM', '6PM'];
 
@@ -55,7 +53,6 @@ const getBackgroundColor = (value: number, maxValue: number): string => {
   return 'bg-primary/80';
 };
 
-// --- API Fetcher ---
 const fetchHotspotData = async (
   startDate: Date,
   endDate: Date
@@ -70,7 +67,6 @@ const fetchHotspotData = async (
   return data;
 };
 
-// --- Main Component ---
 export function ProductivityHotspotChart() {
   const { range } = useAnalyticsStore();
   const { startDate, endDate } = range;
@@ -149,7 +145,6 @@ export function ProductivityHotspotChart() {
                 return (
                   <Tooltip key={`${dayIndex}-${hourIndex}`}>
                     <TooltipTrigger asChild>
-                      {/* FIX 3: Added tabIndex and aria-label for accessibility */}
                       <div
                         tabIndex={0}
                         aria-label={ariaLabel}
@@ -179,7 +174,6 @@ export function ProductivityHotspotChart() {
 
   return (
     <Card>
-      {/* FIX 4: Visually hidden summary for screen readers */}
       <div className='sr-only' aria-live='polite'>
         {screenReaderSummary}
       </div>
@@ -192,7 +186,6 @@ export function ProductivityHotspotChart() {
       </CardHeader>
       <CardContent>{renderGrid()}</CardContent>
       <CardFooter className='flex-col items-start gap-2 text-sm'>
-        {/* FIX 1: Color Scale Legend */}
         <div className='flex w-full items-center gap-2'>
           <span className='text-xs text-muted-foreground'>Less</span>
           <div className='flex flex-1 gap-1'>
@@ -204,7 +197,6 @@ export function ProductivityHotspotChart() {
           </div>
           <span className='text-xs text-muted-foreground'>More</span>
         </div>
-        {/* FIX 2: Summarized Insight */}
         {!isLoading && !isError && data && (
           <p className='w-full pt-2 text-xs text-muted-foreground'>
             {peakTimeSummary}
@@ -215,7 +207,6 @@ export function ProductivityHotspotChart() {
   );
 }
 
-// --- Skeleton Component (Unchanged) ---
 function HotspotSkeleton() {
   return (
     <div className='flex'>

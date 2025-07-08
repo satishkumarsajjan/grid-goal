@@ -22,9 +22,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 
-// --- Type Definitions ---
 type WeeklyBalanceData = {
-  dayOfWeek: number; // 0=Sun, 1=Mon, ..., 6=Sat
+  dayOfWeek: number;
   totalSeconds: number;
 };
 type PomodoroStatsData = {
@@ -33,10 +32,8 @@ type PomodoroStatsData = {
   LONG_BREAK: number;
 };
 
-// --- Helper Constants ---
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// --- API Fetchers ---
 const fetchWeeklyBalance = async (
   startDate: Date,
   endDate: Date
@@ -64,7 +61,6 @@ const fetchPomodoroStats = async (
   return data;
 };
 
-// --- Sub-component for Break Discipline ---
 function BreakDisciplineStats({
   data,
   isLoading,
@@ -80,7 +76,6 @@ function BreakDisciplineStats({
     const expectedShortBreaks = data.WORK - Math.floor(data.WORK / 4);
     const expectedLongBreaks = Math.floor(data.WORK / 4);
 
-    // Calculate adherence, capping at 100%
     const shortBreakAdherence = Math.min(
       data.SHORT_BREAK / expectedShortBreaks,
       1
@@ -90,7 +85,6 @@ function BreakDisciplineStats({
       1
     );
 
-    // Weighted average: short breaks are more frequent, so they get more weight
     const overallAdherence =
       shortBreakAdherence * 0.75 + longBreakAdherence * 0.25;
 
@@ -146,7 +140,7 @@ function BreakDisciplineStats({
         </p>
         <p className='text-xs font-semibold'>{stats.rating} Adherence</p>
       </div>
-      {/* IMPROVEMENT: Using a semantic Definition List */}
+
       <dl className='flex-1 grid grid-cols-3 gap-2 text-xs text-muted-foreground'>
         <div className='flex flex-col'>
           <dt className='font-medium'>Work</dt>
@@ -165,7 +159,6 @@ function BreakDisciplineStats({
   );
 }
 
-// --- Main Component ---
 export function SustainabilityReport() {
   const { range } = useAnalyticsStore();
   const { startDate, endDate } = range;
@@ -185,7 +178,6 @@ export function SustainabilityReport() {
     ],
   });
 
-  // IMPROVEMENT: Logic is wrapped in useMemo for performance
   const weeklyChartData = useMemo(() => {
     return DAYS.map((day, index) => {
       const dataPoint = weeklyBalanceQuery.data?.find(
@@ -209,7 +201,6 @@ export function SustainabilityReport() {
 
   return (
     <Card>
-      {/* IMPROVEMENT: Added screen reader summary */}
       <div className='sr-only' aria-live='polite'>
         {screenReaderSummary}
       </div>
@@ -239,7 +230,6 @@ export function SustainabilityReport() {
                 data={weeklyChartData}
                 margin={{ top: 5, right: 10, left: -20, bottom: -5 }}
               >
-                {/* IMPROVEMENT: Added SVG pattern for accessible weekend differentiation */}
                 <defs>
                   <pattern
                     id='weekendPattern'
@@ -249,7 +239,7 @@ export function SustainabilityReport() {
                   >
                     <path
                       d='M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2'
-                      style={{ stroke: 'hsl(var(--chart-2))', strokeWidth: 1 }}
+                      style={{ stroke: 'var(--chart-2)', strokeWidth: 1 }}
                     />
                   </pattern>
                 </defs>
@@ -260,7 +250,6 @@ export function SustainabilityReport() {
                   axisLine={false}
                   tickMargin={8}
                 />
-                {/* IMPROVEMENT: Added Y-axis for scale readability */}
                 <YAxis
                   unit='h'
                   tickLine={false}
@@ -277,14 +266,13 @@ export function SustainabilityReport() {
                   }
                 />
                 <Bar dataKey='totalHours' radius={4}>
-                  {/* IMPROVEMENT: Using Cell to apply pattern conditionally */}
                   {weeklyChartData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={
                         entry.isWeekend
                           ? 'url(#weekendPattern)'
-                          : 'hsl(var(--chart-1))'
+                          : 'var(--chart-1)'
                       }
                     />
                   ))}

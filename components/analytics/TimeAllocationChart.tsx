@@ -2,12 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { PieChart as PieChartIcon } from 'lucide-react';
-import { Pie, PieChart as RechartsPieChart, Cell } from 'recharts';
+import { useMemo } from 'react';
+import { Cell, Pie, PieChart as RechartsPieChart } from 'recharts';
 
-import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import {
   Card,
   CardContent,
@@ -18,14 +17,12 @@ import {
 } from '@/components/ui/card';
 import {
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
+  ChartTooltip,
 } from '@/components/ui/chart';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 
-// The new data shape from our improved API
 type TimeAllocationData = {
   chartData: {
     categoryName: string;
@@ -34,16 +31,14 @@ type TimeAllocationData = {
   uncategorizedSeconds: number;
 };
 
-// --- Helper Functions & Constants ---
 const CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))', // Color for the "Other" category
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
 ];
 
-// NEW: A more intelligent formatter for tooltips
 const formatSecondsForTooltip = (seconds: number): string => {
   if (seconds === 0) return '0m';
   const hours = seconds / 3600;
@@ -62,7 +57,6 @@ const formatSecondsForDisplay = (seconds: number): string => {
   return [h > 0 ? `${h}h` : '', m > 0 ? `${m}m` : ''].filter(Boolean).join(' ');
 };
 
-// --- API Fetcher ---
 const fetchTimeAllocation = async (
   startDate: Date,
   endDate: Date
@@ -77,7 +71,6 @@ const fetchTimeAllocation = async (
   return data;
 };
 
-// --- Main Component ---
 export function TimeAllocationChart() {
   const { range } = useAnalyticsStore();
   const { startDate, endDate } = range;
@@ -164,7 +157,6 @@ export function TimeAllocationChart() {
               <Cell
                 key={`cell-${index}`}
                 fill={CHART_COLORS[index % CHART_COLORS.length]}
-                // Make the "Other" slice visually distinct
                 className={
                   entry.categoryName === 'Other'
                     ? 'stroke-muted-foreground/50'
@@ -210,7 +202,6 @@ export function TimeAllocationChart() {
   );
 }
 
-// --- Skeleton Component ---
 function ChartSkeleton() {
   return (
     <div className='flex flex-col items-center justify-center p-8'>

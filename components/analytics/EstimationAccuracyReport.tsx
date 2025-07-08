@@ -38,13 +38,11 @@ import type {
   EstimationAccuracyItem,
 } from '@/app/api/analytics/estimation-accuracy/route';
 
-// --- Type for Processed Data ---
 type ProcessedAccuracyItem = EstimationAccuracyItem & {
   variancePercent: number | null;
   isOver: boolean;
 };
 
-// --- Helper Functions & Constants ---
 const formatSecondsToHM = (seconds: number): string => {
   if (seconds < 60) return '0m';
   const h = Math.floor(seconds / 3600);
@@ -52,7 +50,6 @@ const formatSecondsToHM = (seconds: number): string => {
   return `${h > 0 ? `${h}h ` : ''}${m}m`;
 };
 
-// --- API Fetcher ---
 const fetchEstimationAccuracy = async (
   page: number
 ): Promise<EstimationAccuracyResponse> => {
@@ -62,7 +59,6 @@ const fetchEstimationAccuracy = async (
   return data;
 };
 
-// --- Main Component ---
 export function EstimationAccuracyReport() {
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -72,11 +68,9 @@ export function EstimationAccuracyReport() {
     placeholderData: (previousData) => previousData,
   });
 
-  // IMPROVEMENT: Logic is moved into a useMemo hook for performance and readability
   const processedData: ProcessedAccuracyItem[] | null = useMemo(() => {
     if (!data?.data) return null;
     return data.data.map((item) => {
-      // FIX: Guard against division by zero
       if (item.totalEstimatedSeconds === 0) {
         return {
           ...item,
@@ -104,7 +98,7 @@ export function EstimationAccuracyReport() {
   }, [processedData]);
 
   const renderContent = () => {
-    if (isLoading && !processedData) return <ReportSkeleton />; // Show skeleton on initial load
+    if (isLoading && !processedData) return <ReportSkeleton />;
     if (isError)
       return (
         <p className='p-4 text-center text-sm text-destructive'>

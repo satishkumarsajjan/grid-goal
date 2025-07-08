@@ -7,7 +7,6 @@ import { Zap } from 'lucide-react';
 import { useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
-import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import {
   Card,
   CardContent,
@@ -18,12 +17,12 @@ import {
 } from '@/components/ui/card';
 import {
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
+  ChartTooltip,
 } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 
 // --- Type Definitions ---
 type FlowTriggerData = {
@@ -34,14 +33,12 @@ type FlowTriggerData = {
   totalSessions: number;
 };
 
-// --- Chart Configuration ---
 const chartConfig = {
   FLOW: { label: 'Flow', color: 'var(--chart-3)' },
   NEUTRAL: { label: 'Neutral', color: 'var(--chart-4)' },
   STRUGGLE: { label: 'Struggle', color: 'var(--chart-5)' },
 };
 
-// --- API Fetcher ---
 const fetchFlowTriggers = async (
   startDate: Date,
   endDate: Date
@@ -56,7 +53,6 @@ const fetchFlowTriggers = async (
   return data;
 };
 
-// --- Main Component ---
 export function FlowTriggersChart() {
   const { range } = useAnalyticsStore();
   const { startDate, endDate } = range;
@@ -67,7 +63,6 @@ export function FlowTriggersChart() {
     placeholderData: (previousData) => previousData,
   });
 
-  // --- Summarized Insight Logic ---
   const summary = useMemo(() => {
     if (!data || data.length === 0) return null;
 
@@ -88,7 +83,7 @@ export function FlowTriggersChart() {
       return 'You maintain a neutral balance across most of your work categories.';
     }
 
-    return `**${bestFlow.categoryName}** seems to be your greatest source of flow, while **${worstStruggle.categoryName}** presents the most struggle.`;
+    return `${bestFlow.categoryName} seems to be your greatest source of flow, while ${worstStruggle.categoryName} presents the most struggle.`;
   }, [data]);
 
   const screenReaderSummary = data
@@ -117,7 +112,6 @@ export function FlowTriggersChart() {
 
     return (
       <ChartContainer config={chartConfig} className='min-h-[250px] w-full'>
-        {/* IMPROVEMENT: Changed to a 100% stacked bar chart */}
         <BarChart
           accessibilityLayer
           data={data}
@@ -132,7 +126,7 @@ export function FlowTriggersChart() {
             axisLine={false}
             tickMargin={10}
             className='text-xs'
-            width={80} // Provides space for long category names
+            width={80}
           />
           <XAxis type='number' hide />
           <ChartTooltip
@@ -174,7 +168,7 @@ export function FlowTriggersChart() {
               return null;
             }}
           />
-          {/* IMPROVEMENT: Corrected legend implementation */}
+
           <ChartLegend
             content={<ChartLegendContent nameKey='' payload={{}} />}
           />
@@ -221,7 +215,6 @@ export function FlowTriggersChart() {
   );
 }
 
-// --- Skeleton Component (Unchanged) ---
 function ChartSkeleton() {
   return (
     <div className='space-y-4 p-4'>
