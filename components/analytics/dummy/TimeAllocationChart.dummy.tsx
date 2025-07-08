@@ -1,10 +1,10 @@
 // components/analytics/dummy/TimeAllocationChart.dummy.tsx
 'use client';
 
-import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { PieChart as PieChartIcon } from 'lucide-react';
-import { Pie, PieChart as RechartsPieChart, Cell } from 'recharts';
+import { useMemo } from 'react';
+import { Cell, Pie, PieChart as RechartsPieChart } from 'recharts';
 
 import {
   Card,
@@ -16,12 +16,10 @@ import {
 } from '@/components/ui/card';
 import {
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
+  ChartTooltip,
 } from '@/components/ui/chart';
-import { Skeleton } from '@/components/ui/skeleton';
 
 // --- Types and Helpers (Copied from the real component for consistency) ---
 type TimeAllocationData = {
@@ -206,7 +204,7 @@ function TimeAllocationChartUI({
         )}
         {!isLoading && !isError && data && data.chartData.length > 0 && (
           <ChartLegend
-            content={<ChartLegendContent nameKey='categoryName' />}
+            content={<ChartLegendContent nameKey='categoryName' payload={{}} />}
             className='-mx-2 mt-2 w-full'
           />
         )}

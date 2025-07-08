@@ -3,11 +3,14 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { Target, TrendingDown, TrendingUp } from 'lucide-react';
-import { format, formatDistanceToNowStrict } from 'date-fns';
+import { format } from 'date-fns';
+import { useMemo, useState } from 'react';
+
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -21,7 +24,25 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import type { EstimationAccuracyData } from '@/app/api/analytics/estimation-accuracy/route';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import type {
+  EstimationAccuracyResponse,
+  EstimationAccuracyItem,
+} from '@/app/api/analytics/estimation-accuracy/route';
+
+// --- Type for Processed Data ---
+type ProcessedAccuracyItem = EstimationAccuracyItem & {
+  variancePercent: number | null;
+  isOver: boolean;
+};
 
 // --- Helper Functions & Constants ---
 const formatSecondsToHM = (seconds: number): string => {
@@ -32,40 +53,76 @@ const formatSecondsToHM = (seconds: number): string => {
 };
 
 // --- API Fetcher ---
-const fetchEstimationAccuracy = async (): Promise<EstimationAccuracyData[]> => {
-  const { data } = await axios.get('/api/analytics/estimation-accuracy');
+const fetchEstimationAccuracy = async (
+  page: number
+): Promise<EstimationAccuracyResponse> => {
+  const { data } = await axios.get(
+    `/api/analytics/estimation-accuracy?page=${page}`
+  );
   return data;
 };
 
 // --- Main Component ---
 export function EstimationAccuracyReport() {
-  const { data, isLoading, isError } = useQuery<EstimationAccuracyData[]>({
-    queryKey: ['estimationAccuracy'],
-    queryFn: fetchEstimationAccuracy,
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const { data, isLoading, isError } = useQuery<EstimationAccuracyResponse>({
+    queryKey: ['estimationAccuracy', currentPage],
+    queryFn: () => fetchEstimationAccuracy(currentPage),
+    placeholderData: (previousData) => previousData,
   });
 
+  // IMPROVEMENT: Logic is moved into a useMemo hook for performance and readability
+  const processedData: ProcessedAccuracyItem[] | null = useMemo(() => {
+    if (!data?.data) return null;
+    return data.data.map((item) => {
+      // FIX: Guard against division by zero
+      if (item.totalEstimatedSeconds === 0) {
+        return {
+          ...item,
+          variancePercent: null,
+          isOver: item.totalActualSeconds > 0,
+        };
+      }
+      const variance = item.totalActualSeconds - item.totalEstimatedSeconds;
+      const variancePercent = (variance / item.totalEstimatedSeconds) * 100;
+      return { ...item, variancePercent, isOver: variance > 0 };
+    });
+  }, [data]);
+
+  // IMPROVEMENT: Overall "Net Score" calculation
+  const averageAccuracy = useMemo(() => {
+    if (!processedData || processedData.length === 0) return null;
+    const totalVariance = processedData.reduce((acc, item) => {
+      if (item.variancePercent !== null) return acc + item.variancePercent;
+      return acc;
+    }, 0);
+    return (
+      totalVariance /
+      processedData.filter((p) => p.variancePercent !== null).length
+    );
+  }, [processedData]);
+
   const renderContent = () => {
-    if (isLoading) return <ReportSkeleton />;
-    if (isError) {
+    if (isLoading && !processedData) return <ReportSkeleton />; // Show skeleton on initial load
+    if (isError)
       return (
         <p className='p-4 text-center text-sm text-destructive'>
           Could not load estimation report.
         </p>
       );
-    }
-    if (!data || data.length === 0) {
+    if (!processedData || processedData.length === 0) {
       return (
         <div className='flex flex-col items-center justify-center p-8 text-center'>
           <Target className='h-10 w-10 text-muted-foreground mb-4' />
           <p className='font-semibold'>Become a Better Planner</p>
           <p className='text-sm text-muted-foreground'>
-            Estimate time on tasks, then track your focus sessions. Completed
-            goals will appear here.
+            Estimate time on tasks, then track your focus. Completed goals will
+            appear here.
           </p>
         </div>
       );
     }
-
     return (
       <Table>
         <TableHeader>
@@ -77,58 +134,113 @@ export function EstimationAccuracyReport() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((item) => {
-            const variance =
-              item.totalActualSeconds - item.totalEstimatedSeconds;
-            const variancePercent =
-              (variance / item.totalEstimatedSeconds) * 100;
-            const isOver = variance > 0;
-
-            return (
-              <TableRow key={item.goalId}>
-                <TableCell className='font-medium'>
-                  <p className='truncate max-w-xs'>{item.goalTitle}</p>
-                  <p className='text-xs text-muted-foreground'>
-                    {format(new Date(item.completedAt), 'MMM d, yyyy')}
-                  </p>
-                </TableCell>
-                <TableCell className='text-right'>
-                  {formatSecondsToHM(item.totalEstimatedSeconds)}
-                </TableCell>
-                <TableCell className='text-right'>
-                  {formatSecondsToHM(item.totalActualSeconds)}
-                </TableCell>
-                <TableCell className='text-right'>
+          {processedData.map((item) => (
+            <TableRow
+              key={item.goalId}
+              className={isLoading ? 'opacity-50' : ''}
+            >
+              {/* IMPROVEMENT: Added scope="row" for better a11y */}
+              <TableCell scope='row' className='font-medium'>
+                <p className='truncate max-w-xs'>{item.goalTitle}</p>
+                <p className='text-xs text-muted-foreground'>
+                  {format(new Date(item.completedAt), 'MMM d, yyyy')}
+                </p>
+              </TableCell>
+              <TableCell className='text-right'>
+                {formatSecondsToHM(item.totalEstimatedSeconds)}
+              </TableCell>
+              <TableCell className='text-right'>
+                {formatSecondsToHM(item.totalActualSeconds)}
+              </TableCell>
+              <TableCell className='text-right'>
+                {item.variancePercent === null ? (
+                  '—'
+                ) : (
                   <Badge
-                    variant={isOver ? 'destructive' : 'default'}
+                    variant={item.isOver ? 'destructive' : 'default'}
                     className='flex items-center justify-end gap-1'
                   >
-                    {isOver ? (
+                    {item.isOver ? (
                       <TrendingUp className='h-3 w-3' />
                     ) : (
                       <TrendingDown className='h-3 w-3' />
                     )}
-                    <span>{Math.abs(variancePercent).toFixed(0)}%</span>
+                    {/* IMPROVEMENT: Added sr-only text for a11y */}
+                    <span className='sr-only'>
+                      {item.isOver ? 'Over estimate by' : 'Under estimate by'}
+                    </span>
+                    <span>{Math.abs(item.variancePercent).toFixed(0)}%</span>
                   </Badge>
-                </TableCell>
-              </TableRow>
-            );
-          })}
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     );
   };
+
+  const pageCount = data ? Math.ceil(data.totalCount / 10) : 0;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Estimation Accuracy</CardTitle>
         <CardDescription>
-          How well do your plans match reality? Comparing your 10 most recently
-          completed goals.
+          Review your planning accuracy to make more realistic estimates in the
+          future.
         </CardDescription>
       </CardHeader>
       <CardContent>{renderContent()}</CardContent>
+      <CardFooter className='flex flex-col items-center gap-4'>
+        {averageAccuracy !== null && (
+          <div className='text-sm text-muted-foreground'>
+            On average, you tend to{' '}
+            <span
+              className={`font-semibold ${
+                averageAccuracy > 0 ? 'text-destructive' : 'text-green-600'
+              }`}
+            >
+              {averageAccuracy > 0 ? 'underestimate' : 'overestimate'}
+            </span>{' '}
+            by{' '}
+            <span className='font-bold'>
+              {Math.abs(averageAccuracy).toFixed(0)}%
+            </span>
+            .
+          </div>
+        )}
+        {pageCount > 1 && (
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href='#'
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentPage((p) => Math.max(1, p - 1));
+                  }}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink href='#'>{currentPage}</PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  href='#'
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentPage((p) => Math.min(pageCount, p + 1));
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
+      </CardFooter>
     </Card>
   );
 }
@@ -139,9 +251,13 @@ function ReportSkeleton() {
     <div className='p-4 space-y-3'>
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className='flex justify-between items-center'>
-          <Skeleton className='h-5 w-2/5' />
-          <Skeleton className='h-5 w-1/5' />
-          <Skeleton className='h-5 w-1/5' />
+          <div className='w-2/5 space-y-1'>
+            <Skeleton className='h-4 w-full' />
+            <Skeleton className='h-3 w-1/2' />
+          </div>
+          <Skeleton className='h-5 w-1/6' />
+          <Skeleton className='h-5 w-1/6' />
+          <Skeleton className='h-5 w-1/6' />
         </div>
       ))}
     </div>

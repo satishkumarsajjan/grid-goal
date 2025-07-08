@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
+import { z } from 'zod';
 
-// Define the shape of the data returned by our complex query
-export type EstimationAccuracyData = {
+// The shape of the data for a single row
+export type EstimationAccuracyItem = {
   goalId: string;
   goalTitle: string;
   totalEstimatedSeconds: number;
@@ -11,7 +12,21 @@ export type EstimationAccuracyData = {
   completedAt: Date;
 };
 
-export async function GET() {
+// The shape of the entire API response, including pagination metadata
+export type EstimationAccuracyResponse = {
+  data: EstimationAccuracyItem[];
+  totalCount: number;
+};
+
+// Zod schema to validate and parse pagination query parameters
+const querySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  // FIX: Make `pageSize` truly optional. .optional() allows it to be undefined,
+  // which then correctly triggers the .default()
+  pageSize: z.coerce.number().int().min(1).max(50).optional().default(10),
+});
+
+export async function GET(request: Request) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -19,54 +34,68 @@ export async function GET() {
     }
     const userId = session.user.id;
 
-    // This query uses Common Table Expressions (CTEs) for clarity and performance.
-    // 1. `EstimatedTimes`: Aggregates estimated time per goal from Tasks.
-    // 2. `ActualTimes`: Aggregates actual tracked time per goal from FocusSessions.
-    // The final SELECT joins these two sets of data on the goal ID.
-    const result = await prisma.$queryRaw<EstimationAccuracyData[]>`
-      WITH "EstimatedTimes" AS (
-        SELECT
-          "goalId",
-          SUM("estimatedTimeSeconds")::bigint as "totalEstimatedSeconds"
-        FROM "Task"
-        WHERE "userId" = ${userId}
-        GROUP BY "goalId"
-      ),
-      "ActualTimes" AS (
-        SELECT
-          "goalId",
-          SUM("durationSeconds")::bigint as "totalActualSeconds"
-        FROM "FocusSession"
-        WHERE "userId" = ${userId}
-        GROUP BY "goalId"
-      )
-      SELECT
-        g.id as "goalId",
-        g.title as "goalTitle",
-        g."updatedAt" as "completedAt", -- "updatedAt" on an ARCHIVED goal is its completion date
-        COALESCE(est."totalEstimatedSeconds", 0) as "totalEstimatedSeconds",
-        COALESCE(act."totalActualSeconds", 0) as "totalActualSeconds"
-      FROM "Goal" g
-      JOIN "EstimatedTimes" est ON g.id = est."goalId"
-      JOIN "ActualTimes" act ON g.id = act."goalId"
-      WHERE
-        g."userId" = ${userId}
-        AND g.status = 'ARCHIVED'
-        AND est."totalEstimatedSeconds" > 0
-        AND act."totalActualSeconds" > 0 -- Ensure we only get goals with both estimates and actuals
-      ORDER BY
-        g."updatedAt" DESC
-      LIMIT 10; -- Limit to the 10 most recently completed goals for relevance
-    `;
+    const { searchParams } = new URL(request.url);
+    // Now we pass the searchParams object directly to Zod for cleaner parsing
+    const validation = querySchema.safeParse(Object.fromEntries(searchParams));
 
-    // Convert BigInts from the SUM to Numbers for JSON compatibility.
-    const serializedResult = result.map((item) => ({
+    if (!validation.success) {
+      // This will now only trigger for truly invalid inputs, like ?page=-1
+      return NextResponse.json(
+        {
+          error: 'Invalid query parameters',
+          details: validation.error.format(),
+        },
+        { status: 400 }
+      );
+    }
+    const { page, pageSize } = validation.data;
+    const offset = (page - 1) * pageSize;
+
+    // The rest of your logic remains the same and is excellent.
+    const [data, totalCountResult] = await prisma.$transaction([
+      prisma.$queryRaw<EstimationAccuracyItem[]>`
+        WITH "EstimatedTimes" AS (
+          SELECT "goalId", SUM("estimatedTimeSeconds")::bigint as "totalEstimatedSeconds"
+          FROM "Task" WHERE "userId" = ${userId} GROUP BY "goalId"
+        ), "ActualTimes" AS (
+          SELECT "goalId", SUM("durationSeconds")::bigint as "totalActualSeconds"
+          FROM "FocusSession" WHERE "userId" = ${userId} GROUP BY "goalId"
+        )
+        SELECT
+          g.id as "goalId", g.title as "goalTitle", g."updatedAt" as "completedAt",
+          COALESCE(est."totalEstimatedSeconds", 0) as "totalEstimatedSeconds",
+          COALESCE(act."totalActualSeconds", 0) as "totalActualSeconds"
+        FROM "Goal" g
+        JOIN "EstimatedTimes" est ON g.id = est."goalId"
+        JOIN "ActualTimes" act ON g.id = act."goalId"
+        WHERE
+          g."userId" = ${userId} AND g.status = 'ARCHIVED'
+          AND est."totalEstimatedSeconds" > 0 AND act."totalActualSeconds" > 0
+        ORDER BY g."updatedAt" DESC
+        LIMIT ${pageSize} OFFSET ${offset};
+      `,
+      prisma.goal.count({
+        where: {
+          userId,
+          status: 'ARCHIVED',
+          tasks: { some: { estimatedTimeSeconds: { gt: 0 } } },
+          focusSessions: { some: { durationSeconds: { gt: 0 } } },
+        },
+      }),
+    ]);
+
+    const serializedData = data.map((item) => ({
       ...item,
       totalEstimatedSeconds: Number(item.totalEstimatedSeconds),
       totalActualSeconds: Number(item.totalActualSeconds),
     }));
 
-    return NextResponse.json(serializedResult);
+    const response: EstimationAccuracyResponse = {
+      data: serializedData,
+      totalCount: totalCountResult,
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('GET /api/analytics/estimation-accuracy Error:', error);
     return NextResponse.json(

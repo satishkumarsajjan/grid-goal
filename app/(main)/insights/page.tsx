@@ -9,7 +9,8 @@ export default function InsightsPage() {
       <header className='mb-8'>
         <h1 className='text-3xl font-bold tracking-tight'>Your Insights</h1>
         <p className='text-muted-foreground'>
-          Analyze your habits, find your flow, and build a sustainable workflow.
+          Analyze your work habits, find your flow, and build a sustainable
+          workflow.
         </p>
       </header>
       <InsightsPageClient />

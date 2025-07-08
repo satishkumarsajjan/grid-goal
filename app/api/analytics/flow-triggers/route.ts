@@ -4,18 +4,20 @@ import { prisma } from '@/prisma';
 import { z } from 'zod';
 import { SessionVibe } from '@prisma/client';
 
-// The shape of our raw data from the DB query
-type FlowTriggerRawData = {
+export type FlowTriggerData = {
   categoryName: string;
-  vibe: SessionVibe;
-  count: number;
+  FLOW: number;
+  NEUTRAL: number;
+  STRUGGLE: number;
+  totalSessions: number;
 };
 
-// Zod schema for validating incoming query parameters
 const querySchema = z.object({
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
 });
+
+const MAX_CATEGORIES_TO_RETURN = 7;
 
 export async function GET(request: Request) {
   try {
@@ -33,42 +35,60 @@ export async function GET(request: Request) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Invalid query parameters', details: validation.error.errors },
+        { error: 'Invalid query parameters' },
         { status: 400 }
       );
     }
     const { startDate, endDate } = validation.data;
 
-    // This raw SQL query is the most efficient way to get this data.
-    // It joins sessions to goals to categories, filters for sessions with a vibe,
-    // groups by category and vibe, and returns the count for each combination.
-    const result = await prisma.$queryRaw<FlowTriggerRawData[]>`
-      SELECT
-        c.name as "categoryName",
-        fs.vibe,
-        COUNT(*)::int as count
-      FROM "FocusSession" fs
-      JOIN "Goal" g ON fs."goalId" = g.id
-      JOIN "Category" c ON g."categoryId" = c.id
-      WHERE
-        fs."userId" = ${userId}
-        AND fs.vibe IS NOT NULL
-        AND g."categoryId" IS NOT NULL
-        AND fs."startTime" >= ${startDate}
-        AND fs."startTime" <= ${endDate}
-      GROUP BY
-        c.name, fs.vibe
-      ORDER BY
-        c.name, fs.vibe;
-    `;
+    // Step 1: Find all sessions with a vibe in the date range
+    const sessionsWithVibe = await prisma.focusSession.findMany({
+      where: {
+        userId,
+        vibe: { not: null },
+        goal: { categoryId: { not: null } },
+        startTime: { gte: startDate, lte: endDate },
+      },
+      select: {
+        vibe: true,
+        goal: { select: { category: { select: { name: true } } } },
+      },
+    });
 
-    // Convert BigInt to Number for JSON serialization, though `::int` cast helps.
-    const serializedResult = result.map((item) => ({
-      ...item,
-      count: Number(item.count),
-    }));
+    // Step 2: Aggregate counts in memory
+    const categoryStats: Record<
+      string,
+      Omit<FlowTriggerData, 'categoryName'>
+    > = {};
+    for (const session of sessionsWithVibe) {
+      // This check is important because of the nested select
+      if (session.goal?.category?.name && session.vibe) {
+        const name = session.goal.category.name;
+        if (!categoryStats[name]) {
+          categoryStats[name] = {
+            FLOW: 0,
+            NEUTRAL: 0,
+            STRUGGLE: 0,
+            totalSessions: 0,
+          };
+        }
+        categoryStats[name][session.vibe]++;
+        categoryStats[name].totalSessions++;
+      }
+    }
 
-    return NextResponse.json(serializedResult);
+    // Step 3: Convert to array, sort by total sessions, and take the top N
+    const sortedCategories = Object.entries(categoryStats)
+      .map(([categoryName, stats]) => ({ categoryName, ...stats }))
+      .sort((a, b) => b.totalSessions - a.totalSessions)
+      .slice(0, MAX_CATEGORIES_TO_RETURN);
+
+    // Step 4 (Optional but good): Sort the final result by flow percentage for a nice default view
+    sortedCategories.sort(
+      (a, b) => b.FLOW / b.totalSessions - a.FLOW / a.totalSessions
+    );
+
+    return NextResponse.json(sortedCategories);
   } catch (error) {
     console.error('GET /api/analytics/flow-triggers Error:', error);
     return NextResponse.json(

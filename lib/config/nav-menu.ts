@@ -1,5 +1,5 @@
-import { LayoutDashboard, Target, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { ChartNoAxesCombined, Target } from 'lucide-react';
 
 // Define the type for our menu items for type safety
 export interface NavItem {
@@ -14,5 +14,10 @@ export const mainNav: NavItem[] = [
     title: 'Goals',
     href: '/goals',
     icon: Target,
+  },
+  {
+    title: 'Insights',
+    href: '/insights',
+    icon: ChartNoAxesCombined,
   },
 ];

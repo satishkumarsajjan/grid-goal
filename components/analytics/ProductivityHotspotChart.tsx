@@ -10,6 +10,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -21,29 +22,33 @@ import {
 } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// The data shape from the API endpoint.
-// Exporting this from the route file and importing here is best practice.
+// The improved data shape from our new API endpoint.
+type PeakTime = { day: number; hour: number } | null;
 type ProductivityHotspotData = {
   heatmap: number[][];
   maxValue: number;
+  peakTime: PeakTime;
+  totalHours: number;
 };
 
 // --- Helper Functions & Constants ---
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const TIME_LABELS = ['12AM', '6AM', '12PM', '6PM'];
 
-// Utility to format seconds into a concise, human-readable string for the tooltip.
-const formatSeconds = (seconds: number): string => {
-  if (seconds < 1) return 'No focus';
+const formatSecondsForTooltip = (seconds: number): string => {
+  if (seconds < 1) return 'No focus time';
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  return [h > 0 ? `${h}h` : '', m > 0 ? `${m}m` : ''].filter(Boolean).join(' ');
+  const parts = [];
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0) parts.push(`${m}m`);
+  return parts.length > 0 ? parts.join(' ') : '< 1m';
 };
 
 const getBackgroundColor = (value: number, maxValue: number): string => {
-  if (value === 0 || maxValue === 0) return 'bg-muted/50';
+  if (value === 0 || maxValue === 0) return 'bg-muted/30';
   const intensity = Math.min(value / maxValue, 1);
-
-  if (intensity < 0.01) return 'bg-muted/50';
+  if (intensity < 0.01) return 'bg-muted/30';
   if (intensity < 0.25) return 'bg-primary/20';
   if (intensity < 0.5) return 'bg-primary/40';
   if (intensity < 0.75) return 'bg-primary/60';
@@ -67,29 +72,36 @@ const fetchHotspotData = async (
 
 // --- Main Component ---
 export function ProductivityHotspotChart() {
-  // Read the date range directly from the global Zustand store.
   const { range } = useAnalyticsStore();
   const { startDate, endDate } = range;
 
-  const { data, isLoading, isError, error } = useQuery<ProductivityHotspotData>(
-    {
-      // The queryKey now includes the global startDate and endDate.
-      // TanStack Query will automatically refetch when these values change.
-      queryKey: ['productivityHotspot', { startDate, endDate }],
-      queryFn: () => fetchHotspotData(startDate, endDate),
-      // Keep previous data visible while new data is loading for a smoother UX.
-      placeholderData: (previousData) => previousData,
-    }
-  );
+  const { data, isLoading, isError } = useQuery<ProductivityHotspotData>({
+    queryKey: ['productivityHotspot', { startDate, endDate }],
+    queryFn: () => fetchHotspotData(startDate, endDate),
+    placeholderData: (previousData) => previousData,
+  });
+
+  const peakTimeSummary = data?.peakTime
+    ? `Your peak focus time is typically on ${
+        DAYS[data.peakTime.day]
+      }s around ${format(new Date(2000, 0, 1, data.peakTime.hour), 'ha')}.`
+    : 'Track more time to discover your peak productivity patterns.';
+
+  const screenReaderSummary = data
+    ? `Productivity heatmap from ${format(startDate, 'MMM d')} to ${format(
+        endDate,
+        'MMM d'
+      )}. Total focus time was ${data.totalHours.toFixed(
+        1
+      )} hours. ${peakTimeSummary}`
+    : 'Loading productivity heatmap data.';
 
   const renderGrid = () => {
     if (isLoading) return <HotspotSkeleton />;
     if (isError) {
       return (
         <p className='p-4 text-center text-sm text-destructive'>
-          {axios.isAxiosError(error)
-            ? error.response?.data?.error || error.message
-            : 'Could not load heatmap data.'}
+          Could not load heatmap data.
         </p>
       );
     }
@@ -107,40 +119,59 @@ export function ProductivityHotspotChart() {
 
     return (
       <TooltipProvider delayDuration={0}>
-        <div className='grid grid-cols-7 gap-1.5 p-1'>
-          {DAYS.map((day) => (
-            <div
-              key={day}
-              className='text-center text-xs font-medium text-muted-foreground'
-            >
-              {day}
-            </div>
-          ))}
-          {Array.from({ length: 24 * 7 }).map((_, index) => {
-            const dayIndex = index % 7;
-            const hourIndex = Math.floor(index / 7);
-            const value = data.heatmap[dayIndex][hourIndex];
-            const hourLabel = format(new Date(2000, 0, 1, hourIndex), 'ha');
+        <div className='relative flex'>
+          {/* FIX 1: Y-Axis Time Labels */}
+          <div className='flex flex-col justify-between text-xs text-muted-foreground pt-6 pb-2 pr-2'>
+            {TIME_LABELS.map((label) => (
+              <span key={label}>{label}</span>
+            ))}
+          </div>
 
-            return (
-              <Tooltip key={`${dayIndex}-${hourIndex}`}>
-                <TooltipTrigger asChild>
-                  <div
-                    className={`h-4 w-full rounded-sm ${getBackgroundColor(
-                      value,
-                      data.maxValue
-                    )}`}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className='text-sm font-semibold'>
-                    {formatSeconds(value)} on {DAYS[dayIndex]}s around{' '}
-                    {hourLabel}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
+          <div className='flex-1'>
+            <div className='grid grid-cols-7 gap-1.5'>
+              {DAYS.map((day) => (
+                <div
+                  key={day}
+                  className='text-center text-xs font-medium text-muted-foreground pb-2'
+                >
+                  {day}
+                </div>
+              ))}
+              {Array.from({ length: 24 * 7 }).map((_, index) => {
+                const dayIndex = index % 7;
+                const hourIndex = Math.floor(index / 7);
+                const value = data.heatmap[dayIndex][hourIndex];
+                const hourLabel = format(new Date(2000, 0, 1, hourIndex), 'ha');
+                const ariaLabel = `${
+                  DAYS[dayIndex]
+                } at ${hourLabel}: ${formatSecondsForTooltip(value)}.`;
+
+                return (
+                  <Tooltip key={`${dayIndex}-${hourIndex}`}>
+                    <TooltipTrigger asChild>
+                      {/* FIX 3: Added tabIndex and aria-label for accessibility */}
+                      <div
+                        tabIndex={0}
+                        aria-label={ariaLabel}
+                        className={`h-4 w-full rounded-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${getBackgroundColor(
+                          value,
+                          data.maxValue
+                        )}`}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className='text-sm font-semibold'>
+                        {formatSecondsForTooltip(value)}
+                      </p>
+                      <p className='text-xs text-muted-foreground'>
+                        {DAYS[dayIndex]}s around {hourLabel}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </TooltipProvider>
     );
@@ -148,28 +179,61 @@ export function ProductivityHotspotChart() {
 
   return (
     <Card>
+      {/* FIX 4: Visually hidden summary for screen readers */}
+      <div className='sr-only' aria-live='polite'>
+        {screenReaderSummary}
+      </div>
       <CardHeader>
         <CardTitle>Your Productivity Hotspot</CardTitle>
         <CardDescription>
-          Focus intensity by day and hour from {format(startDate, 'MMM d')} to{' '}
+          Focus intensity from {format(startDate, 'MMM d')} to{' '}
           {format(endDate, 'MMM d')}.
         </CardDescription>
       </CardHeader>
       <CardContent>{renderGrid()}</CardContent>
+      <CardFooter className='flex-col items-start gap-2 text-sm'>
+        {/* FIX 1: Color Scale Legend */}
+        <div className='flex w-full items-center gap-2'>
+          <span className='text-xs text-muted-foreground'>Less</span>
+          <div className='flex flex-1 gap-1'>
+            <div className='h-2 flex-1 rounded-full bg-muted/30'></div>
+            <div className='h-2 flex-1 rounded-full bg-primary/20'></div>
+            <div className='h-2 flex-1 rounded-full bg-primary/40'></div>
+            <div className='h-2 flex-1 rounded-full bg-primary/60'></div>
+            <div className='h-2 flex-1 rounded-full bg-primary/80'></div>
+          </div>
+          <span className='text-xs text-muted-foreground'>More</span>
+        </div>
+        {/* FIX 2: Summarized Insight */}
+        {!isLoading && !isError && data && (
+          <p className='w-full pt-2 text-xs text-muted-foreground'>
+            {peakTimeSummary}
+          </p>
+        )}
+      </CardFooter>
     </Card>
   );
 }
 
-// --- Skeleton Component ---
+// --- Skeleton Component (Unchanged) ---
 function HotspotSkeleton() {
   return (
-    <div className='grid grid-cols-7 gap-1.5 p-1'>
-      {Array.from({ length: 7 }).map((_, i) => (
-        <Skeleton key={`day-skel-${i}`} className='h-4 w-8 mx-auto' />
-      ))}
-      {Array.from({ length: 24 * 7 }).map((_, i) => (
-        <Skeleton key={`cell-skel-${i}`} className='h-4 w-full' />
-      ))}
+    <div className='flex'>
+      <div className='flex flex-col justify-between pt-6 pb-2 pr-2'>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className='h-4 w-10' />
+        ))}
+      </div>
+      <div className='flex-1'>
+        <div className='grid grid-cols-7 gap-1.5'>
+          {Array.from({ length: 7 }).map((_, i) => (
+            <Skeleton key={i} className='h-6 w-8 mx-auto' />
+          ))}
+          {Array.from({ length: 24 * 7 }).map((_, i) => (
+            <Skeleton key={i} className='h-4 w-full' />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,12 +1,12 @@
 'use client';
 
-import { useQueries } from '@tanstack/react-query';
+import { keepPreviousData, useQueries } from '@tanstack/react-query';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
 import { Coffee } from 'lucide-react';
+import { useMemo } from 'react';
+import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts';
 
-import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import {
   Card,
   CardContent,
@@ -20,13 +20,13 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 
-// --- Type Definitions (best practice is to import from the route files) ---
+// --- Type Definitions ---
 type WeeklyBalanceData = {
   dayOfWeek: number; // 0=Sun, 1=Mon, ..., 6=Sat
   totalSeconds: number;
 };
-
 type PomodoroStatsData = {
   WORK: number;
   SHORT_BREAK: number;
@@ -50,7 +50,6 @@ const fetchWeeklyBalance = async (
   );
   return data;
 };
-
 const fetchPomodoroStats = async (
   startDate: Date,
   endDate: Date
@@ -65,47 +64,155 @@ const fetchPomodoroStats = async (
   return data;
 };
 
+// --- Sub-component for Break Discipline ---
+function BreakDisciplineStats({
+  data,
+  isLoading,
+  isError,
+}: {
+  data?: PomodoroStatsData;
+  isLoading: boolean;
+  isError: boolean;
+}) {
+  const stats = useMemo(() => {
+    if (!data || data.WORK === 0) return null;
+
+    const expectedShortBreaks = data.WORK - Math.floor(data.WORK / 4);
+    const expectedLongBreaks = Math.floor(data.WORK / 4);
+
+    // Calculate adherence, capping at 100%
+    const shortBreakAdherence = Math.min(
+      data.SHORT_BREAK / expectedShortBreaks,
+      1
+    );
+    const longBreakAdherence = Math.min(
+      data.LONG_BREAK / expectedLongBreaks,
+      1
+    );
+
+    // Weighted average: short breaks are more frequent, so they get more weight
+    const overallAdherence =
+      shortBreakAdherence * 0.75 + longBreakAdherence * 0.25;
+
+    let rating: string;
+    let color: string;
+    if (overallAdherence >= 0.9) {
+      rating = 'Excellent';
+      color = 'text-green-500';
+    } else if (overallAdherence >= 0.7) {
+      rating = 'Good';
+      color = 'text-yellow-500';
+    } else {
+      rating = 'Needs Improvement';
+      color = 'text-red-500';
+    }
+
+    return {
+      ...data,
+      adherence: Math.round(overallAdherence * 100),
+      rating,
+      color,
+    };
+  }, [data]);
+
+  if (isLoading)
+    return (
+      <div className='flex justify-around'>
+        <Skeleton className='h-12 w-1/4' />
+        <Skeleton className='h-12 w-1/4' />
+        <Skeleton className='h-12 w-1/4' />
+      </div>
+    );
+  if (isError)
+    return (
+      <p className='text-destructive text-sm text-center'>
+        Could not load Pomodoro data.
+      </p>
+    );
+  if (!stats) {
+    return (
+      <div className='text-center text-sm text-muted-foreground p-4 bg-muted/50 rounded-lg'>
+        <Coffee className='mx-auto h-6 w-6 mb-2' />
+        Use the Pomodoro timer to analyze your break habits.
+      </div>
+    );
+  }
+
+  return (
+    <div className='flex flex-col sm:flex-row justify-around items-center text-center gap-4'>
+      <div className='flex-1'>
+        <p className={`text-4xl font-bold ${stats.color}`}>
+          {stats.adherence}%
+        </p>
+        <p className='text-xs font-semibold'>{stats.rating} Adherence</p>
+      </div>
+      {/* IMPROVEMENT: Using a semantic Definition List */}
+      <dl className='flex-1 grid grid-cols-3 gap-2 text-xs text-muted-foreground'>
+        <div className='flex flex-col'>
+          <dt className='font-medium'>Work</dt>
+          <dd className='text-lg font-mono'>{stats.WORK}</dd>
+        </div>
+        <div className='flex flex-col'>
+          <dt className='font-medium'>Short Breaks</dt>
+          <dd className='text-lg font-mono'>{stats.SHORT_BREAK}</dd>
+        </div>
+        <div className='flex flex-col'>
+          <dt className='font-medium'>Long Breaks</dt>
+          <dd className='text-lg font-mono'>{stats.LONG_BREAK}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
 // --- Main Component ---
 export function SustainabilityReport() {
-  // Read the date range directly from the global Zustand store.
   const { range } = useAnalyticsStore();
   const { startDate, endDate } = range;
 
-  // useQueries is perfect for fetching multiple, independent data sets for one component.
-  // Both queries now use the global date range from the store.
   const [weeklyBalanceQuery, pomodoroStatsQuery] = useQueries({
     queries: [
       {
         queryKey: ['weeklyBalance', { startDate, endDate }],
         queryFn: () => fetchWeeklyBalance(startDate, endDate),
-        placeholderData: (previousData) => previousData,
+        placeholderData: keepPreviousData,
       },
       {
         queryKey: ['pomodoroStats', { startDate, endDate }],
         queryFn: () => fetchPomodoroStats(startDate, endDate),
-        placeholderData: (previousData) => previousData,
+        placeholderData: keepPreviousData,
       },
     ],
   });
 
-  // Process weekly balance data for the chart
-  const weeklyChartData = DAYS.map((day, index) => {
-    const dataPoint = weeklyBalanceQuery.data?.find(
-      (d) => d.dayOfWeek === index
-    );
-    return {
-      day,
-      totalHours: (dataPoint?.totalSeconds ?? 0) / 3600,
-      // Color weekends differently for visual emphasis
-      fill: index === 0 || index === 6 ? 'var(--chart-2)' : 'var(--chart-1)',
-    };
-  });
+  // IMPROVEMENT: Logic is wrapped in useMemo for performance
+  const weeklyChartData = useMemo(() => {
+    return DAYS.map((day, index) => {
+      const dataPoint = weeklyBalanceQuery.data?.find(
+        (d) => d.dayOfWeek === index
+      );
+      return {
+        day,
+        totalHours: (dataPoint?.totalSeconds ?? 0) / 3600,
+        isWeekend: index === 0 || index === 6,
+      };
+    });
+  }, [weeklyBalanceQuery.data]);
 
-  const hasPomodoroData =
-    pomodoroStatsQuery.data && pomodoroStatsQuery.data.WORK > 0;
+  const screenReaderSummary = `Work-Life Health Report from ${format(
+    startDate,
+    'MMM d'
+  )} to ${format(
+    endDate,
+    'MMM d'
+  )}. This report analyzes your weekly focus distribution and your break discipline when using the Pomodoro timer.`;
 
   return (
     <Card>
+      {/* IMPROVEMENT: Added screen reader summary */}
+      <div className='sr-only' aria-live='polite'>
+        {screenReaderSummary}
+      </div>
       <CardHeader>
         <CardTitle>Work-Life Health</CardTitle>
         <CardDescription>
@@ -113,8 +220,7 @@ export function SustainabilityReport() {
           {format(endDate, 'MMM d')}.
         </CardDescription>
       </CardHeader>
-      <CardContent className='space-y-6'>
-        {/* Section 1: Weekly Balance Chart */}
+      <CardContent className='space-y-8'>
         <div>
           <h4 className='font-semibold text-sm mb-2'>Weekly Focus Balance</h4>
           {weeklyBalanceQuery.isLoading ? (
@@ -124,14 +230,43 @@ export function SustainabilityReport() {
               Could not load balance data.
             </p>
           ) : (
-            <ChartContainer config={{}} className='h-[150px] w-full'>
-              <BarChart accessibilityLayer data={weeklyChartData}>
+            <ChartContainer
+              config={{ hours: { label: 'Hours' } }}
+              className='h-[150px] w-full'
+            >
+              <BarChart
+                accessibilityLayer
+                data={weeklyChartData}
+                margin={{ top: 5, right: 10, left: -20, bottom: -5 }}
+              >
+                {/* IMPROVEMENT: Added SVG pattern for accessible weekend differentiation */}
+                <defs>
+                  <pattern
+                    id='weekendPattern'
+                    patternUnits='userSpaceOnUse'
+                    width='4'
+                    height='4'
+                  >
+                    <path
+                      d='M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2'
+                      style={{ stroke: 'hsl(var(--chart-2))', strokeWidth: 1 }}
+                    />
+                  </pattern>
+                </defs>
                 <CartesianGrid vertical={false} />
                 <XAxis
                   dataKey='day'
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
+                />
+                {/* IMPROVEMENT: Added Y-axis for scale readability */}
+                <YAxis
+                  unit='h'
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  width={40}
                 />
                 <ChartTooltip
                   cursor={false}
@@ -141,49 +276,30 @@ export function SustainabilityReport() {
                     />
                   }
                 />
-                <Bar dataKey='totalHours' radius={4} />
+                <Bar dataKey='totalHours' radius={4}>
+                  {/* IMPROVEMENT: Using Cell to apply pattern conditionally */}
+                  {weeklyChartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={
+                        entry.isWeekend
+                          ? 'url(#weekendPattern)'
+                          : 'hsl(var(--chart-1))'
+                      }
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ChartContainer>
           )}
         </div>
-
-        {/* Section 2: Pomodoro Break Discipline */}
         <div className='border-t pt-6'>
           <h4 className='font-semibold text-sm mb-2'>Break Discipline</h4>
-          {pomodoroStatsQuery.isLoading ? (
-            <Skeleton className='h-12 w-full' />
-          ) : pomodoroStatsQuery.isError ? (
-            <p className='text-destructive text-sm'>
-              Could not load Pomodoro data.
-            </p>
-          ) : !hasPomodoroData ? (
-            <div className='text-center text-sm text-muted-foreground p-4 bg-muted/50 rounded-lg'>
-              <Coffee className='mx-auto h-6 w-6 mb-2' />
-              Use the Pomodoro timer in this period to analyze your break
-              habits.
-            </div>
-          ) : (
-            <div className='flex justify-around text-center'>
-              <div>
-                <p className='text-2xl font-bold'>
-                  {pomodoroStatsQuery.data.WORK}
-                </p>
-                <p className='text-xs text-muted-foreground'>Work Cycles</p>
-              </div>
-              <div>
-                <p className='text-2xl font-bold'>
-                  {pomodoroStatsQuery.data.SHORT_BREAK}
-                </p>
-                <p className='text-xs text-muted-foreground'>Short Breaks</p>
-              </div>
-              <div>
-                <p className='text-2xl font-bold'>
-                  {pomodoroStatsQuery.data.LONG_BREAK}
-                </p>
-                <p className='text-xs text-muted-foreground'>Long Breaks</p>
-              </div>
-            </div>
-          )}
+          <BreakDisciplineStats
+            data={pomodoroStatsQuery.data}
+            isLoading={pomodoroStatsQuery.isLoading}
+            isError={pomodoroStatsQuery.isError}
+          />
         </div>
       </CardContent>
     </Card>

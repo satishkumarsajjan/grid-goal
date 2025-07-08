@@ -6,13 +6,13 @@ import { format } from 'date-fns';
 import { Zap } from 'lucide-react';
 import { useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { SessionVibe } from '@prisma/client';
 
 import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -26,35 +26,26 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 
 // --- Type Definitions ---
-// The raw data shape returned by the API
-type FlowTriggerRawData = {
-  categoryName: string;
-  vibe: SessionVibe;
-  count: number;
-};
-
-// The transformed data shape required by the Recharts BarChart
-type ChartData = {
+type FlowTriggerData = {
   categoryName: string;
   FLOW: number;
   NEUTRAL: number;
   STRUGGLE: number;
+  totalSessions: number;
 };
 
 // --- Chart Configuration ---
-// Defines labels and colors for the chart legend and bars.
-// Ensure these CSS variables are defined in your global styles.
 const chartConfig = {
-  FLOW: { label: 'Flow', color: 'hsl(var(--chart-green))' },
-  NEUTRAL: { label: 'Neutral', color: 'hsl(var(--chart-yellow))' },
-  STRUGGLE: { label: 'Struggle', color: 'hsl(var(--chart-red))' },
+  FLOW: { label: 'Flow', color: 'var(--chart-3)' },
+  NEUTRAL: { label: 'Neutral', color: 'var(--chart-4)' },
+  STRUGGLE: { label: 'Struggle', color: 'var(--chart-5)' },
 };
 
 // --- API Fetcher ---
 const fetchFlowTriggers = async (
   startDate: Date,
   endDate: Date
-): Promise<FlowTriggerRawData[]> => {
+): Promise<FlowTriggerData[]> => {
   const params = new URLSearchParams({
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
@@ -67,67 +58,58 @@ const fetchFlowTriggers = async (
 
 // --- Main Component ---
 export function FlowTriggersChart() {
-  // Read the date range directly from the global Zustand store.
   const { range } = useAnalyticsStore();
   const { startDate, endDate } = range;
 
-  const {
-    data: rawData,
-    isLoading,
-    isError,
-    error,
-  } = useQuery<FlowTriggerRawData[]>({
-    // The queryKey now includes the global startDate and endDate.
-    // TanStack Query will automatically refetch when these values change.
+  const { data, isLoading, isError } = useQuery<FlowTriggerData[]>({
     queryKey: ['flowTriggers', { startDate, endDate }],
     queryFn: () => fetchFlowTriggers(startDate, endDate),
-    // Keep previous data visible while new data is loading for a smoother UX.
     placeholderData: (previousData) => previousData,
   });
 
-  // useMemo is crucial here to transform the raw data into a format suitable
-  // for a stacked bar chart, and to prevent re-computation on every render.
-  const chartData: ChartData[] = useMemo(() => {
-    if (!rawData) return [];
+  // --- Summarized Insight Logic ---
+  const summary = useMemo(() => {
+    if (!data || data.length === 0) return null;
 
-    const groupedData = rawData.reduce<Record<string, ChartData>>(
-      (acc, item) => {
-        if (!acc[item.categoryName]) {
-          acc[item.categoryName] = {
-            categoryName: item.categoryName,
-            FLOW: 0,
-            NEUTRAL: 0,
-            STRUGGLE: 0,
-          };
-        }
-        acc[item.categoryName][item.vibe] = item.count;
-        return acc;
-      },
-      {}
+    const withPercentages = data.map((d) => ({
+      ...d,
+      flowPct: d.totalSessions > 0 ? d.FLOW / d.totalSessions : 0,
+      strugglePct: d.totalSessions > 0 ? d.STRUGGLE / d.totalSessions : 0,
+    }));
+
+    const bestFlow = withPercentages.reduce((max, cur) =>
+      cur.flowPct > max.flowPct ? cur : max
+    );
+    const worstStruggle = withPercentages.reduce((max, cur) =>
+      cur.strugglePct > max.strugglePct ? cur : max
     );
 
-    return Object.values(groupedData);
-  }, [rawData]);
+    if (bestFlow.flowPct < 0.5 && worstStruggle.strugglePct < 0.5) {
+      return 'You maintain a neutral balance across most of your work categories.';
+    }
+
+    return `**${bestFlow.categoryName}** seems to be your greatest source of flow, while **${worstStruggle.categoryName}** presents the most struggle.`;
+  }, [data]);
+
+  const screenReaderSummary = data
+    ? `Chart of session vibes by category. ${summary?.replace(/\*\*/g, '')}`
+    : 'Loading session vibe data.';
 
   const renderContent = () => {
     if (isLoading) return <ChartSkeleton />;
-    if (isError) {
+    if (isError)
       return (
         <p className='p-4 text-center text-sm text-destructive'>
-          {axios.isAxiosError(error)
-            ? error.response?.data?.error || error.message
-            : 'Could not load chart data.'}
+          Could not load chart data.
         </p>
       );
-    }
-    if (chartData.length === 0) {
+    if (!data || data.length === 0) {
       return (
         <div className='flex flex-col items-center justify-center p-8 text-center'>
           <Zap className='h-10 w-10 text-muted-foreground mb-4' />
           <p className='font-semibold'>Find Your Flow</p>
           <p className='text-sm text-muted-foreground'>
-            Set a 'Vibe' after a focus session in this period to see what drives
-            your flow.
+            Set a 'Vibe' after a focus session to see what drives your flow.
           </p>
         </div>
       );
@@ -135,7 +117,13 @@ export function FlowTriggersChart() {
 
     return (
       <ChartContainer config={chartConfig} className='min-h-[250px] w-full'>
-        <BarChart accessibilityLayer data={chartData} layout='vertical'>
+        {/* IMPROVEMENT: Changed to a 100% stacked bar chart */}
+        <BarChart
+          accessibilityLayer
+          data={data}
+          layout='vertical'
+          stackOffset='expand'
+        >
           <CartesianGrid horizontal={false} />
           <YAxis
             dataKey='categoryName'
@@ -144,28 +132,64 @@ export function FlowTriggersChart() {
             axisLine={false}
             tickMargin={10}
             className='text-xs'
-            width={80} // Give space for long category names
+            width={80} // Provides space for long category names
           />
-          <XAxis dataKey='total' type='number' hide />
+          <XAxis type='number' hide />
           <ChartTooltip
             cursor={false}
-            content={<ChartTooltipContent hideLabel />}
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                const dataPoint = payload[0].payload as FlowTriggerData;
+                return (
+                  <div className='rounded-lg border bg-background p-2.5 text-sm shadow-sm'>
+                    <p className='font-bold'>{dataPoint.categoryName}</p>
+                    <ul className='mt-1 space-y-1 text-muted-foreground'>
+                      <li className='flex items-center gap-2'>
+                        <span
+                          className='h-2.5 w-2.5 rounded-full'
+                          style={{ backgroundColor: chartConfig.FLOW.color }}
+                        />
+                        Flow: {dataPoint.FLOW} sessions
+                      </li>
+                      <li className='flex items-center gap-2'>
+                        <span
+                          className='h-2.5 w-2.5 rounded-full'
+                          style={{ backgroundColor: chartConfig.NEUTRAL.color }}
+                        />
+                        Neutral: {dataPoint.NEUTRAL} sessions
+                      </li>
+                      <li className='flex items-center gap-2'>
+                        <span
+                          className='h-2.5 w-2.5 rounded-full'
+                          style={{
+                            backgroundColor: chartConfig.STRUGGLE.color,
+                          }}
+                        />
+                        Struggle: {dataPoint.STRUGGLE} sessions
+                      </li>
+                    </ul>
+                  </div>
+                );
+              }
+              return null;
+            }}
           />
+          {/* IMPROVEMENT: Corrected legend implementation */}
           <ChartLegend
-            content={<ChartLegendContent nameKey='categoryName' payload={{}} />}
+            content={<ChartLegendContent nameKey='' payload={{}} />}
           />
-          <Bar
-            dataKey='STRUGGLE'
-            stackId='a'
-            fill={chartConfig.STRUGGLE.color}
-            radius={[4, 0, 0, 4]}
-          />
-          <Bar dataKey='NEUTRAL' stackId='a' fill={chartConfig.NEUTRAL.color} />
           <Bar
             dataKey='FLOW'
             stackId='a'
             fill={chartConfig.FLOW.color}
             radius={[0, 4, 4, 0]}
+          />
+          <Bar dataKey='NEUTRAL' stackId='a' fill={chartConfig.NEUTRAL.color} />
+          <Bar
+            dataKey='STRUGGLE'
+            stackId='a'
+            fill={chartConfig.STRUGGLE.color}
+            radius={[4, 0, 0, 4]}
           />
         </BarChart>
       </ChartContainer>
@@ -174,19 +198,30 @@ export function FlowTriggersChart() {
 
   return (
     <Card>
+      <div className='sr-only' aria-live='polite'>
+        {screenReaderSummary}
+      </div>
       <CardHeader>
         <CardTitle>Find Your Flow Triggers</CardTitle>
         <CardDescription>
-          Which types of work put you in a state of flow from{' '}
-          {format(startDate, 'MMM d')} to {format(endDate, 'MMM d')}?
+          Percentage of session 'vibes' for your top categories from{' '}
+          {format(startDate, 'MMM d')} to {format(endDate, 'MMM d')}.
         </CardDescription>
       </CardHeader>
       <CardContent>{renderContent()}</CardContent>
+      {summary && (
+        <CardFooter>
+          <p
+            className='text-xs text-muted-foreground'
+            dangerouslySetInnerHTML={{ __html: summary }}
+          />
+        </CardFooter>
+      )}
     </Card>
   );
 }
 
-// --- Skeleton Component ---
+// --- Skeleton Component (Unchanged) ---
 function ChartSkeleton() {
   return (
     <div className='space-y-4 p-4'>

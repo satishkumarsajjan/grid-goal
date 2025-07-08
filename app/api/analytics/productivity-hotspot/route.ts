@@ -4,15 +4,18 @@ import { prisma } from '@/prisma';
 import { z } from 'zod';
 import { getDay, getHours, addSeconds } from 'date-fns';
 
-// The shape of our response: a 7x24 matrix and the max value for scaling
+export type PeakTime = {
+  day: number; // 0-6
+  hour: number; // 0-23
+} | null;
+
 export type ProductivityHotspotData = {
-  // A 7-day (rows, Sun-Sat) by 24-hour (cols) matrix of total seconds
   heatmap: number[][];
-  // The highest value in the heatmap, useful for color scaling on the client
   maxValue: number;
+  peakTime: PeakTime;
+  totalHours: number;
 };
 
-// Zod schema for validating query parameters
 const querySchema = z.object({
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
@@ -34,61 +37,56 @@ export async function GET(request: Request) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Invalid query parameters', details: validation.error.errors },
+        { error: 'Invalid query parameters' },
         { status: 400 }
       );
     }
     const { startDate, endDate } = validation.data;
 
     const focusSessions = await prisma.focusSession.findMany({
-      where: {
-        userId,
-        startTime: { gte: startDate, lte: endDate },
-      },
-      select: {
-        startTime: true,
-        durationSeconds: true,
-      },
+      where: { userId, startTime: { gte: startDate, lte: endDate } },
+      select: { startTime: true, durationSeconds: true },
     });
 
-    // Initialize a 7x24 matrix with zeros
     const heatmap: number[][] = Array(7)
       .fill(0)
       .map(() => Array(24).fill(0));
     let maxValue = 0;
+    let peakTime: PeakTime = null;
+    let totalSeconds = 0;
 
-    // Process each session and distribute its duration across the heatmap
     for (const session of focusSessions) {
+      totalSeconds += session.durationSeconds;
       let remainingSeconds = session.durationSeconds;
       let currentTime = session.startTime;
 
       while (remainingSeconds > 0) {
-        const day = getDay(currentTime); // 0 (Sun) to 6 (Sat)
+        const day = getDay(currentTime);
         const hour = getHours(currentTime);
-
-        // Calculate seconds until the next hour
         const nextHour = new Date(currentTime);
         nextHour.setHours(hour + 1, 0, 0, 0);
         const secondsToNextHour =
           (nextHour.getTime() - currentTime.getTime()) / 1000;
-
-        // Determine how many seconds to add to the current cell
         const secondsInThisSlot = Math.min(remainingSeconds, secondsToNextHour);
 
         heatmap[day][hour] += secondsInThisSlot;
 
-        // Update the global max value
         if (heatmap[day][hour] > maxValue) {
           maxValue = heatmap[day][hour];
+          peakTime = { day, hour };
         }
 
-        // Move time forward and decrease remaining seconds
         remainingSeconds -= secondsInThisSlot;
         currentTime = addSeconds(currentTime, secondsInThisSlot);
       }
     }
 
-    const responseData: ProductivityHotspotData = { heatmap, maxValue };
+    const responseData: ProductivityHotspotData = {
+      heatmap,
+      maxValue,
+      peakTime,
+      totalHours: totalSeconds / 3600,
+    };
 
     return NextResponse.json(responseData);
   } catch (error) {
