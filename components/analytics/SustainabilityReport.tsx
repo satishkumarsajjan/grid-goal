@@ -20,7 +20,8 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
+import { useAnalyticsStore } from '@/store/useAnalyticsStore';
+import { InsightTooltip } from './InsightTooltip';
 
 type WeeklyBalanceData = {
   dayOfWeek: number;
@@ -205,7 +206,33 @@ export function SustainabilityReport() {
         {screenReaderSummary}
       </div>
       <CardHeader>
-        <CardTitle>Work-Life Health</CardTitle>
+        <div className='flex items-center justify-between'>
+          <CardTitle>Work-Life Health</CardTitle>
+
+          <InsightTooltip
+            content={
+              <>
+                <p className='font-medium'>
+                  This report is your work-life health check.
+                </p>
+                <ul className='mt-2 list-disc list-inside space-y-1 text-xs'>
+                  <li>
+                    <strong>Weekly Balance:</strong> Shows your focus
+                    distribution across weekdays vs. weekends.
+                  </li>
+                  <li>
+                    <strong>Break Discipline:</strong> Analyzes how effectively
+                    you take breaks during Pomodoro sessions.
+                  </li>
+                </ul>
+                <p className='mt-2'>
+                  Use it to prevent burnout and ensure your work habits are
+                  sustainable.
+                </p>
+              </>
+            }
+          />
+        </div>
         <CardDescription>
           Analyzing your work habits from {format(startDate, 'MMM d')} to{' '}
           {format(endDate, 'MMM d')}.

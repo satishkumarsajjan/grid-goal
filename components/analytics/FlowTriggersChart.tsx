@@ -22,7 +22,8 @@ import {
   ChartTooltip,
 } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
+import { useAnalyticsStore } from '@/store/useAnalyticsStore';
+import { InsightTooltip } from './InsightTooltip';
 
 // --- Type Definitions ---
 type FlowTriggerData = {
@@ -196,7 +197,19 @@ export function FlowTriggersChart() {
         {screenReaderSummary}
       </div>
       <CardHeader>
-        <CardTitle>Find Your Flow Triggers</CardTitle>
+        <div className='flex items-center justify-between'>
+          <CardTitle>Find Your Flow Triggers</CardTitle>
+          <InsightTooltip
+            content={
+              <p>
+                This chart analyzes the 'vibe' you set after focus sessions. It
+                helps you understand which types of work are most likely to put
+                you in a state of flow, and which ones consistently lead to
+                struggle.
+              </p>
+            }
+          />
+        </div>
         <CardDescription>
           Percentage of session 'vibes' for your top categories from{' '}
           {format(startDate, 'MMM d')} to {format(endDate, 'MMM d')}.

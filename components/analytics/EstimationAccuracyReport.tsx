@@ -37,6 +37,7 @@ import type {
   EstimationAccuracyResponse,
   EstimationAccuracyItem,
 } from '@/app/api/analytics/estimation-accuracy/route';
+import { InsightTooltip } from './InsightTooltip';
 
 type ProcessedAccuracyItem = EstimationAccuracyItem & {
   variancePercent: number | null;
@@ -179,7 +180,19 @@ export function EstimationAccuracyReport() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Estimation Accuracy</CardTitle>
+        <div className='flex items-center justify-between'>
+          <CardTitle>Estimation Accuracy</CardTitle>
+          <InsightTooltip
+            content={
+              <p>
+                This report compares your estimated time against the actual time
+                you spent on completed goals. Use this feedback to improve your
+                planning skills, set more realistic deadlines, and reduce the
+                stress of falling behind.
+              </p>
+            }
+          />
+        </div>
         <CardDescription>
           Review your planning accuracy to make more realistic estimates in the
           future.

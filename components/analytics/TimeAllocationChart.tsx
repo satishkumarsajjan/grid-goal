@@ -21,7 +21,8 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from '@/components/ui/chart';
-import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
+import { useAnalyticsStore } from '@/store/useAnalyticsStore';
+import { InsightTooltip } from './InsightTooltip';
 
 type TimeAllocationData = {
   chartData: {
@@ -173,7 +174,19 @@ export function TimeAllocationChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Where Your Time Goes</CardTitle>
+        <div className='flex items-center justify-between'>
+          <CardTitle>Where your time goes</CardTitle>
+
+          <InsightTooltip
+            content={
+              <p>
+                This chart shows how your focus time is distributed across your
+                different work categories. Use it to check if your effort is
+                aligned with your priorities.
+              </p>
+            }
+          />
+        </div>
         <CardDescription>
           Focus time by category from {format(startDate, 'MMM d')} to{' '}
           {format(endDate, 'MMM d')}.

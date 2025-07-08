@@ -5,7 +5,7 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import { BrainCircuit } from 'lucide-react';
 
-import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
+import { useAnalyticsStore } from '@/store/useAnalyticsStore';
 import {
   Card,
   CardContent,
@@ -21,6 +21,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
+import { InsightTooltip } from './InsightTooltip';
 
 type PeakTime = { day: number; hour: number } | null;
 type ProductivityHotspotData = {
@@ -178,7 +179,20 @@ export function ProductivityHotspotChart() {
         {screenReaderSummary}
       </div>
       <CardHeader>
-        <CardTitle>Your Productivity Hotspot</CardTitle>
+        <div className='flex items-center justify-between'>
+          <CardTitle>Your Productivity Hotspot</CardTitle>
+
+          <InsightTooltip
+            content={
+              <p>
+                This heatmap shows your focus intensity throughout the week.
+                More intense squares indicate more time spent in a focus session
+                during that specific hour. Use this to identify your 'deep work'
+                windows and schedule important tasks accordingly.
+              </p>
+            }
+          />
+        </div>
         <CardDescription>
           Focus intensity from {format(startDate, 'MMM d')} to{' '}
           {format(endDate, 'MMM d')}.

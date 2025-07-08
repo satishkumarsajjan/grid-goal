@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
+import { useAnalyticsStore } from '@/store/useAnalyticsStore';
 import { format, isEqual, startOfDay, subDays } from 'date-fns';
 import { CalendarIcon, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
