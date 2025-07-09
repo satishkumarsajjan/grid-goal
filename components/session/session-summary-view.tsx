@@ -110,6 +110,8 @@ export function SessionSummaryView({
       pomodoroCycle: sessionData.pomodoroCycle,
       tags,
     };
+    console.log('SESSIONSUMMARY:', sessionData);
+
     mutation.mutate(payload);
   }
 

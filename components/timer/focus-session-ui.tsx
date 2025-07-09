@@ -52,6 +52,7 @@ export function FocusSessionUI() {
     } else {
       reset();
     }
+    console.log('POMODORO', finalDurationSeconds);
   };
 
   const handleSessionSavedOrDiscarded = () => {

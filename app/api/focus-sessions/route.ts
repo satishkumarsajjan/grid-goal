@@ -2,75 +2,78 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
 import { z } from 'zod';
-import { SessionVibe, TaskStatus } from '@prisma/client';
+// Import the enums from Prisma client to use them in Zod
+import {
+  SessionVibe,
+  TaskStatus,
+  TimerMode,
+  PomodoroCycle,
+} from '@prisma/client';
 
-// Zod schema for validation
+// FIX: Update the Zod schema to include the missing fields
 const createFocusSessionSchema = z.object({
   startTime: z.string().datetime(),
   endTime: z.string().datetime(),
   durationSeconds: z.number().int().positive(),
   taskId: z.string().cuid(),
   goalId: z.string().cuid(),
-  noteAccomplished: z.string().max(10000).optional(),
-  noteNextStep: z.string().max(10000).optional(),
+  noteAccomplished: z.string().max(10000).optional().nullable(),
+  noteNextStep: z.string().max(10000).optional().nullable(),
+  artifactUrl: z.string().url().optional().nullable(),
   vibe: z.nativeEnum(SessionVibe).optional(),
-  tags: z.array(z.string().min(1).max(50)).optional(), // Assuming tags are passed as an array of names
+  tags: z.array(z.string().min(1).max(50)).optional(),
+
+  // These were the missing properties.
+  // We make them optional because a STOPWATCH session won't have a pomodoroCycle.
+  mode: z.nativeEnum(TimerMode).optional().default('STOPWATCH'),
+  pomodoroCycle: z.nativeEnum(PomodoroCycle).optional(),
 });
 
-// This function handles POST requests to /api/focus-sessions
 export async function POST(request: Request) {
   try {
-    // 1. Authenticate & Authorize
     const session = await auth();
     if (!session?.user?.id) {
-      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const userId = session.user.id;
 
-    // 2. Validate request body
     const body = await request.json();
     const validation = createFocusSessionSchema.safeParse(body);
 
     if (!validation.success) {
-      return new NextResponse(
-        JSON.stringify({ error: validation.error.format() }),
+      return NextResponse.json(
+        { error: validation.error.format() },
         { status: 400 }
       );
     }
+
+    // Now, `mode` and `pomodoroCycle` will be correctly included in `validation.data`
     const { taskId, goalId, tags, ...sessionData } = validation.data;
 
-    // 3. Security Check: Verify user owns the task/goal they are logging time for.
-    const task = await prisma.task.findFirst({
-      where: { id: taskId, userId: userId },
-    });
-
-    if (!task) {
-      return new NextResponse(
-        JSON.stringify({
-          error: 'Task not found or you do not have permission',
-        }),
-        { status: 404 }
-      );
-    }
-
-    // 4. Perform the database operations within a transaction
-    // This ensures that BOTH the session creation and the task update succeed or fail together.
     const [newSession] = await prisma.$transaction(async (tx) => {
+      // Security Check: Verify user owns the task/goal
+      const task = await tx.task.findFirst({
+        where: { id: taskId, userId: userId },
+      });
+      if (!task) {
+        throw new Error('Task not found or you do not have permission');
+      }
+
       // A) Create or find tags and get their IDs
       let tagIds: { id: string }[] = [];
       if (tags && tags.length > 0) {
-        await Promise.all(
-          tags.map(async (tagName) => {
-            const tag = await tx.tag.upsert({
+        // Use Promise.all to run tag upserts concurrently for better performance
+        const upsertedTags = await Promise.all(
+          tags.map((tagName) =>
+            tx.tag.upsert({
               where: { userId_name: { userId, name: tagName } },
               update: {},
               create: { name: tagName, userId },
-            });
-            tagIds.push({ id: tag.id });
-          })
+              select: { id: true },
+            })
+          )
         );
+        tagIds = upsertedTags;
       }
 
       // B) Create the focus session
@@ -81,15 +84,15 @@ export async function POST(request: Request) {
           taskId,
           goalId,
           tags: {
-            // Connect the tags to this session
             create: tagIds.map((tag) => ({
               tag: { connect: { id: tag.id } },
             })),
           },
         },
       });
+      console.log('createdSession:', createdSession);
 
-      // C) CRITICAL SIDE-EFFECT: Update the task's status if it's currently PENDING
+      // C) Update the task's status if it's currently PENDING
       if (task.status === TaskStatus.PENDING) {
         await tx.task.update({
           where: { id: taskId },
@@ -99,12 +102,14 @@ export async function POST(request: Request) {
       return [createdSession];
     });
 
-    // 5. Return a successful response
     return NextResponse.json(newSession, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[API:CREATE_FOCUS_SESSION]', error);
-    return new NextResponse(
-      JSON.stringify({ error: 'An internal error occurred' }),
+    if (error.message.includes('Task not found')) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+    return NextResponse.json(
+      { error: 'An internal error occurred' },
       { status: 500 }
     );
   }
