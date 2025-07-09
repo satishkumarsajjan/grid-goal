@@ -4,20 +4,23 @@
 import { TaskStatus } from '@prisma/client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { toast } from 'sonner';
-
 import { type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 
 import { TaskSelectionModal } from '@/components/timer/task-selection-modal';
-import { AriaLiveRegion } from '@/components/ui/AriaLiveRegion';
-import { calculatePaceData } from '@/lib/pace-helpers';
 import { type GoalWithSessions, type TaskWithTime } from '@/lib/types';
 import { CreateTaskForm } from './create-task-form';
-import { SortableTasks } from './SortableTasks';
 import { TaskListSkeleton } from './task-list-skeleton';
 import { TaskListHeader } from './TaskListHeader';
+import { SortableTasks } from './SortableTasks';
+import { AriaLiveRegion } from '@/components/ui/AriaLiveRegion';
+import {
+  TaskListControls,
+  type FilterOption,
+  type SortOption,
+} from './TaskListControls';
 
 interface TaskListProps {
   goalId: string | null;
@@ -43,6 +46,8 @@ export function TaskList({ goalId }: TaskListProps) {
     null
   );
   const [announcement, setAnnouncement] = useState('');
+  const [activeFilter, setActiveFilter] = useState<FilterOption>('ALL');
+  const [activeSort, setActiveSort] = useState<SortOption>('sortOrder');
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['taskListData', goalId],
@@ -57,7 +62,33 @@ export function TaskList({ goalId }: TaskListProps) {
     if (fetchedTasks) {
       setOrderedTasks(fetchedTasks);
     }
-  }, [fetchedTasks]);
+    setActiveFilter('ALL');
+    setActiveSort('sortOrder');
+  }, [fetchedTasks, goalId]);
+
+  const displayedTasks = useMemo(() => {
+    let tasks = [...orderedTasks];
+    if (activeFilter !== 'ALL') {
+      tasks = tasks.filter((task) => task.status === activeFilter);
+    }
+    switch (activeSort) {
+      case 'createdAt':
+        tasks.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        break;
+      case 'estimatedTimeSeconds':
+        tasks.sort(
+          (a, b) =>
+            (b.estimatedTimeSeconds || 0) - (a.estimatedTimeSeconds || 0)
+        );
+        break;
+      default:
+        break;
+    }
+    return tasks;
+  }, [orderedTasks, activeFilter, activeSort]);
 
   const { completedTaskCount, inProgressTaskCount } = useMemo(() => {
     if (!orderedTasks) return { completedTaskCount: 0, inProgressTaskCount: 0 };
@@ -83,32 +114,27 @@ export function TaskList({ goalId }: TaskListProps) {
     },
   });
 
-  const handleStartSessionRequest = (task: TaskWithTime) => {
-    setTaskForSession(task);
-    setIsModalOpen(true);
-  };
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       const oldIndex = orderedTasks.findIndex((t) => t.id === active.id);
       const newIndex = orderedTasks.findIndex((t) => t.id === over.id);
-
       const reorderedTasks = arrayMove(orderedTasks, oldIndex, newIndex);
       setOrderedTasks(reorderedTasks);
-
       const tasksToUpdate = reorderedTasks.map((task, index) => ({
         id: task.id,
         sortOrder: index,
       }));
       orderMutation.mutate(tasksToUpdate);
-
       const taskTitle = reorderedTasks[newIndex].title;
-      setAnnouncement(
-        `Task "${taskTitle}" moved from position ${oldIndex + 1} to ${
-          newIndex + 1
-        }.`
-      );
+      setAnnouncement(`Task "${taskTitle}" moved to position ${newIndex + 1}.`);
+    }
+  };
+
+  const handleFilterChange = (filter: FilterOption) => {
+    setActiveFilter(filter);
+    if (filter !== 'ALL' && activeSort === 'sortOrder') {
+      setActiveSort('createdAt');
     }
   };
 
@@ -135,7 +161,6 @@ export function TaskList({ goalId }: TaskListProps) {
   return (
     <>
       <AriaLiveRegion message={announcement} />
-
       <div className='flex h-full flex-col rounded-lg'>
         <TaskListHeader
           goal={goal}
@@ -144,12 +169,26 @@ export function TaskList({ goalId }: TaskListProps) {
           inProgressTaskCount={inProgressTaskCount}
           isSavingOrder={orderMutation.isPending}
         />
-        <SortableTasks
-          tasks={orderedTasks}
-          onDragEnd={handleDragEnd}
-          onStartSession={handleStartSessionRequest}
+        <TaskListControls
+          activeFilter={activeFilter}
+          onFilterChange={handleFilterChange}
+          activeSort={activeSort}
+          onSortChange={setActiveSort}
           isDisabled={orderMutation.isPending}
         />
+
+        {/* Pass the new totalTaskCount prop */}
+        <SortableTasks
+          tasks={displayedTasks}
+          totalTaskCount={orderedTasks.length}
+          onDragEnd={handleDragEnd}
+          onStartSession={(task) => {
+            setTaskForSession(task);
+            setIsModalOpen(true);
+          }}
+          isDisabled={orderMutation.isPending || activeSort !== 'sortOrder'}
+        />
+
         <div className='p-4 border-t bg-background/50 sticky bottom-0'>
           <CreateTaskForm
             goalId={goal.id}
@@ -157,7 +196,6 @@ export function TaskList({ goalId }: TaskListProps) {
           />
         </div>
       </div>
-
       <TaskSelectionModal
         isOpen={isModalOpen}
         onOpenChange={setIsModalOpen}
@@ -166,7 +204,7 @@ export function TaskList({ goalId }: TaskListProps) {
             ? {
                 id: taskForSession.id,
                 title: taskForSession.title,
-                goalId: taskForSession.goalId,
+                goalId: goal.id,
                 goalTitle: goal.title,
               }
             : undefined

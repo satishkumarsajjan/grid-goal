@@ -124,7 +124,6 @@ export function PaceProgressChart({ data }: PaceProgressChartProps) {
       </div>
       <ChartContainer config={chartConfig} className='h-[250px] w-full'>
         <LineChart
-          title='Goal Pace Progress Chart'
           desc="A line chart comparing your actual hours completed versus the target pace over the goal's timeline."
           accessibilityLayer
           data={data}
@@ -182,7 +181,7 @@ export function PaceProgressChart({ data }: PaceProgressChartProps) {
           />
           <ReferenceLine
             x={startOfToday().toISOString().split('T')[0]}
-            stroke='hsl(var(--foreground))'
+            stroke='var(--foreground)'
             strokeDasharray='3 3'
             strokeWidth={1}
           />
