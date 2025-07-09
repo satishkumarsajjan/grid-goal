@@ -43,7 +43,12 @@ export function TaskListHeader({
   };
 
   return (
-    <div className='p-4 border-b'>
+    <div
+      className='p-4 border-b'
+      style={{
+        borderTop: `3px solid ${goal.color}`,
+      }}
+    >
       <div className='flex items-center justify-between'>
         <h1 className='text-2xl font-bold'>{goal.title}</h1>
         {isSavingOrder && (
@@ -64,8 +69,8 @@ export function TaskListHeader({
           <div className='flex items-center mb-1 gap-2'>
             <InsightTooltip
               content={
-                <>
-                  <p className='font-medium'>
+                <span className='text-wrap'>
+                  <p className='font-medium text-wrap'>
                     This chart helps you stay on track to meet your deadline.
                   </p>
                   <ul className='mt-2 list-disc list-inside space-y-1 text-xs'>
@@ -82,7 +87,7 @@ export function TaskListHeader({
                     Try to keep your actual progress line at or above the target
                     line!
                   </p>
-                </>
+                </span>
               }
             />
             <h3 className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
