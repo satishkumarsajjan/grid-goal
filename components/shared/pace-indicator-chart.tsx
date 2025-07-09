@@ -1,154 +1,208 @@
 'use client';
 
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-
+import {
+  Line,
+  LineChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  ReferenceLine,
+} from 'recharts';
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
+import { Badge, badgeVariants } from '@/components/ui/badge'; // Import badgeVariants for type safety
+import { useMemo } from 'react';
+import { startOfToday, differenceInCalendarDays } from 'date-fns';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import type { VariantProps } from 'class-variance-authority';
 
-// The component correctly expects this data structure, which our system now provides.
+// --- Type Definitions ---
 interface PaceDataPoint {
   date: string;
   targetPace: number;
   actualPace: number | null;
 }
-
 interface PaceProgressChartProps {
   data: PaceDataPoint[];
 }
 
-// The configuration is purely for display and is perfectly fine.
+// FIX 1: Define a specific type for the badge variants for type safety.
+type BadgeVariant = VariantProps<typeof badgeVariants>['variant'];
+
+// --- Chart Configuration ---
 const chartConfig = {
-  targetPace: {
-    label: 'Target Pace',
-    color: 'var(--chart-2)',
-  },
-  actualPace: {
-    label: 'Actual Pace',
-    color: 'var(--chart-1)',
-  },
+  targetPace: { label: 'Target Pace', color: 'var(--chart-2)' },
+  actualPace: { label: 'Actual Pace', color: 'var(--chart-1)' },
 } satisfies ChartConfig;
 
+// --- Helper to calculate Pace Status ---
+const getPaceStatus = (data: PaceDataPoint[]) => {
+  const today = startOfToday();
+  const todayStr = today.toISOString().split('T')[0];
+
+  // Find the last point with actual data for a more robust status
+  const lastDataPointWithActuals = [...data]
+    .reverse()
+    .find((d) => d.actualPace !== null);
+
+  if (!lastDataPointWithActuals) {
+    return {
+      status: 'Not Started',
+      variant: 'secondary' as BadgeVariant,
+      Icon: Minus,
+    };
+  }
+
+  const { actualPace, targetPace, date } = lastDataPointWithActuals;
+
+  // Check if we can calculate the "days ahead/behind" metric
+  const daysIntoGoal =
+    differenceInCalendarDays(new Date(date), new Date(data[0].date)) || 1;
+  const hoursPerDay = targetPace / daysIntoGoal;
+
+  const diffHours = actualPace! - targetPace;
+
+  // Set a threshold (e.g., half a day's work) to be considered "On Pace"
+  const onPaceThreshold = hoursPerDay / 2;
+
+  if (diffHours > onPaceThreshold) {
+    const diffDays = Math.abs(diffHours / hoursPerDay);
+    return {
+      status: `~${diffDays.toFixed(0)}d Ahead`,
+      variant: 'success' as BadgeVariant,
+      Icon: TrendingUp,
+    };
+  }
+  if (diffHours < -onPaceThreshold) {
+    const diffDays = Math.abs(diffHours / hoursPerDay);
+    return {
+      status: `~${diffDays.toFixed(0)}d Behind`,
+      variant: 'destructive' as BadgeVariant,
+      Icon: TrendingDown,
+    };
+  }
+  return { status: 'On Pace', variant: 'default' as BadgeVariant, Icon: Minus };
+};
+
 export function PaceProgressChart({ data }: PaceProgressChartProps) {
-  // This entire implementation is robust and well-designed for presentation.
-  // It does not need to change because the data it receives will now be correct.
+  const paceStatus = useMemo(() => getPaceStatus(data), [data]);
+
+  if (!data || data.length === 0) {
+    return (
+      <div className='flex h-[250px] w-full items-center justify-center rounded-lg border border-dashed text-center'>
+        <div>
+          <h3 className='text-lg font-semibold'>Pace Chart Not Available</h3>
+          <p className='mt-1 text-sm text-muted-foreground'>
+            Add a deadline and time estimates to your tasks to see your
+            progress.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const screenReaderSummary = `Pace chart showing progress for your goal. You are currently ${paceStatus.status.replace(
+    '~',
+    'approximately '
+  )}.`;
+
   return (
-    <ChartContainer config={chartConfig} className='h-[250px] w-full'>
-      <AreaChart
-        accessibilityLayer
-        data={data}
-        margin={{
-          left: 12,
-          right: 12,
-          top: 10,
-          bottom: 20,
-        }}
-      >
-        <defs>
-          <linearGradient id='fillTargetPace' x1='0' y1='0' x2='0' y2='1'>
-            <stop
-              offset='5%'
-              stopColor='var(--color-targetPace)'
-              stopOpacity={0.4}
-            />
-            <stop
-              offset='95%'
-              stopColor='var(--color-targetPace)'
-              stopOpacity={0.1}
-            />
-          </linearGradient>
-          <linearGradient id='fillActualPace' x1='0' y1='0' x2='0' y2='1'>
-            <stop
-              offset='5%'
-              stopColor='var(--color-actualPace)'
-              stopOpacity={0.8}
-            />
-            <stop
-              offset='95%'
-              stopColor='var(--color-actualPace)'
-              stopOpacity={0.1}
-            />
-          </linearGradient>
-        </defs>
-
-        <CartesianGrid vertical={false} />
-
-        <XAxis
-          dataKey='date'
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-          tickFormatter={(value) => {
-            const date = new Date(value);
-            // Using a specific locale is good practice.
-            return date.toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            });
-          }}
-          label={{
-            value: 'Goal Timeline',
-            position: 'insideBottom',
-            offset: -15,
-            style: { textAnchor: 'middle' },
-          }}
-        />
-
-        <YAxis
-          label={{
-            value: 'Hours Completed',
-            angle: -90,
-            position: 'insideLeft',
-            style: { textAnchor: 'middle' },
-            offset: -5,
-          }}
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-          tickFormatter={(value) => `${Math.round(value)}h`}
-        />
-
-        <ChartTooltip
-          cursor
-          content={
-            <ChartTooltipContent
-              labelFormatter={(label) => {
-                return new Date(label).toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                });
-              }}
-              formatter={(value) =>
-                `${typeof value === 'number' ? value.toFixed(1) : value} hrs`
-              }
-              indicator='line'
-            />
-          }
-        />
-
-        <Area
-          dataKey='targetPace'
-          type='natural'
-          fill='url(#fillTargetPace)'
-          stroke='var(--color-targetPace)'
-          strokeWidth={2}
-          strokeDasharray='4 4'
-          dot={false}
-        />
-
-        <Area
-          dataKey='actualPace'
-          type='natural'
-          fill='url(#fillActualPace)'
-          stroke='var(--color-actualPace)'
-          strokeWidth={2}
-          dot={false}
-        />
-      </AreaChart>
-    </ChartContainer>
+    <div className='relative'>
+      <div className='absolute -top-4 right-4 z-10'>
+        {/* FIX 2: The `variant` prop now receives a correctly typed value */}
+        <Badge variant={paceStatus.variant} className='flex items-center gap-1'>
+          <paceStatus.Icon className='h-3 w-3' />
+          <span>{paceStatus.status}</span>
+        </Badge>
+      </div>
+      <div className='sr-only' aria-live='polite'>
+        {screenReaderSummary}
+      </div>
+      <ChartContainer config={chartConfig} className='h-[250px] w-full'>
+        <LineChart
+          title='Goal Pace Progress Chart'
+          desc="A line chart comparing your actual hours completed versus the target pace over the goal's timeline."
+          accessibilityLayer
+          data={data}
+          margin={{ left: 12, right: 12, top: 20, bottom: 20 }}
+        >
+          <CartesianGrid vertical={false} />
+          <XAxis
+            dataKey='date'
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+            tickFormatter={(value) =>
+              new Date(value).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+              })
+            }
+            label={{
+              value: 'Goal Timeline',
+              position: 'insideBottom',
+              offset: -15,
+              style: { textAnchor: 'middle' },
+            }}
+          />
+          <YAxis
+            label={{
+              value: 'Hours Completed',
+              angle: -90,
+              position: 'insideLeft',
+              style: { textAnchor: 'middle' },
+              offset: -5,
+            }}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+            tickFormatter={(value) => `${Math.round(value)}h`}
+          />
+          <ChartTooltip
+            cursor
+            content={
+              <ChartTooltipContent
+                labelFormatter={(label) =>
+                  new Date(label).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  })
+                }
+                formatter={(value) =>
+                  `${typeof value === 'number' ? value.toFixed(1) : value} hrs`
+                }
+                indicator='line'
+              />
+            }
+          />
+          <ReferenceLine
+            x={startOfToday().toISOString().split('T')[0]}
+            stroke='hsl(var(--foreground))'
+            strokeDasharray='3 3'
+            strokeWidth={1}
+          />
+          <Line
+            dataKey='targetPace'
+            type='natural'
+            stroke='var(--color-targetPace)'
+            strokeWidth={2}
+            strokeDasharray='4 4'
+            dot={false}
+          />
+          <Line
+            dataKey='actualPace'
+            type='natural'
+            stroke='var(--color-actualPace)'
+            strokeWidth={2}
+            dot={false}
+          />
+        </LineChart>
+      </ChartContainer>
+    </div>
   );
 }

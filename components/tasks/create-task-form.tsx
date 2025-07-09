@@ -20,10 +20,9 @@ import { Input } from '@/components/ui/input';
 
 interface CreateTaskFormProps {
   goalId: string;
+  isDisabled?: boolean; // NEW PROP
 }
 
-// FIX 1: Define the Zod schema for the FORM's values right here.
-// This schema is what the user interacts with (hours).
 const taskFormSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   goalId: z.string(),
@@ -32,17 +31,13 @@ const taskFormSchema = z.object({
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
 
-// FIX 2: The mutation function now performs the data transformation.
 const createTask = async (values: TaskFormValues) => {
-  // This is the key change!
   const apiPayload = {
     title: values.title,
     goalId: values.goalId,
-    // Convert hours from the form into seconds for the API.
     estimatedTimeSeconds: (values.estimatedTimeInHours ?? 0) * 3600,
   };
 
-  // Only include the estimate if it's greater than zero.
   if (apiPayload.estimatedTimeSeconds <= 0) {
     delete (apiPayload as any).estimatedTimeSeconds;
   }
@@ -51,10 +46,12 @@ const createTask = async (values: TaskFormValues) => {
   return data;
 };
 
-export function CreateTaskForm({ goalId }: CreateTaskFormProps) {
+export function CreateTaskForm({
+  goalId,
+  isDisabled = false,
+}: CreateTaskFormProps) {
   const queryClient = useQueryClient();
   const form = useForm<TaskFormValues>({
-    // Use the form-specific schema
     resolver: zodResolver(taskFormSchema),
     defaultValues: {
       title: '',
@@ -66,7 +63,6 @@ export function CreateTaskForm({ goalId }: CreateTaskFormProps) {
   const mutation = useMutation({
     mutationFn: createTask,
     onSuccess: () => {
-      // Invalidate the query for the specific goal's task list
       queryClient.invalidateQueries({ queryKey: ['taskListData', goalId] });
       toast.success('Task created!');
       form.reset();
@@ -78,6 +74,9 @@ export function CreateTaskForm({ goalId }: CreateTaskFormProps) {
     if (!values.title.trim()) return;
     mutation.mutate(values);
   }
+
+  // Combine local mutation state with the parent's disabled state
+  const isFormDisabled = mutation.isPending || isDisabled;
 
   return (
     <Form {...form}>
@@ -96,7 +95,7 @@ export function CreateTaskForm({ goalId }: CreateTaskFormProps) {
                   <Input
                     placeholder='Add a new task...'
                     className='pl-9'
-                    disabled={mutation.isPending}
+                    disabled={isFormDisabled} // USE COMBINED DISABLED STATE
                     autoComplete='off'
                     {...field}
                   />
@@ -118,10 +117,9 @@ export function CreateTaskForm({ goalId }: CreateTaskFormProps) {
                     type='number'
                     placeholder='Hours'
                     className='pl-9'
-                    disabled={mutation.isPending}
+                    disabled={isFormDisabled} // USE COMBINED DISABLED STATE
                     step='0.1'
                     {...field}
-                    // This onChange logic correctly handles clearing the input
                     onChange={(e) =>
                       field.onChange(
                         e.target.value === ''
@@ -137,7 +135,9 @@ export function CreateTaskForm({ goalId }: CreateTaskFormProps) {
             </FormItem>
           )}
         />
-        <Button type='submit' disabled={mutation.isPending}>
+        <Button type='submit' disabled={isFormDisabled}>
+          {' '}
+          {/* USE COMBINED DISABLED STATE */}
           {mutation.isPending ? 'Adding...' : 'Add'}
         </Button>
       </form>
