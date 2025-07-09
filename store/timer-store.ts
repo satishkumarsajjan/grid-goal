@@ -2,7 +2,6 @@ import type { PomodoroCycle, TimerMode } from '@prisma/client';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// Define the full shape of the task object we'll store
 export interface ActiveTask {
   id: string;
   title: string;
@@ -10,27 +9,28 @@ export interface ActiveTask {
   goalTitle: string;
 }
 
-// The shape of the state managed by this store
 export interface TimerState {
   isActive: boolean;
   accumulatedTime: number; // in milliseconds
   intervalStartTime: number | null;
-  activeTask: ActiveTask | null; // Use the new, more detailed type
+  activeTask: ActiveTask | null;
   mode: TimerMode;
   pomodoroCycle: PomodoroCycle;
   pomodorosCompletedInCycle: number;
+  // NEW: A unique ID for the entire Pomodoro sequence (e.g., 4 work + 3 breaks).
+  // This will be used to group session logs. It's null for stopwatch mode.
+  sequenceId: string | null;
 }
 
-// The actions that can be dispatched to modify the state
 interface TimerActions {
-  // The signature of startSession now expects the full ActiveTask object
   startSession: (task: ActiveTask, mode: TimerMode) => void;
   pauseSession: () => void;
   resumeSession: () => void;
   reset: () => void;
+  // We may need this later if we update state from the engine
+  setTimerState: (newState: Partial<TimerState>) => void;
 }
 
-// The initial, default state for the store
 const initialState: TimerState = {
   isActive: false,
   accumulatedTime: 0,
@@ -39,6 +39,7 @@ const initialState: TimerState = {
   mode: 'STOPWATCH',
   pomodoroCycle: 'WORK',
   pomodorosCompletedInCycle: 0,
+  sequenceId: null, // Default to null
 };
 
 export const useTimerStore = create<TimerState & TimerActions>()(
@@ -46,18 +47,21 @@ export const useTimerStore = create<TimerState & TimerActions>()(
     (set, get) => ({
       ...initialState,
 
+      setTimerState: (newState) => set(newState),
+
       startSession: (task, mode) => {
         const isNewPomodoroSession = mode === 'POMODORO';
         set({
           isActive: true,
           intervalStartTime: Date.now(),
           accumulatedTime: 0,
-          activeTask: task, // Store the full task object with goalTitle
+          activeTask: task,
           mode: mode,
-          pomodoroCycle: isNewPomodoroSession ? 'WORK' : get().pomodoroCycle,
-          pomodorosCompletedInCycle: isNewPomodoroSession
-            ? 0
-            : get().pomodorosCompletedInCycle,
+          // Reset Pomodoro state at the start of a new session
+          pomodoroCycle: 'WORK',
+          pomodorosCompletedInCycle: 0,
+          // NEW: Generate a unique ID for this new Pomodoro sequence
+          sequenceId: isNewPomodoroSession ? crypto.randomUUID() : null,
         });
       },
 
@@ -87,15 +91,17 @@ export const useTimerStore = create<TimerState & TimerActions>()(
       },
     }),
     {
-      name: 'gridgoal-timer-storage-v4',
+      name: 'gridgoal-timer-storage-v5', // Incremented version to avoid conflicts
       partialize: (state) => ({
+        // ... include all state properties including the new sequenceId
         isActive: state.isActive,
         accumulatedTime: state.accumulatedTime,
         intervalStartTime: state.intervalStartTime,
-        activeTask: state.activeTask, // This now includes goalTitle
+        activeTask: state.activeTask,
         mode: state.mode,
         pomodoroCycle: state.pomodoroCycle,
         pomodorosCompletedInCycle: state.pomodorosCompletedInCycle,
+        sequenceId: state.sequenceId, // Persist the sequence ID
       }),
     }
   )
