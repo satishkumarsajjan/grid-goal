@@ -1,5 +1,6 @@
 'use client';
 
+import { type TaskWithTime } from '@/lib/types';
 import {
   closestCenter,
   DndContext,
@@ -7,16 +8,13 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-  // FIX: DragStartEvent is no longer needed here
 } from '@dnd-kit/core';
 import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { TaskItem } from './task-item';
-import { type TaskWithTime } from '@/lib/types';
 
-// FIX: The props interface no longer requires onDragStart
 interface SortableTasksProps {
   tasks: TaskWithTime[];
   onDragEnd: (event: DragEndEvent) => void;
@@ -24,7 +22,6 @@ interface SortableTasksProps {
   isDisabled: boolean;
 }
 
-// FIX: The component no longer accepts onDragStart as a prop
 export function SortableTasks({
   tasks,
   onDragEnd,
@@ -40,32 +37,33 @@ export function SortableTasks({
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        // FIX: The onDragStart prop is removed from the DndContext
         onDragEnd={onDragEnd}
       >
-        <SortableContext
-          items={tasks.map((t) => t.id)}
-          strategy={verticalListSortingStrategy}
-          disabled={isDisabled}
-        >
-          {tasks.length > 0 ? (
-            tasks.map((task) => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                onStartSession={onStartSession}
-                isDragDisabled={isDisabled}
-              />
-            ))
-          ) : (
-            <div className='text-center text-muted-foreground p-10'>
-              <p>This goal has no tasks yet.</p>
-              <p className='text-sm'>
-                Add the first task below to get started.
-              </p>
-            </div>
-          )}
-        </SortableContext>
+        <ul className='list-none p-0 m-0'>
+          <SortableContext
+            items={tasks.map((t) => t.id)}
+            strategy={verticalListSortingStrategy}
+            disabled={isDisabled}
+          >
+            {tasks.length > 0 ? (
+              tasks.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  onStartSession={onStartSession}
+                  isDragDisabled={isDisabled}
+                />
+              ))
+            ) : (
+              <div className='text-center text-muted-foreground p-10'>
+                <p>This goal has no tasks yet.</p>
+                <p className='text-sm'>
+                  Add the first task below to get started.
+                </p>
+              </div>
+            )}
+          </SortableContext>
+        </ul>
       </DndContext>
     </div>
   );

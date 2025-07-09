@@ -72,8 +72,6 @@ const goalFormSchema = z.object({
   title: z.string().min(1, 'Title is required.').max(100),
   description: z.string().max(500).optional(),
   deadline: z.date().optional(),
-  estimatedHours: z.coerce.number().int().min(0).optional(),
-  estimatedMinutes: z.coerce.number().int().min(0).max(59).optional(),
 });
 
 type GoalFormValues = z.infer<typeof goalFormSchema>;
@@ -83,8 +81,6 @@ const createGoal = async (
   values: GoalFormValues & { parentId?: string; color?: string | null }
 ) => {
   // Transform hours and minutes into total seconds
-  const estimatedTimeSeconds =
-    (values.estimatedHours || 0) * 3600 + (values.estimatedMinutes || 0) * 60;
 
   // Build the object that our backend API expects
   const apiPayload = {
@@ -93,8 +89,6 @@ const createGoal = async (
     deadline: values.deadline,
     parentId: values.parentId,
     color: values.color, // Pass the color (or null) to the API
-    estimatedTimeSeconds:
-      estimatedTimeSeconds > 0 ? estimatedTimeSeconds : undefined,
   };
 
   const { data } = await axios.post('/api/goals', apiPayload);
@@ -116,8 +110,6 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
       title: '',
       description: '',
       deadline: undefined,
-      estimatedHours: undefined,
-      estimatedMinutes: undefined,
     },
   });
 
@@ -183,52 +175,6 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
             setSelectedColor(color === selectedColor ? null : color)
           }
         />
-
-        {/* Time Estimate Input Section */}
-        <div>
-          <FormLabel>Time Estimate (Optional)</FormLabel>
-          <div className='flex items-center gap-2 pt-2'>
-            <FormField
-              control={form.control}
-              name='estimatedHours'
-              render={({ field }) => (
-                <FormItem className='flex-1'>
-                  <FormControl>
-                    <Input
-                      type='number'
-                      placeholder='Hours'
-                      {...field}
-                      value={field.value ?? ''}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='estimatedMinutes'
-              render={({ field }) => (
-                <FormItem className='flex-1'>
-                  <FormControl>
-                    <Input
-                      type='number'
-                      placeholder='Minutes'
-                      {...field}
-                      value={field.value ?? ''}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          </div>
-          <FormMessage>
-            {form.formState.errors.estimatedHours?.message ||
-              form.formState.errors.estimatedMinutes?.message}
-          </FormMessage>
-          <FormDescription className='pt-2 text-xs'>
-            How long do you estimate this goal will take to complete?
-          </FormDescription>
-        </div>
 
         {/* Deadline Picker Field */}
         <FormField

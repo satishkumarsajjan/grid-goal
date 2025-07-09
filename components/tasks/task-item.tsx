@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { StatusIcon } from '@/lib/status-icon';
 import { type TaskWithTime } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
@@ -25,20 +26,23 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
-import { StatusIcon } from '@/lib/status-icon';
 
 interface UpdateTaskPayload {
   status?: TaskStatus;
   title?: string;
   estimatedTimeSeconds?: number | null;
 }
+
 const updateTask = async ({
   taskId,
   payload,
 }: {
   taskId: string;
   payload: UpdateTaskPayload;
-}) => (await axios.patch(`/api/tasks/${taskId}`, payload)).data;
+}) => {
+  const { data } = await axios.patch(`/api/tasks/${taskId}`, payload);
+  return data;
+};
 const deleteTask = async (taskId: string) =>
   await axios.delete(`/api/tasks/${taskId}`);
 const fetchQueue = async (): Promise<DailyQueueItem[]> =>
@@ -70,44 +74,43 @@ export function TaskItem({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const timeInputRef = useRef<HTMLInputElement>(null);
 
-  // --- START OF DRAG-AND-DROP IMPROVEMENTS ---
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-    isDragging, // This state is key for the "lifted" style
+    isDragging,
   } = useSortable({
     id: task.id,
     disabled: isDragDisabled,
   });
 
-  // dnd-kit provides transform and transition for smooth, hardware-accelerated animations.
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition: transition || 'transform 250ms ease', // Add a fallback transition
-    // When dragging, lift the item above others with a higher z-index
+    transition: transition || 'transform 250ms ease, box-shadow 250ms ease',
     zIndex: isDragging ? 10 : 'auto',
   };
-  // --- END OF DRAG-AND-DROP IMPROVEMENTS ---
 
   const { data: queueItems } = useQuery<DailyQueueItem[]>({
     queryKey: ['dailyQueue'],
     queryFn: fetchQueue,
   });
+
   const updateMutation = useMutation({
     mutationFn: updateTask,
-    onSuccess: () =>
+    onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['taskListData', task.goalId],
-      }),
+      });
+    },
     onError: () => toast.error('Failed to update task.'),
     onSettled: () => {
       setIsEditingTitle(false);
       setIsEditingTime(false);
     },
   });
+
   const deleteMutation = useMutation({
     mutationFn: deleteTask,
     onSuccess: () => {
@@ -118,6 +121,7 @@ export function TaskItem({
     },
     onError: () => toast.error('Failed to delete task.'),
   });
+
   const addToQueueMutation = useMutation({
     mutationFn: addToQueue,
     onSuccess: () => {
@@ -130,18 +134,46 @@ export function TaskItem({
   useEffect(() => {
     if (isEditingTitle) titleInputRef.current?.select();
   }, [isEditingTitle]);
+
   useEffect(() => {
     if (isEditingTime) timeInputRef.current?.select();
   }, [isEditingTime]);
 
   const handleSaveTitle = () => {
-    /* ... remains the same ... */
+    const trimmedTitle = newTitle.trim();
+    if (isEditingTitle && trimmedTitle && trimmedTitle !== task.title) {
+      updateMutation.mutate({
+        taskId: task.id,
+        payload: { title: trimmedTitle },
+      });
+    } else {
+      setIsEditingTitle(false);
+      setNewTitle(task.title);
+    }
   };
+
   const handleSaveTime = () => {
-    /* ... remains the same ... */
+    if (isEditingTime) {
+      const timeInHours = parseFloat(newTime);
+      const newSeconds =
+        !isNaN(timeInHours) && timeInHours > 0 ? timeInHours * 3600 : null;
+      if (newSeconds !== task.estimatedTimeSeconds) {
+        updateMutation.mutate({
+          taskId: task.id,
+          payload: { estimatedTimeSeconds: newSeconds },
+        });
+      } else {
+        setIsEditingTime(false);
+      }
+    }
   };
+
   const handleStatusChange = () => {
-    /* ... remains the same ... */
+    const newStatus =
+      task.status === TaskStatus.COMPLETED
+        ? TaskStatus.PENDING
+        : TaskStatus.COMPLETED;
+    updateMutation.mutate({ taskId: task.id, payload: { status: newStatus } });
   };
 
   const isCompleted = task.status === TaskStatus.COMPLETED;
@@ -164,15 +196,14 @@ export function TaskItem({
   const estimatedTimeFormatted = formatTime(task.estimatedTimeSeconds);
 
   return (
-    <div
+    <li
       ref={setNodeRef}
       style={style}
-      // IMPROVEMENT: Apply styles based on the isDragging state
       className={cn(
         'group flex items-center gap-3 rounded-lg border p-2 my-1 transition-all duration-200 ease-in-out relative',
         isCompleted && 'opacity-50',
         isDragging
-          ? 'bg-background border-primary shadow-lg scale-[1.02]' // The "lifted" style
+          ? 'bg-background border-primary shadow-lg scale-[1.02]'
           : 'bg-card border-transparent',
         !isDragDisabled &&
           !isDragging &&
@@ -211,7 +242,21 @@ export function TaskItem({
         }}
       >
         {isEditingTitle ? (
-          <Input /* ... */ />
+          <Input
+            ref={titleInputRef}
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onBlur={handleSaveTitle}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSaveTitle();
+              if (e.key === 'Escape') {
+                setIsEditingTitle(false);
+                setNewTitle(task.title);
+              }
+            }}
+            className='h-8 bg-background text-sm'
+            disabled={updateMutation.isPending}
+          />
         ) : (
           <span
             className={cn(
@@ -231,7 +276,28 @@ export function TaskItem({
         }}
       >
         {isEditingTime ? (
-          <Input /* ... */ />
+          <Input
+            ref={timeInputRef}
+            value={newTime}
+            onChange={(e) => setNewTime(e.target.value)}
+            onBlur={handleSaveTime}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSaveTime();
+              if (e.key === 'Escape') {
+                setIsEditingTime(false);
+                setNewTime(
+                  task.estimatedTimeSeconds
+                    ? (task.estimatedTimeSeconds / 3600).toString()
+                    : ''
+                );
+              }
+            }}
+            className='h-7 w-20 text-xs'
+            placeholder='Hours'
+            step='0.1'
+            type='number'
+            disabled={updateMutation.isPending}
+          />
         ) : (
           <>
             {accumulatedTimeFormatted && (
@@ -247,7 +313,6 @@ export function TaskItem({
         )}
       </div>
 
-      {/* The action buttons are now styled to be more subtle by default */}
       <div
         className={cn(
           'flex items-center transition-opacity',
@@ -319,6 +384,6 @@ export function TaskItem({
           </Tooltip>
         </TooltipProvider>
       </div>
-    </div>
+    </li>
   );
 }
