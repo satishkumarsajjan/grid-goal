@@ -192,7 +192,7 @@ export function TaskItem({
     return `${m}m`;
   };
 
-  const accumulatedTimeFormatted = formatTime(task.totalTimeSeconds);
+  const accumulatedTimeFormatted = formatTime(task.totalTimeSpentSeconds);
   const estimatedTimeFormatted = formatTime(task.estimatedTimeSeconds);
 
   return (

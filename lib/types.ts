@@ -7,7 +7,7 @@ export type GoalWithTasksCount = Goal & {
 };
 
 export type TaskWithTime = Task & {
-  totalTimeSeconds: number;
+  totalTimeSpentSeconds: number;
 };
 
 export type GoalWithProgress = Goal & {

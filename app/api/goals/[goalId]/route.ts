@@ -56,7 +56,7 @@ export async function GET(
         status: 404,
       });
     }
-    console.log('GOAL DETAILS:', goalDetails);
+
     // Return the goal details with the focus sessions nested inside.
     return NextResponse.json({ ...goalDetails, focusSessions: sessions });
   } catch (error) {

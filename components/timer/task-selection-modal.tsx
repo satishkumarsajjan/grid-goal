@@ -105,9 +105,6 @@ export function TaskSelectionModal({
     else if (selectedTaskId && tasksToShow) {
       const task = tasksToShow.find((t) => t.id === selectedTaskId);
       if (task) {
-        // Construct the payload required by the timer store
-        console.log('TASK', task);
-
         taskPayload = {
           id: task.id,
           title: task.title,
