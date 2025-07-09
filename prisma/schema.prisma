@@ -94,22 +94,22 @@ model User {
 // =======================================================
 
 model Goal {
-  id                   String     @id @default(cuid())
-  title                String
-  description          String?
-  status               GoalStatus @default(ACTIVE)
-  color                String?
-  deadline             DateTime?
-  estimatedTimeSeconds Int?
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      GoalStatus @default(ACTIVE)
+  color       String?
+  deadline    DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  deepEstimateTotalSeconds Int @default(0)
 
   userId      String
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspaceId String?
   workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  // Self-relation for Nested Goals (Phase 2).
   parentId String?
   parent   Goal?   @relation("SubGoals", fields: [parentId], references: [id], onDelete: Cascade)
   subGoals Goal[]  @relation("SubGoals")
@@ -119,23 +119,26 @@ model Goal {
   categoryId    String?
   category      Category?      @relation(fields: [categoryId], references: [id], onUpdate: NoAction, onDelete: SetNull)
 }
-
 model Task {
-  id                   String           @id @default(cuid())
+  id                   String     @id @default(cuid())
   title                String
-  status               TaskStatus       @default(PENDING)
+  status               TaskStatus @default(PENDING)
   sortOrder            Int
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-  estimatedTimeSeconds Int?             @default(0)
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  
+  estimatedTimeSeconds Int?       @default(0)
+  
   userId               String
-  user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                 User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   goalId               String
-  goal                 Goal             @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  goal                 Goal       @relation(fields: [goalId], references: [id], onDelete: Cascade)
   focusSessions        FocusSession[]
   dailyQueueItems      DailyQueueItem[]
-}
 
+
+  @@index([estimatedTimeSeconds])
+}
 // ===================================================
 // ========= 4. CORE ACTION & DATA MODELS =========
 // ===================================================

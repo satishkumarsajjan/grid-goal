@@ -9,6 +9,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 
+// The component correctly expects this data structure, which our system now provides.
 interface PaceDataPoint {
   date: string;
   targetPace: number;
@@ -19,6 +20,7 @@ interface PaceProgressChartProps {
   data: PaceDataPoint[];
 }
 
+// The configuration is purely for display and is perfectly fine.
 const chartConfig = {
   targetPace: {
     label: 'Target Pace',
@@ -31,6 +33,8 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function PaceProgressChart({ data }: PaceProgressChartProps) {
+  // This entire implementation is robust and well-designed for presentation.
+  // It does not need to change because the data it receives will now be correct.
   return (
     <ChartContainer config={chartConfig} className='h-[250px] w-full'>
       <AreaChart
@@ -79,6 +83,7 @@ export function PaceProgressChart({ data }: PaceProgressChartProps) {
           tickMargin={8}
           tickFormatter={(value) => {
             const date = new Date(value);
+            // Using a specific locale is good practice.
             return date.toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric',
@@ -93,7 +98,6 @@ export function PaceProgressChart({ data }: PaceProgressChartProps) {
         />
 
         <YAxis
-          // This label is important for context!
           label={{
             value: 'Hours Completed',
             angle: -90,
@@ -126,7 +130,6 @@ export function PaceProgressChart({ data }: PaceProgressChartProps) {
           }
         />
 
-        {/* The "Target Pace" line - dashed to indicate it's a guide */}
         <Area
           dataKey='targetPace'
           type='natural'

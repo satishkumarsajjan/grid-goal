@@ -1,15 +1,23 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
-import { createTaskSchema } from '@/lib/zod-schemas'; // Assuming you have this schema
+import { z } from 'zod'; // Assuming this comes from your lib
+import { updateGoalTreeEstimates } from '@/lib/goal-estimate-updater';
 
+// Define the schema here for clarity or import it from your lib
+const createTaskSchema = z.object({
+  title: z.string().min(1, 'Title is required.'),
+  goalId: z.string().cuid('Invalid Goal ID.'),
+  // We'll expect seconds directly now for consistency with the DB
+  estimatedTimeSeconds: z.number().int().min(0).optional(),
+});
+
+// --- GET Function (Unchanged, but reformatted for consistency) ---
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const userId = session.user.id;
 
@@ -19,15 +27,9 @@ export async function GET(request: NextRequest) {
     const tasks = await prisma.task.findMany({
       where: {
         userId: userId,
-
-        status: {
-          not: 'COMPLETED',
-        },
+        status: { not: 'COMPLETED' },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
-
+      orderBy: { createdAt: 'desc' },
       include: {
         goal: includeGoal ? { select: { title: true } } : false,
       },
@@ -36,73 +38,70 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(tasks);
   } catch (error) {
     console.error('[API:GET_ALL_TASKS]', error);
-    return new NextResponse(
-      JSON.stringify({ error: 'An internal error occurred' }),
+    return NextResponse.json(
+      { error: 'An internal error occurred' },
       { status: 500 }
     );
   }
 }
 
+// --- POST Function (Completely Re-implemented with Best Practices) ---
 export async function POST(request: Request) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const userId = session.user.id;
 
     const body = await request.json();
-
+    // It validates against the correct API schema.
     const validation = createTaskSchema.safeParse(body);
 
     if (!validation.success) {
-      return new NextResponse(
-        JSON.stringify({ error: validation.error.format() }),
+      return NextResponse.json(
+        { error: validation.error.format() },
         { status: 400 }
       );
     }
 
-    const { title, goalId, estimatedTimeInHours } = validation.data;
-    const estimatedTimeInSeconds = (estimatedTimeInHours ?? 0) * 3600;
+    // It correctly destructures estimatedTimeSeconds.
+    const { title, goalId, estimatedTimeSeconds } = validation.data;
 
-    const parentGoal = await prisma.goal.findFirst({
-      where: { id: goalId, userId: userId },
+    const newTask = await prisma.$transaction(async (tx) => {
+      const parentGoal = await tx.goal.findUnique({
+        where: { id: goalId, userId: userId },
+      });
+      if (!parentGoal) throw new Error('Goal not found or permission denied.');
+
+      const lastTask = await tx.task.findFirst({
+        where: { goalId: goalId },
+        orderBy: { sortOrder: 'desc' },
+      });
+      const newSortOrder = (lastTask?.sortOrder ?? -1) + 1;
+
+      const createdTask = await tx.task.create({
+        data: {
+          userId,
+          goalId,
+          title,
+          sortOrder: newSortOrder,
+          estimatedTimeSeconds, // This will now be populated correctly.
+        },
+      });
+
+      await updateGoalTreeEstimates(goalId, tx);
+      return createdTask;
     });
 
-    if (!parentGoal) {
-      return new NextResponse(
-        JSON.stringify({
-          error: 'Goal not found or you do not have permission',
-        }),
-        { status: 404 }
-      );
-    }
-
-    const lastTask = await prisma.task.findFirst({
-      where: { goalId: goalId },
-      orderBy: { sortOrder: 'desc' },
-    });
-    const newSortOrder = (lastTask?.sortOrder ?? -1) + 1;
-
-    const newTask = await prisma.task.create({
-      data: {
-        userId,
-        goalId,
-        title,
-        sortOrder: newSortOrder,
-
-        estimatedTimeSeconds: estimatedTimeInSeconds,
-      },
-    });
-
-    // 4. Return a successful response
     return NextResponse.json(newTask, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[API:CREATE_TASK]', error);
-    return new NextResponse(
-      JSON.stringify({ error: 'An internal error occurred' }),
+    if (error.message.includes('Goal not found')) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+    return NextResponse.json(
+      { error: 'An internal error occurred' },
       { status: 500 }
     );
   }
