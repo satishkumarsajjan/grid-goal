@@ -134,3 +134,9 @@
     transform: rotate(360deg);
   }
 }
+
+@property --progress-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}

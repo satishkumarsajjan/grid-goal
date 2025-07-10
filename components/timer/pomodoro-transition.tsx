@@ -10,12 +10,14 @@ interface PomodoroTransitionProps {
   nextCycle: PomodoroCycle;
   onStartNext: () => void;
   onSkipBreak: () => void;
+  onEndSession: () => void; // NEW: Add prop to end the session
 }
 
 export function PomodoroTransition({
   nextCycle,
   onStartNext,
   onSkipBreak,
+  onEndSession, // Destructure the new prop
 }: PomodoroTransitionProps) {
   const isBreak = nextCycle.includes('BREAK');
   const pomodoroSettings = useSettingsStore((state) => state.pomodoro);
@@ -67,15 +69,29 @@ export function PomodoroTransition({
         <h1 className='text-4xl font-bold tracking-tight'>{title}</h1>
         <p className='text-xl text-muted-foreground mt-2'>{subtitle}</p>
       </div>
-      <div className='flex flex-col sm:flex-row gap-4'>
+      <div className='flex flex-col items-center gap-4'>
+        {/* Primary Action Button */}
         <Button onClick={onStartNext} size='lg' className='px-8 py-6 text-lg'>
           Start {durationMinutes}min {cycleName}
         </Button>
-        {isBreak && (
-          <Button onClick={onSkipBreak} variant='ghost' size='lg'>
-            Skip Break
+
+        {/* Secondary Action Buttons */}
+        <div className='flex items-center gap-4 mt-2'>
+          {isBreak && (
+            <Button onClick={onSkipBreak} variant='ghost' size='lg'>
+              Skip Break
+            </Button>
+          )}
+          {/* NEW: Button to end the session entirely */}
+          <Button
+            onClick={onEndSession}
+            variant='ghost'
+            size='lg'
+            className='text-muted-foreground hover:text-destructive'
+          >
+            End Session
           </Button>
-        )}
+        </div>
       </div>
     </motion.div>
   );
