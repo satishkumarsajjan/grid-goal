@@ -6,35 +6,55 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
-// NEW: Mutation function for background logging
 const logCycle = async (payload: any) => {
-  return axios.post('/api/focus-sessions/log-cycle', payload);
+  const { data } = await axios.post('/api/focus-sessions/log-cycle', payload);
+  return data;
+};
+
+// NEW: A helper function to play sounds
+const playSound = (soundFile: string, volume: number) => {
+  try {
+    const audio = new Audio(soundFile);
+    audio.volume = volume;
+    audio.play().catch((error) => {
+      // Autoplay can be blocked by the browser, log error if it happens.
+      console.error('Audio play failed:', error);
+    });
+  } catch (error) {
+    console.error('Failed to play sound:', error);
+  }
 };
 
 export function useTimerEngine() {
-  const setTimerState = useTimerStore.setState;
+  const { setTimerState, addTimeToTotal } = useTimerStore.getState();
   const pomodoroSettings = useSettingsStore((state) => state.pomodoro);
+  // NEW: Get notification settings from the store
+  const notificationSettings = useSettingsStore((state) => state.notifications);
   const queryClient = useQueryClient();
 
   const [currentIntervalElapsed, setCurrentIntervalElapsed] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [transitionTo, setTransitionTo] = useState<PomodoroCycle | null>(null);
 
-  const { isActive, accumulatedTime, intervalStartTime, mode, pomodoroCycle } =
-    useTimerStore();
+  const {
+    isActive,
+    accumulatedTime,
+    intervalStartTime,
+    mode,
+    pomodoroCycle,
+    activeTask,
+    sequenceId,
+  } = useTimerStore();
+
   const displayTime = accumulatedTime + currentIntervalElapsed;
 
-  // NEW: The mutation hook for logging cycles
   const logCycleMutation = useMutation({
     mutationFn: logCycle,
-    onSuccess: (_, variables) => {
-      // Invalidate task data to reflect status change (PENDING -> IN_PROGRESS)
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({
         queryKey: ['taskListData', variables.goalId],
       });
+      console.log('Successfully logged cycle:', data);
     },
     onError: () => {
-      // You could add more robust error handling here, like retries
       console.error('Failed to log pomodoro cycle to server.');
     },
   });
@@ -62,50 +82,58 @@ export function useTimerEngine() {
     let animationFrameId: number;
 
     const updateTimer = () => {
-      const currentState = useTimerStore.getState();
       const elapsed = Date.now() - intervalStartTime;
       setCurrentIntervalElapsed(elapsed);
 
-      if (
-        currentState.mode === 'POMODORO' &&
-        elapsed >= currentIntervalDuration
-      ) {
+      if (mode === 'POMODORO' && elapsed >= currentIntervalDuration) {
         cancelAnimationFrame(animationFrameId);
 
-        // --- NEW AUTOMATION LOGIC ---
+        // NEW: Play sound based on the completed cycle
+        if (notificationSettings.soundEnabled) {
+          if (pomodoroCycle === 'WORK') {
+            playSound('/chime-work-end.mp3', notificationSettings.soundVolume);
+          } else {
+            // It was a break
+            playSound('/chime-break-end.mp3', notificationSettings.soundVolume);
+          }
+        }
+
+        if (pomodoroCycle === 'WORK') {
+          addTimeToTotal(currentIntervalDuration);
+        }
+
         const finishedCycleDuration = Math.round(
           currentIntervalDuration / 1000
         );
 
-        // 1. Log the completed cycle in the background
-        if (currentState.activeTask) {
+        if (activeTask && sequenceId) {
           logCycleMutation.mutate({
             startTime: new Date(
               Date.now() - currentIntervalDuration
             ).toISOString(),
             endTime: new Date().toISOString(),
             durationSeconds: finishedCycleDuration,
-            taskId: currentState.activeTask.id,
-            goalId: currentState.activeTask.goalId,
-            mode: currentState.mode,
-            pomodoroCycle: currentState.pomodoroCycle,
+            taskId: activeTask.id,
+            goalId: activeTask.goalId,
+            mode: mode,
+            pomodoroCycle: pomodoroCycle,
+            sequenceId: sequenceId,
           });
         }
 
-        // 2. Calculate the next state for the timer
+        const currentState = useTimerStore.getState();
         const nextState = calculateNextPomodoroState(
           currentState,
           pomodoroSettings
         );
 
-        // 3. Pause timer and show transition screen
         setTimerState({
           isActive: false,
-          accumulatedTime: 0, // Reset accumulated time for each new cycle
+          accumulatedTime: 0,
           intervalStartTime: null,
+          isTransitioning: true,
+          transitionTo: nextState.pomodoroCycle!,
         });
-        setTransitionTo(nextState.pomodoroCycle!);
-        setIsTransitioning(true);
       } else {
         animationFrameId = requestAnimationFrame(updateTimer);
       }
@@ -115,9 +143,15 @@ export function useTimerEngine() {
   }, [
     isActive,
     intervalStartTime,
+    mode,
+    pomodoroCycle,
     currentIntervalDuration,
-    setTimerState,
+    activeTask,
+    sequenceId,
     pomodoroSettings,
+    notificationSettings, // NEW: Add notificationSettings to dependency array
+    setTimerState,
+    addTimeToTotal,
     logCycleMutation,
   ]);
 
@@ -127,9 +161,12 @@ export function useTimerEngine() {
       currentState,
       pomodoroSettings
     );
-    setTimerState({ ...nextState, accumulatedTime: 0 }); // Ensure accumulated time is reset
-    setIsTransitioning(false);
-    setTransitionTo(null);
+    setTimerState({
+      ...nextState,
+      accumulatedTime: 0,
+      isTransitioning: false,
+      transitionTo: null,
+    });
   };
 
   const skipBreak = () => {
@@ -141,16 +178,21 @@ export function useTimerEngine() {
       intervalStartTime: Date.now(),
       isActive: true,
     };
-    setTimerState(nextState);
-    setIsTransitioning(false);
-    setTransitionTo(null);
+    setTimerState({
+      ...nextState,
+      isTransitioning: false,
+      transitionTo: null,
+    });
   };
 
   return {
     displayTime,
     currentIntervalDuration,
-    isTransitioning,
-    transitionTo,
+    // Note: isTransitioning and transitionTo are no longer returned here
+    // as they are consumed directly by the UI component from the store.
+    // Let's re-add them for consistency with your FocusSessionUI component.
+    isTransitioning: useTimerStore((s) => s.isTransitioning),
+    transitionTo: useTimerStore((s) => s.transitionTo),
     startNextInterval,
     skipBreak,
   };

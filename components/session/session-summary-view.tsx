@@ -9,6 +9,7 @@ import axios from 'axios';
 import { SessionVibe, TimerMode, PomodoroCycle } from '@prisma/client';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { X } from 'lucide-react'; // NEW: Import X icon
 
 import { sessionSummarySchema } from '@/lib/zod-schemas';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { useTimerStore } from '@/store/timer-store';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 interface SessionSummaryViewProps {
   task: { id: string; title: string; goalId: string };
@@ -44,7 +48,8 @@ interface SessionSummaryViewProps {
     pomodoroCycle: PomodoroCycle;
   };
   onSessionSaved: () => void;
-  onDiscard: () => void;
+  onSessionDiscarded: () => void;
+  onClose: () => void; // NEW: Add onClose to props
 }
 
 type SummaryFormValues = z.infer<typeof sessionSummarySchema>;
@@ -52,6 +57,10 @@ type SummaryFormValues = z.infer<typeof sessionSummarySchema>;
 const createFocusSession = async (payload: any) => {
   const { data } = await axios.post('/api/focus-sessions', payload);
   return data;
+};
+
+const deleteSessionSequence = async (sequenceId: string) => {
+  return axios.delete('/api/focus-sessions', { data: { sequenceId } });
 };
 
 const fetchUserTags = async (): Promise<string[]> => {
@@ -69,51 +78,91 @@ export function SessionSummaryView({
   task,
   sessionData,
   onSessionSaved,
-  onDiscard,
+  onSessionDiscarded,
+  onClose, // Destructure onClose
 }: SessionSummaryViewProps) {
   const queryClient = useQueryClient();
   const [tags, setTags] = useState<string[]>([]);
+  const [markTaskAsComplete, setMarkTaskAsComplete] = useState(false);
+
   const { data: existingTags } = useQuery({
     queryKey: ['userTags'],
     queryFn: fetchUserTags,
   });
 
+  const sessionStartTime = useTimerStore((state) => state.sessionStartTime);
+  const sequenceId = useTimerStore((state) => state.sequenceId);
+
   const form = useForm<SummaryFormValues>({
     resolver: zodResolver(sessionSummarySchema),
-    defaultValues: { noteAccomplished: '', noteNextStep: '', artifactUrl: '' },
+    defaultValues: {
+      noteAccomplished: '',
+      noteNextStep: '',
+      artifactUrl: '',
+    },
   });
 
-  const mutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: createFocusSession,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', task.goalId] });
+      queryClient.invalidateQueries({
+        queryKey: ['taskListData', task.goalId],
+      });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
       queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
       queryClient.invalidateQueries({ queryKey: ['userTags'] });
       toast.success('Session saved successfully!');
       onSessionSaved();
     },
-    onError: () => toast.error('Failed to save session. Please try again.'),
+    onError: (error) => {
+      console.error('Save error:', error);
+      toast.error('Failed to save session. Please try again.');
+    },
+  });
+
+  const discardMutation = useMutation({
+    mutationFn: deleteSessionSequence,
+    onSuccess: () => {
+      toast.success('Session discarded.');
+      onSessionDiscarded();
+    },
+    onError: () => {
+      toast.error('Failed to discard session. Just exiting.');
+      onSessionDiscarded();
+    },
   });
 
   function onSubmit(values: SummaryFormValues) {
+    if (!sessionStartTime) {
+      toast.error('Session start time is missing. Cannot save.');
+      return;
+    }
+
     const payload = {
       ...values,
       artifactUrl: values.artifactUrl || null,
-      startTime: new Date(
-        Date.now() - sessionData.durationSeconds * 1000
-      ).toISOString(),
+      tags: tags,
+      startTime: new Date(sessionStartTime).toISOString(),
       endTime: new Date().toISOString(),
       durationSeconds: sessionData.durationSeconds,
       taskId: task.id,
       goalId: task.goalId,
       mode: sessionData.mode,
       pomodoroCycle: sessionData.pomodoroCycle,
-      tags,
+      sequenceId: sequenceId,
+      markTaskAsComplete: markTaskAsComplete,
     };
-    console.log('SESSIONSUMMARY:', sessionData);
 
-    mutation.mutate(payload);
+    saveMutation.mutate(payload);
   }
+
+  const handleDiscard = () => {
+    if (sessionData.mode === 'POMODORO' && sequenceId) {
+      discardMutation.mutate(sequenceId);
+    } else {
+      onSessionDiscarded();
+    }
+  };
 
   const formatDuration = (seconds: number) => {
     if (seconds < 60) return `${seconds}s`;
@@ -126,13 +175,29 @@ export function SessionSummaryView({
     );
   };
 
+  const isMutationPending = saveMutation.isPending || discardMutation.isPending;
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className='fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex justify-center items-center'
     >
-      <div className='w-full max-w-lg h-full max-h-[95vh] sm:max-h-[90vh] bg-card border rounded-xl shadow-2xl flex flex-col'>
+      <div className='w-full max-w-lg h-full max-h-[95vh] sm:max-h-[90vh] bg-card border rounded-xl shadow-2xl flex flex-col relative'>
+        {/* NEW: Close button */}
+        <Button
+          type='button'
+          variant='ghost'
+          size='icon'
+          onClick={onClose}
+          className='absolute top-3 right-3 text-muted-foreground hover:text-foreground'
+          aria-label='Close summary'
+          disabled={isMutationPending}
+        >
+          <X className='h-5 w-5' />
+        </Button>
+        {/* END NEW */}
+
         <div className='p-6 border-b'>
           <h2 className='text-xl font-bold'>Session Summary</h2>
           <p className='text-muted-foreground'>
@@ -237,13 +302,13 @@ export function SessionSummaryView({
                 </FormControl>
               </FormItem>
             </div>
-            <div className='p-6 border-t mt-auto bg-background/50 flex justify-between'>
+            <div className='p-6 border-t mt-auto bg-background/50 flex justify-between items-center'>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     type='button'
                     variant='ghost'
-                    disabled={mutation.isPending}
+                    disabled={isMutationPending}
                   >
                     Discard
                   </Button>
@@ -254,23 +319,45 @@ export function SessionSummaryView({
                       Discard this session log?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                      You can't undo this. Your focused time will not be logged.
+                      This will discard the summary and any automatically saved
+                      progress from this session. You can't undo this action.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
-                      onClick={onDiscard}
+                      onClick={handleDiscard}
                       className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                      disabled={isMutationPending}
                     >
-                      Yes, Discard
+                      {discardMutation.isPending
+                        ? 'Discarding...'
+                        : 'Yes, Discard'}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button type='submit' disabled={mutation.isPending}>
-                {mutation.isPending ? 'Saving...' : 'Save & Finish'}
-              </Button>
+              <div className='flex items-center gap-4'>
+                <div className='flex items-center space-x-2'>
+                  <Checkbox
+                    id='complete-task'
+                    checked={markTaskAsComplete}
+                    onCheckedChange={(checked) =>
+                      setMarkTaskAsComplete(Boolean(checked))
+                    }
+                    disabled={isMutationPending}
+                  />
+                  <Label
+                    htmlFor='complete-task'
+                    className='text-sm font-medium text-muted-foreground'
+                  >
+                    Mark task as complete
+                  </Label>
+                </div>
+                <Button type='submit' disabled={isMutationPending}>
+                  {saveMutation.isPending ? 'Saving...' : 'Save & Finish'}
+                </Button>
+              </div>
             </div>
           </form>
         </Form>

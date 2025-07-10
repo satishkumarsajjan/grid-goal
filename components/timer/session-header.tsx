@@ -12,8 +12,7 @@ interface SessionHeaderProps {
  */
 export function SessionHeader({ taskTitle, goalTitle }: SessionHeaderProps) {
   return (
-    <div className='absolute top-8 text-center px-4 w-full max-w-2xl'>
-      {/* Parent Goal Title (conditionally rendered) */}
+    <div className=' text-center px-4 w-full max-w-2xl'>
       {goalTitle && (
         <div className='flex items-center justify-center text-muted-foreground text-sm mb-1'>
           <span

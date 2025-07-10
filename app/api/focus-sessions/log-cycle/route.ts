@@ -12,7 +12,7 @@ const logCycleSchema = z.object({
   goalId: z.string().cuid(),
   mode: z.nativeEnum(TimerMode),
   pomodoroCycle: z.nativeEnum(PomodoroCycle),
-  // We don't need sequenceId in the DB model, but we use it for logic
+  sequenceId: z.string().uuid().nullable(),
 });
 
 export async function POST(request: Request) {
@@ -35,13 +35,16 @@ export async function POST(request: Request) {
 
     const { taskId, goalId, ...sessionData } = validation.data;
 
-    await prisma.$transaction(async (tx) => {
-      const task = await tx.task.findUnique({ where: { id: taskId, userId } });
+    // The transaction now creates the session and updates the task
+    const [newSession] = await prisma.$transaction(async (tx) => {
+      const task = await tx.task.findUnique({
+        where: { id: taskId, userId },
+      });
       if (!task) throw new Error('Task not found');
 
-      await tx.focusSession.create({
+      const createdSession = await tx.focusSession.create({
         data: {
-          ...sessionData,
+          ...sessionData, // This now includes sequenceId
           userId,
           taskId,
           goalId,
@@ -59,11 +62,17 @@ export async function POST(request: Request) {
           data: { status: TaskStatus.IN_PROGRESS },
         });
       }
+
+      return [createdSession];
     });
 
-    return NextResponse.json({ success: true }, { status: 201 });
+    // Return the created session so the client can use its ID if needed
+    return NextResponse.json(newSession, { status: 201 });
   } catch (error) {
     console.error('[API:LOG_CYCLE]', error);
+    if (error instanceof Error && error.message === 'Task not found') {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
     return NextResponse.json(
       { error: 'An internal server error occurred.' },
       { status: 500 }

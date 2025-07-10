@@ -14,19 +14,45 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { useMutation } from '@tanstack/react-query';
+import axios from 'axios';
+import { toast } from 'sonner';
 
 interface SessionControlsProps {
-  onFinish: () => void; // A function to trigger the summary view
+  onFinish: () => void;
 }
 
+// NEW: Mutation function for deleting a session sequence
+const deleteSessionSequence = async (sequenceId: string) => {
+  return axios.delete('/api/focus-sessions', { data: { sequenceId } });
+};
+
 export function SessionControls({ onFinish }: SessionControlsProps) {
-  // Get state and actions from our refactored store
-  const {
-    isActive,
-    pauseSession,
-    resumeSession,
-    reset: discardSession, // We alias the 'reset' action to 'discardSession' for clarity
-  } = useTimerStore();
+  const { isActive, pauseSession, resumeSession, reset, mode, sequenceId } =
+    useTimerStore();
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteSessionSequence,
+    onSuccess: () => {
+      toast.success('Session discarded.');
+      reset(); // Reset the store after successful deletion
+    },
+    onError: () => {
+      toast.error('Failed to discard session. Please try again.');
+    },
+  });
+
+  const handleDiscard = () => {
+    // If it's a Pomodoro session with a sequenceId, call the API
+    if (mode === 'POMODORO' && sequenceId) {
+      deleteMutation.mutate(sequenceId);
+    } else {
+      // For stopwatch or sessions without a sequenceId, just reset the store
+      reset();
+    }
+  };
+
+  const isPomodoroWithProgress = mode === 'POMODORO' && sequenceId;
 
   return (
     <div className='flex items-center justify-center gap-4'>
@@ -38,6 +64,7 @@ export function SessionControls({ onFinish }: SessionControlsProps) {
             size='lg'
             className='w-28 h-14 rounded-full border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive'
             aria-label='Discard Session'
+            disabled={deleteMutation.isPending}
           >
             <X className='h-6 w-6' />
           </Button>
@@ -46,17 +73,19 @@ export function SessionControls({ onFinish }: SessionControlsProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Discard this session?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to discard this focus session? All progress
-              will be lost and no time will be logged. This cannot be undone.
+              {isPomodoroWithProgress
+                ? "Are you sure? This will discard all progress for this session, including any automatically saved cycles. This can't be undone."
+                : 'Are you sure? All progress will be lost and no time will be logged. This cannot be undone.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Focusing</AlertDialogCancel>
             <AlertDialogAction
-              onClick={discardSession}
+              onClick={handleDiscard}
               className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+              disabled={deleteMutation.isPending}
             >
-              Yes, Discard It
+              {deleteMutation.isPending ? 'Discarding...' : 'Yes, Discard It'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTimerStore } from '@/store/timer-store';
 import { useTimerEngine } from '@/hooks/use-timer-engine';
+import { useIdle } from '@/hooks/use-idle';
 import { calculateFinalDuration } from '@/lib/timer-machine';
 
 import { SessionControls } from './session-controls';
@@ -11,12 +12,13 @@ import { SessionHeader } from './session-header';
 import { TimerDisplay } from './timer-display';
 import { PomodoroTransition } from './pomodoro-transition';
 import { PomodoroCycle, TimerMode } from '@prisma/client';
+import { cn } from '@/lib/utils';
 
 export function FocusSessionUI() {
-  // --- State from Global Store ---
-  const { isActive, activeTask, mode, pomodoroCycle, reset } = useTimerStore();
+  // Get the pause action directly from the store
+  const { isActive, activeTask, mode, pomodoroCycle, reset, pauseSession } =
+    useTimerStore();
 
-  // --- Logic from Custom Hook ---
   const {
     displayTime,
     currentIntervalDuration,
@@ -26,7 +28,8 @@ export function FocusSessionUI() {
     skipBreak,
   } = useTimerEngine();
 
-  // --- Local UI State ---
+  const isIdle = useIdle(3000);
+
   const [showSummary, setShowSummary] = useState(false);
   const [finalSessionData, setFinalSessionData] = useState<{
     durationSeconds: number;
@@ -34,28 +37,33 @@ export function FocusSessionUI() {
     pomodoroCycle: PomodoroCycle;
   } | null>(null);
 
-  // --- Event Handlers ---
   const handleFinishSession = () => {
+    // NEW: Pause the session first. This updates accumulatedTime and makes the action reversible.
+    pauseSession();
+
+    // Get the now-paused state to calculate the final duration accurately.
     const timerState = useTimerStore.getState();
     const finalDurationSeconds = calculateFinalDuration(timerState);
 
-    if (
-      timerState.mode === 'STOPWATCH' ||
-      timerState.pomodoroCycle === 'WORK'
-    ) {
-      setFinalSessionData({
-        durationSeconds: finalDurationSeconds,
-        mode: timerState.mode,
-        pomodoroCycle: timerState.pomodoroCycle,
-      });
-      setShowSummary(true);
-    } else {
-      reset();
-    }
-    console.log('POMODORO', finalDurationSeconds);
+    setFinalSessionData({
+      durationSeconds: finalDurationSeconds,
+      mode: timerState.mode,
+      pomodoroCycle: timerState.pomodoroCycle,
+    });
+    setShowSummary(true);
+
+    console.log(
+      'SESSION FINISHED. Total Duration (seconds):',
+      finalDurationSeconds
+    );
   };
 
-  const handleSessionSavedOrDiscarded = () => {
+  // NEW: Handler to simply close the summary view without ending the session.
+  const handleCloseSummary = () => {
+    setShowSummary(false);
+  };
+
+  const handleSessionEnd = () => {
     setShowSummary(false);
     setFinalSessionData(null);
     reset();
@@ -63,7 +71,6 @@ export function FocusSessionUI() {
 
   if (!activeTask) return null;
 
-  // --- RENDER LOGIC ---
   if (isTransitioning && transitionTo) {
     return (
       <PomodoroTransition
@@ -85,7 +92,7 @@ export function FocusSessionUI() {
           pointerEvents: showSummary ? 'none' : 'auto',
         }}
       >
-        {/* The PAUSED overlay - solves Flaw #10 */}
+        {/* The "Paused" overlay will now correctly show if the user opens the summary */}
         {!isActive && (
           <div className='absolute inset-0 bg-black/10 dark:bg-black/30 flex items-center justify-center backdrop-blur-sm'>
             <span className='text-white text-2xl font-bold tracking-widest uppercase bg-black/50 px-4 py-2 rounded-lg'>
@@ -94,10 +101,17 @@ export function FocusSessionUI() {
           </div>
         )}
 
-        <SessionHeader
-          taskTitle={activeTask.title}
-          goalTitle={activeTask.goalTitle}
-        />
+        <div
+          className={cn(
+            'transition-opacity duration-500',
+            isIdle && !showSummary ? 'opacity-0' : 'opacity-100'
+          )}
+        >
+          <SessionHeader
+            taskTitle={activeTask.title}
+            goalTitle={activeTask.goalTitle}
+          />
+        </div>
 
         <TimerDisplay
           mode={mode}
@@ -106,7 +120,12 @@ export function FocusSessionUI() {
           intervalDurationMs={currentIntervalDuration}
         />
 
-        <div className='absolute bottom-16 flex gap-4'>
+        <div
+          className={cn(
+            'absolute bottom-16 flex gap-4 transition-opacity duration-500',
+            isIdle && !showSummary ? 'opacity-0' : 'opacity-100'
+          )}
+        >
           <SessionControls onFinish={handleFinishSession} />
         </div>
       </div>
@@ -115,8 +134,10 @@ export function FocusSessionUI() {
         <SessionSummaryView
           task={activeTask}
           sessionData={finalSessionData}
-          onSessionSaved={handleSessionSavedOrDiscarded}
-          onDiscard={handleSessionSavedOrDiscarded}
+          onSessionSaved={handleSessionEnd}
+          onSessionDiscarded={handleSessionEnd}
+          // NEW: Pass the close handler
+          onClose={handleCloseSummary}
         />
       )}
     </>

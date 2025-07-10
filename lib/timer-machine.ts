@@ -4,16 +4,23 @@ import type { PomodoroCycle } from '@prisma/client';
 
 /**
  * Calculates the final, accurate duration of a session when it's manually finished.
+ * This now reflects the TOTAL time across all intervals.
  * @param state - The current state from the timer store.
  * @returns The total duration in seconds.
  */
 export function calculateFinalDuration(state: TimerState): number {
-  let finalAccumulatedTime = state.accumulatedTime;
-  // If the timer was running when finished, add the last interval's time.
+  // Start with the total time accumulated from previous, completed intervals.
+  let finalTotalTime = state.totalAccumulatedTime;
+
+  // Add the time from the current, active interval.
+  let currentIntervalTime = state.accumulatedTime;
   if (state.isActive && state.intervalStartTime) {
-    finalAccumulatedTime += Date.now() - state.intervalStartTime;
+    currentIntervalTime += Date.now() - state.intervalStartTime;
   }
-  return Math.round(finalAccumulatedTime / 1000);
+
+  finalTotalTime += currentIntervalTime;
+
+  return Math.round(finalTotalTime / 1000);
 }
 
 /**

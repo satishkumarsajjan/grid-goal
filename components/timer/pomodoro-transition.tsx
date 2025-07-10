@@ -4,6 +4,7 @@ import { type PomodoroCycle } from '@prisma/client';
 import { Button } from '@/components/ui/button';
 import { Coffee, Briefcase } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useSettingsStore } from '@/store/settings-store';
 
 interface PomodoroTransitionProps {
   nextCycle: PomodoroCycle;
@@ -17,21 +18,38 @@ export function PomodoroTransition({
   onSkipBreak,
 }: PomodoroTransitionProps) {
   const isBreak = nextCycle.includes('BREAK');
+  const pomodoroSettings = useSettingsStore((state) => state.pomodoro);
+
+  const getDurationInMinutes = (cycle: PomodoroCycle): number => {
+    switch (cycle) {
+      case 'WORK':
+        return pomodoroSettings.durationWork / 60;
+      case 'SHORT_BREAK':
+        return pomodoroSettings.durationShortBreak / 60;
+      case 'LONG_BREAK':
+        return pomodoroSettings.durationLongBreak / 60;
+      default:
+        return 0;
+    }
+  };
+
+  const durationMinutes = getDurationInMinutes(nextCycle);
+  const cycleName = nextCycle.replace('_', ' ').toLowerCase();
 
   const messages = {
     SHORT_BREAK: {
       title: 'Great work!',
-      subtitle: 'Time for a short break.',
+      subtitle: `Time for a ${durationMinutes}-minute short break.`,
       icon: <Coffee className='h-16 w-16 mb-4 text-primary' />,
     },
     LONG_BREAK: {
       title: 'Cycle complete!',
-      subtitle: 'Time for a well-deserved long break.',
+      subtitle: `Time for a well-deserved ${durationMinutes}-minute long break.`,
       icon: <Coffee className='h-16 w-16 mb-4 text-primary' />,
     },
     WORK: {
       title: "Break's over!",
-      subtitle: 'Ready for the next focus session?',
+      subtitle: `Ready for the next ${durationMinutes}-minute focus session?`,
       icon: <Briefcase className='h-16 w-16 mb-4 text-primary' />,
     },
   };
@@ -51,7 +69,7 @@ export function PomodoroTransition({
       </div>
       <div className='flex flex-col sm:flex-row gap-4'>
         <Button onClick={onStartNext} size='lg' className='px-8 py-6 text-lg'>
-          Start {nextCycle.replace('_', ' ').toLowerCase()}
+          Start {durationMinutes}min {cycleName}
         </Button>
         {isBreak && (
           <Button onClick={onSkipBreak} variant='ghost' size='lg'>

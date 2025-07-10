@@ -1,3 +1,4 @@
+import { PomodoroCycle, SessionVibe, TimerMode } from '@prisma/client';
 import { z } from 'zod';
 
 export const createGoalSchema = z.object({
@@ -22,9 +23,9 @@ export const createTaskSchema = z.object({
 // export const createTaskSchema = ...
 
 export const sessionSummarySchema = z.object({
-  vibe: z.string(),
-  noteAccomplished: z.string().optional(),
-  noteNextStep: z.string().optional(),
+  vibe: z.nativeEnum(SessionVibe).optional(),
+  noteAccomplished: z.string().max(10000).optional(),
+  noteNextStep: z.string().max(10000).optional(),
   artifactUrl: z
     .string()
     .url({ message: 'Please enter a valid URL.' })

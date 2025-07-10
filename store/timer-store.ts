@@ -11,15 +11,20 @@ export interface ActiveTask {
 
 export interface TimerState {
   isActive: boolean;
-  accumulatedTime: number; // in milliseconds
+  accumulatedTime: number; // Time for the CURRENT interval
   intervalStartTime: number | null;
   activeTask: ActiveTask | null;
   mode: TimerMode;
   pomodoroCycle: PomodoroCycle;
   pomodorosCompletedInCycle: number;
-  // NEW: A unique ID for the entire Pomodoro sequence (e.g., 4 work + 3 breaks).
-  // This will be used to group session logs. It's null for stopwatch mode.
   sequenceId: string | null;
+  isTransitioning: boolean;
+  transitionTo: PomodoroCycle | null;
+  sessionStartTime: number | null;
+
+  // NEW: Total time accumulated across ALL intervals in the session.
+  // This will be used for the final summary.
+  totalAccumulatedTime: number;
 }
 
 interface TimerActions {
@@ -27,8 +32,9 @@ interface TimerActions {
   pauseSession: () => void;
   resumeSession: () => void;
   reset: () => void;
-  // We may need this later if we update state from the engine
   setTimerState: (newState: Partial<TimerState>) => void;
+  // NEW: Action to add time to the total accumulator.
+  addTimeToTotal: (ms: number) => void;
 }
 
 const initialState: TimerState = {
@@ -39,7 +45,13 @@ const initialState: TimerState = {
   mode: 'STOPWATCH',
   pomodoroCycle: 'WORK',
   pomodorosCompletedInCycle: 0,
-  sequenceId: null, // Default to null
+  sequenceId: null,
+  isTransitioning: false,
+  transitionTo: null,
+  sessionStartTime: null,
+
+  // NEW: Initial state for total time
+  totalAccumulatedTime: 0,
 };
 
 export const useTimerStore = create<TimerState & TimerActions>()(
@@ -49,19 +61,29 @@ export const useTimerStore = create<TimerState & TimerActions>()(
 
       setTimerState: (newState) => set(newState),
 
+      addTimeToTotal: (ms) => {
+        set((state) => ({
+          totalAccumulatedTime: state.totalAccumulatedTime + ms,
+        }));
+      },
+
       startSession: (task, mode) => {
         const isNewPomodoroSession = mode === 'POMODORO';
+        const now = Date.now();
         set({
           isActive: true,
-          intervalStartTime: Date.now(),
+          intervalStartTime: now,
           accumulatedTime: 0,
           activeTask: task,
           mode: mode,
-          // Reset Pomodoro state at the start of a new session
           pomodoroCycle: 'WORK',
           pomodorosCompletedInCycle: 0,
-          // NEW: Generate a unique ID for this new Pomodoro sequence
           sequenceId: isNewPomodoroSession ? crypto.randomUUID() : null,
+          isTransitioning: false,
+          transitionTo: null,
+          sessionStartTime: now,
+          // Reset total time at the start of a new session
+          totalAccumulatedTime: 0,
         });
       },
 
@@ -91,9 +113,8 @@ export const useTimerStore = create<TimerState & TimerActions>()(
       },
     }),
     {
-      name: 'gridgoal-timer-storage-v5', // Incremented version to avoid conflicts
+      name: 'gridgoal-timer-storage-v5',
       partialize: (state) => ({
-        // ... include all state properties including the new sequenceId
         isActive: state.isActive,
         accumulatedTime: state.accumulatedTime,
         intervalStartTime: state.intervalStartTime,
@@ -101,7 +122,12 @@ export const useTimerStore = create<TimerState & TimerActions>()(
         mode: state.mode,
         pomodoroCycle: state.pomodoroCycle,
         pomodorosCompletedInCycle: state.pomodorosCompletedInCycle,
-        sequenceId: state.sequenceId, // Persist the sequence ID
+        sequenceId: state.sequenceId,
+        isTransitioning: state.isTransitioning,
+        transitionTo: state.transitionTo,
+        sessionStartTime: state.sessionStartTime,
+        // NEW: Persist the total accumulated time
+        totalAccumulatedTime: state.totalAccumulatedTime,
       }),
     }
   )
