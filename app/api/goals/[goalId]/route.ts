@@ -78,26 +78,34 @@ export async function PATCH(
     const { goalId } = params;
 
     const body = await request.json();
-
-    const { title, description, status, deadline, color } = body;
+    const { title, description, status, deadline, color, categoryId } = body;
 
     const goalToUpdate = await prisma.goal.findFirst({
-      where: { id: goalId, userId: userId },
+      where: { id: goalId, userId },
     });
-
     if (!goalToUpdate) {
-      return new NextResponse(
-        JSON.stringify({
-          error: 'Goal not found or you do not have permission',
-        }),
-        { status: 404 }
-      );
+      return new NextResponse(JSON.stringify({ error: 'Goal not found' }), {
+        status: 404,
+      });
+    }
+
+    const dataToUpdate: any = {};
+    if (title !== undefined) dataToUpdate.title = title;
+    if (description !== undefined) dataToUpdate.description = description;
+    if (status !== undefined) dataToUpdate.status = status;
+    if (deadline !== undefined) dataToUpdate.deadline = deadline;
+    if (color !== undefined) dataToUpdate.color = color;
+    // Handle categoryId specifically to allow setting it to null
+    if (categoryId !== undefined) {
+      dataToUpdate.categoryId = categoryId;
     }
 
     const updatedGoal = await prisma.goal.update({
       where: { id: goalId },
-      // NEW: Include 'color' in the update data payload
-      data: { title, description, status, deadline, color },
+      data: dataToUpdate,
+      include: {
+        category: true,
+      },
     });
 
     return NextResponse.json(updatedGoal);
@@ -109,7 +117,6 @@ export async function PATCH(
     );
   }
 }
-
 export async function DELETE(
   request: Request,
   { params }: { params: { goalId: string } }

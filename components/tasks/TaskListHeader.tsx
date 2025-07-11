@@ -1,20 +1,28 @@
 'use client';
 
+import { Category } from '@prisma/client';
+import { Loader2 } from 'lucide-react';
+import { useMemo } from 'react';
+
 import { PaceProgressChart } from '@/components/shared/pace-indicator-chart';
 import { calculatePaceData } from '@/lib/pace-helpers';
 import { type GoalWithSessions } from '@/lib/types';
-import { TaskStats } from './task-stats';
-import { useMemo } from 'react';
-import { Loader2 } from 'lucide-react';
-// NEW: Import the reusable tooltip component
 import { InsightTooltip } from '../analytics/InsightTooltip';
+import { GoalCategorySelector } from '../goals/GoalCategorySelector';
+import { TaskStats } from './task-stats';
+
+// The goal prop now expects to include the nested category object
+type GoalWithCategoryAndSessions = GoalWithSessions & {
+  category: Category | null;
+};
 
 interface TaskListHeaderProps {
-  goal: GoalWithSessions;
+  goal: GoalWithCategoryAndSessions;
   taskCount: number;
   completedTaskCount: number;
   inProgressTaskCount: number;
   isSavingOrder: boolean;
+  onOpenCreateCategoryDialog: () => void;
 }
 
 export function TaskListHeader({
@@ -23,6 +31,7 @@ export function TaskListHeader({
   completedTaskCount,
   inProgressTaskCount,
   isSavingOrder,
+  onOpenCreateCategoryDialog,
 }: TaskListHeaderProps) {
   const paceData = useMemo(() => {
     if (goal.deadline && goal.deepEstimateTotalSeconds > 0) {
@@ -44,62 +53,65 @@ export function TaskListHeader({
 
   return (
     <div
-      className='p-4 border-b'
-      style={{
-        borderTop: `3px solid ${goal.color}`,
-      }}
+      className='p-6 border-b space-y-4'
+      style={{ borderTop: `3px solid ${goal.color ?? 'transparent'}` }}
     >
-      <div className='flex items-center justify-between'>
-        <h1 className='text-2xl font-bold'>{goal.title}</h1>
+      <div className='flex items-start justify-between gap-4'>
+        <div>
+          <h1 className='text-2xl font-bold'>{goal.title}</h1>
+          {goal.description && (
+            <p className='mt-1 text-sm text-muted-foreground max-w-prose'>
+              {goal.description}
+            </p>
+          )}
+        </div>
         {isSavingOrder && (
-          <div className='flex items-center gap-2 text-xs text-muted-foreground animate-pulse'>
+          <div className='flex items-center gap-2 text-xs text-muted-foreground animate-pulse flex-shrink-0 mt-1'>
             <Loader2 className='h-4 w-4 animate-spin' />
             <span>Saving order...</span>
           </div>
         )}
       </div>
 
-      {goal.description && (
-        <p className='mt-1 text-sm text-muted-foreground'>{goal.description}</p>
-      )}
+      <div className='flex items-center gap-6'>
+        <TaskStats {...taskStats} />
+        <GoalCategorySelector
+          goal={goal}
+          onOpenCreateCategoryDialog={onOpenCreateCategoryDialog}
+        />
+      </div>
 
-      {/* This is the section we are modifying */}
       {paceData && paceData.length > 0 && (
-        <div className='mt-4'>
+        <div className='pt-2'>
           <div className='flex items-center mb-1 gap-2'>
-            <InsightTooltip
-              content={
-                <span className='text-wrap'>
-                  <p className='font-medium text-wrap'>
-                    This chart helps you stay on track to meet your deadline.
-                  </p>
-                  <ul className='mt-2 list-disc list-inside space-y-1 text-xs'>
-                    <li>
-                      The <span className='font-semibold'>solid line</span> is
-                      your actual cumulative progress.
-                    </li>
-                    <li>
-                      The <span className='font-semibold '>dashed line</span> is
-                      the ideal pace you need to maintain.
-                    </li>
-                  </ul>
-                  <p className='mt-2'>
-                    Try to keep your actual progress line at or above the target
-                    line!
-                  </p>
-                </span>
-              }
-            />
             <h3 className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
               Pace Indicator
             </h3>
+            <InsightTooltip
+              content={
+                <div className='text-wrap'>
+                  {' '}
+                  <p className='font-medium'>
+                    This chart helps you stay on track to meet your deadline.
+                  </p>{' '}
+                  <ul className='mt-2 list-disc list-inside space-y-1 text-xs'>
+                    {' '}
+                    <li>
+                      The <span className='font-semibold'>solid line</span> is
+                      your actual progress.
+                    </li>{' '}
+                    <li>
+                      The <span className='font-semibold'>dashed line</span> is
+                      your target pace.
+                    </li>{' '}
+                  </ul>{' '}
+                </div>
+              }
+            />
           </div>
           <PaceProgressChart data={paceData} />
         </div>
       )}
-      <div className='mt-4'>
-        <TaskStats {...taskStats} />
-      </div>
     </div>
   );
 }

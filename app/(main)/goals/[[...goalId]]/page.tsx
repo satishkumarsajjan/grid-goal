@@ -6,20 +6,22 @@ import { Goal } from '@prisma/client';
 
 import { GoalTree } from '@/components/goals/goal-tree';
 import { CreateGoalButton } from '@/components/goals/create-goal-button';
-import { GoalForm } from '@/components/goals/create-goal-form'; // NEW: Import the unified GoalForm
 import { TaskList } from '@/components/tasks/task-list';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  Dialog, // NEW: Import Dialog components for our new GoalDialog
+  Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { DeleteCategoriesButton } from '@/components/goals/DeleteCategoriesButton';
+import { GoalForm } from '@/components/goals/create-goal-form';
+// NEW: Import the CreateCategoryForm
+import { CreateCategoryForm } from '@/components/goals/CreateCategoryForm';
 
-// This type now represents the full state of our dialog
 export interface GoalDialogOptions {
   open: boolean;
   mode: 'create' | 'edit';
@@ -33,18 +35,14 @@ export default function GoalsLayoutAndPage({
   params: { goalId?: string[] };
 }) {
   const selectedGoalId = params.goalId?.[0] ?? null;
-
-  // RENAMED state to be more generic
   const [goalDialogOptions, setGoalDialogOptions] = useState<GoalDialogOptions>(
-    {
-      open: false,
-      mode: 'create',
-      parentId: null,
-      initialData: null,
-    }
+    { open: false, mode: 'create', parentId: null, initialData: null }
   );
-
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // NEW: State to control the separate "Create Category" dialog
+  const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
+
   const pathname = usePathname();
 
   useEffect(() => {
@@ -68,7 +66,6 @@ export default function GoalsLayoutAndPage({
             onClick={() => setGoalDialogOptions({ open: true, mode: 'create' })}
           />
         </div>
-
         <div className='flex flex-1 overflow-hidden'>
           <aside
             className={cn(
@@ -97,29 +94,35 @@ export default function GoalsLayoutAndPage({
                 </Button>
               </div>
             </div>
-
             <div className='flex-1 overflow-y-auto p-2'>
               <Suspense fallback={<GoalNavigatorSkeleton />}>
                 <GoalTree
                   activeGoalId={selectedGoalId}
-                  // Pass the generic dialog handler to GoalTree
                   openGoalDialog={setGoalDialogOptions}
                 />
               </Suspense>
             </div>
+            <div className='p-2 border-t'>
+              <DeleteCategoriesButton />
+            </div>
           </aside>
-
           {isSidebarOpen && (
             <div
               className='fixed inset-0 z-20 bg-black/20 md:hidden'
               onClick={() => setIsSidebarOpen(false)}
             />
           )}
-
           <main className='flex-1 border-l'>
             {selectedGoalId ? (
               <Suspense fallback={<TaskListSkeleton />}>
-                <TaskList goalId={selectedGoalId} />
+                {/* --- THIS IS THE FIX --- */}
+                {/* Pass the required function down to the TaskList component */}
+                <TaskList
+                  goalId={selectedGoalId}
+                  onOpenCreateCategoryDialog={() =>
+                    setIsCreateCategoryOpen(true)
+                  }
+                />
               </Suspense>
             ) : (
               <WelcomePlaceholder />
@@ -128,18 +131,34 @@ export default function GoalsLayoutAndPage({
         </div>
       </div>
 
-      {/* Use our new, more powerful GoalDialog component */}
+      {/* This dialog is for creating/editing GOALS */}
       <GoalDialog
         options={goalDialogOptions}
         onOpenChange={(open) =>
           setGoalDialogOptions({ ...goalDialogOptions, open })
         }
       />
+
+      {/* NEW: This dialog is for creating CATEGORIES */}
+      <Dialog
+        open={isCreateCategoryOpen}
+        onOpenChange={setIsCreateCategoryOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Category</DialogTitle>
+          </DialogHeader>
+          <div className='pt-4'>
+            <CreateCategoryForm
+              onFinished={() => setIsCreateCategoryOpen(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
 
-// NEW: A dedicated component for the Goal Dialog to keep the main page clean
 function GoalDialog({
   options,
   onOpenChange,
@@ -152,12 +171,7 @@ function GoalDialog({
   const description = isEditing
     ? `You are editing "${options.initialData?.title}".`
     : 'Set a new objective to work towards.';
-
-  // We need this check to prevent the dialog from trying to render without the necessary data.
-  if (!options.open) {
-    return null;
-  }
-
+  if (!options.open) return null;
   return (
     <Dialog open={options.open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -169,30 +183,31 @@ function GoalDialog({
           <GoalForm
             initialData={options.initialData}
             parentId={options.parentId}
-            onFinished={() => onOpenChange(false)} // Close the dialog on success
+            onFinished={() => onOpenChange(false)}
           />
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
 function WelcomePlaceholder() {
   return (
     <div className='flex h-full flex-col items-center justify-center text-center p-8 gap-4'>
-      <LayoutGrid className='h-16 w-16 text-muted-foreground/40' />
-      <h2 className='text-2xl font-bold'>Welcome to Your Goals</h2>
+      {' '}
+      <LayoutGrid className='h-16 w-16 text-muted-foreground/40' />{' '}
+      <h2 className='text-2xl font-bold'>Welcome to Your Goals</h2>{' '}
       <p className='max-w-xs text-muted-foreground'>
+        {' '}
         Select a goal from the left to view its tasks, or create a new one to
-        get started.
-      </p>
+        get started.{' '}
+      </p>{' '}
     </div>
   );
 }
-
 function GoalNavigatorSkeleton() {
   return (
     <div className='space-y-3 p-2'>
+      {' '}
       {[...Array(8)].map((_, i) => (
         <div
           key={i}
@@ -202,32 +217,36 @@ function GoalNavigatorSkeleton() {
             i === 4 && '!ml-12'
           )}
         >
-          <Skeleton className='h-5 w-5 rounded-md' />
+          {' '}
+          <Skeleton className='h-5 w-5 rounded-md' />{' '}
           <div className='flex-1 space-y-1.5'>
-            <Skeleton className='h-4 w-3/4' />
-            <Skeleton className='h-2 w-1/2' />
-          </div>
+            {' '}
+            <Skeleton className='h-4 w-3/4' />{' '}
+            <Skeleton className='h-2 w-1/2' />{' '}
+          </div>{' '}
         </div>
-      ))}
+      ))}{' '}
     </div>
   );
 }
-
-function TaskListSkeleton() {
+export function TaskListSkeleton() {
   return (
     <div className='p-6 space-y-4'>
+      {' '}
       <div className='space-y-2'>
-        <Skeleton className='h-8 w-1/2' />
-        <Skeleton className='h-4 w-3/4' />
-      </div>
+        {' '}
+        <Skeleton className='h-8 w-1/2' /> <Skeleton className='h-4 w-3/4' />{' '}
+      </div>{' '}
       <div className='space-y-3 pt-4'>
+        {' '}
         {[...Array(5)].map((_, i) => (
           <div key={i} className='flex items-center gap-3'>
-            <Skeleton className='h-5 w-5 rounded-sm' />
-            <Skeleton className='h-5 flex-1' />
+            {' '}
+            <Skeleton className='h-5 w-5 rounded-sm' />{' '}
+            <Skeleton className='h-5 flex-1' />{' '}
           </div>
-        ))}
-      </div>
+        ))}{' '}
+      </div>{' '}
     </div>
   );
 }

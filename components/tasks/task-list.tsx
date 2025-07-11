@@ -1,4 +1,3 @@
-// components/goal/task-list.tsx
 'use client';
 
 import { TaskStatus } from '@prisma/client';
@@ -10,9 +9,9 @@ import { type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 
 import { TaskSelectionModal } from '@/components/timer/task-selection-modal';
-import { type GoalWithSessions, type TaskWithTime } from '@/lib/types';
+import { type FullGoalDetails, type TaskWithTime } from '@/lib/types';
 import { CreateTaskForm } from './create-task-form';
-import { TaskListSkeleton } from './task-list-skeleton';
+import { TaskListSkeleton } from '@/app/(main)/goals/[[...goalId]]/page';
 import { TaskListHeader } from './TaskListHeader';
 import { SortableTasks } from './SortableTasks';
 import { AriaLiveRegion } from '@/components/ui/AriaLiveRegion';
@@ -24,12 +23,13 @@ import {
 
 interface TaskListProps {
   goalId: string | null;
+  // This prop is now required to connect the "Create New" button in the header
+  onOpenCreateCategoryDialog: () => void;
 }
 
-const fetchTaskListData = async (
-  goalId: string
-): Promise<{ goal: GoalWithSessions; tasks: TaskWithTime[] }> => {
-  const { data } = await axios.get(`/api/task-list-data?goalId=${goalId}`);
+// Fetcher now uses the standard goal detail endpoint and expects the full data shape
+const fetchGoalDetails = async (goalId: string): Promise<FullGoalDetails> => {
+  const { data } = await axios.get(`/api/goals/${goalId}`);
   return data;
 };
 
@@ -38,7 +38,10 @@ const updateTaskOrder = async (tasks: { id: string; sortOrder: number }[]) => {
   return data;
 };
 
-export function TaskList({ goalId }: TaskListProps) {
+export function TaskList({
+  goalId,
+  onOpenCreateCategoryDialog,
+}: TaskListProps) {
   const queryClient = useQueryClient();
   const [orderedTasks, setOrderedTasks] = useState<TaskWithTime[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,19 +52,27 @@ export function TaskList({ goalId }: TaskListProps) {
   const [activeFilter, setActiveFilter] = useState<FilterOption>('ALL');
   const [activeSort, setActiveSort] = useState<SortOption>('sortOrder');
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['taskListData', goalId],
-    queryFn: () => fetchTaskListData(goalId!),
+  const {
+    data: goalData,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    // Use a more specific query key to avoid conflicts
+    queryKey: ['goal', goalId],
+    queryFn: () => fetchGoalDetails(goalId!),
     enabled: !!goalId,
   });
 
-  const goal = data?.goal;
-  const fetchedTasks = data?.tasks;
+  // Separate the goal object from its tasks array
+  const goal = goalData ? { ...goalData, tasks: undefined } : undefined;
+  const fetchedTasks = goalData?.tasks;
 
   useEffect(() => {
     if (fetchedTasks) {
       setOrderedTasks(fetchedTasks);
     }
+    // Reset filters and sort when the goal changes
     setActiveFilter('ALL');
     setActiveSort('sortOrder');
   }, [fetchedTasks, goalId]);
@@ -105,7 +116,8 @@ export function TaskList({ goalId }: TaskListProps) {
   const orderMutation = useMutation({
     mutationFn: updateTaskOrder,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['taskListData', goalId] });
+      // Use the correct query key for invalidation
+      queryClient.invalidateQueries({ queryKey: ['goal', goalId] });
     },
     onError: () => {
       setOrderedTasks(fetchedTasks || []);
@@ -149,7 +161,7 @@ export function TaskList({ goalId }: TaskListProps) {
     );
   }
 
-  if (isLoading && !data) return <TaskListSkeleton />;
+  if (isLoading && !goalData) return <TaskListSkeleton />;
   if (isError)
     return (
       <div className='text-destructive p-4 text-center'>
@@ -163,11 +175,13 @@ export function TaskList({ goalId }: TaskListProps) {
       <AriaLiveRegion message={announcement} />
       <div className='flex h-full flex-col rounded-lg'>
         <TaskListHeader
-          goal={goal}
+          goal={goal as any} // The fetched 'goal' object is now compatible
           taskCount={orderedTasks.length}
           completedTaskCount={completedTaskCount}
           inProgressTaskCount={inProgressTaskCount}
           isSavingOrder={orderMutation.isPending}
+          // Pass the handler down to the header
+          onOpenCreateCategoryDialog={onOpenCreateCategoryDialog}
         />
         <TaskListControls
           activeFilter={activeFilter}
@@ -176,19 +190,16 @@ export function TaskList({ goalId }: TaskListProps) {
           onSortChange={setActiveSort}
           isDisabled={orderMutation.isPending}
         />
-
-        {/* Pass the new totalTaskCount prop */}
         <SortableTasks
           tasks={displayedTasks}
-          totalTaskCount={orderedTasks.length}
           onDragEnd={handleDragEnd}
           onStartSession={(task) => {
             setTaskForSession(task);
             setIsModalOpen(true);
           }}
+          totalTaskCount={displayedTasks.length}
           isDisabled={orderMutation.isPending || activeSort !== 'sortOrder'}
         />
-
         <div className='p-4 border-t bg-background/50 sticky bottom-0'>
           <CreateTaskForm
             goalId={goal.id}

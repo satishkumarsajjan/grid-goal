@@ -1,4 +1,4 @@
-import { type Goal, type Task } from '@prisma/client';
+import { Category, FocusSession, type Goal, type Task } from '@prisma/client';
 
 export type GoalWithTasksCount = Goal & {
   _count: {
@@ -63,3 +63,9 @@ export function hasGoal(
 export type DailyQueueResponse<T extends boolean = boolean> = T extends true
   ? DailyQueueItemWithTaskAndGoal[]
   : DailyQueueItemWithTask[];
+
+export type FullGoalDetails = Goal & {
+  category: Category | null;
+  focusSessions: Pick<FocusSession, 'startTime' | 'durationSeconds'>[];
+  tasks: TaskWithTime[]; // Assuming tasks from the API also include time
+};
