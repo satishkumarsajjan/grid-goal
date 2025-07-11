@@ -140,7 +140,7 @@ export function VacationModeSection() {
         </div>
       </div>
       <div>
-        <h3 className='font-semibold mb-4'>Scheduled Breaks</h3>
+        <h3 className='font-semibold my-4'>Scheduled Breaks</h3>
         <div className='space-y-2'>
           {isLoading && (
             <>
