@@ -1,19 +1,23 @@
 'use client';
 
-import { GoalNavigatorItem } from './goal-navigator-item';
-import { type GoalWithProgressAndChildren } from '@/lib/types'; // Using our new richer type
-import { type GoalCreationOptions } from '@/app/(main)/goals/[[...goalId]]/page';
+import {
+  GoalNavigatorItem,
+  type GoalDialogOptions,
+} from './goal-navigator-item'; // NEW: Import the generic dialog options type
+import { type GoalWithProgressAndChildren } from '@/lib/types';
 
+// The props interface is updated to be more generic.
 interface GoalNavigatorProps {
-  goalTree: GoalWithProgressAndChildren[]; // Use the richer type
+  goalTree: GoalWithProgressAndChildren[];
   activeGoalId: string | null;
-  openCreationDialog: (options: GoalCreationOptions) => void;
+  // RENAMED and RE-TYPED: This now handles opening the dialog for creating OR editing.
+  openGoalDialog: (options: GoalDialogOptions) => void;
 }
 
 export function GoalNavigator({
   goalTree,
   activeGoalId,
-  openCreationDialog,
+  openGoalDialog, // Use the new, more generic prop name
 }: GoalNavigatorProps) {
   return (
     <nav className='flex-1 space-y-1 p-2 overflow-x-auto'>
@@ -23,7 +27,8 @@ export function GoalNavigator({
           goal={goal}
           activeGoalId={activeGoalId}
           level={0}
-          openCreationDialog={openCreationDialog}
+          // Pass the generic dialog handler down to the item
+          openGoalDialog={openGoalDialog}
         />
       ))}
     </nav>

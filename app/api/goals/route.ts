@@ -126,7 +126,7 @@ export async function POST(request: Request) {
         description,
         parentId,
         deadline,
-        estimatedTimeSeconds,
+        deepEstimateTotalSeconds: estimatedTimeSeconds ?? undefined,
         color: finalColor, // Use the determined color
       },
     });

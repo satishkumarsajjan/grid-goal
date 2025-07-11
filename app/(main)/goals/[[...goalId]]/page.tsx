@@ -2,19 +2,30 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { Goal } from '@prisma/client';
+
 import { GoalTree } from '@/components/goals/goal-tree';
 import { CreateGoalButton } from '@/components/goals/create-goal-button';
-import { GoalCreationDialog } from '@/components/goals/goal-creation-dialog';
+import { GoalForm } from '@/components/goals/create-goal-form'; // NEW: Import the unified GoalForm
 import { TaskList } from '@/components/tasks/task-list';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Dialog, // NEW: Import Dialog components for our new GoalDialog
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
-export type GoalCreationOptions = {
+// This type now represents the full state of our dialog
+export interface GoalDialogOptions {
   open: boolean;
+  mode: 'create' | 'edit';
   parentId?: string | null;
-};
+  initialData?: Goal | null;
+}
 
 export default function GoalsLayoutAndPage({
   params,
@@ -22,14 +33,20 @@ export default function GoalsLayoutAndPage({
   params: { goalId?: string[] };
 }) {
   const selectedGoalId = params.goalId?.[0] ?? null;
-  const [dialogOptions, setDialogOptions] = useState<GoalCreationOptions>({
-    open: false,
-    parentId: null,
-  });
+
+  // RENAMED state to be more generic
+  const [goalDialogOptions, setGoalDialogOptions] = useState<GoalDialogOptions>(
+    {
+      open: false,
+      mode: 'create',
+      parentId: null,
+      initialData: null,
+    }
+  );
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close the mobile sidebar when the user navigates to a new goal
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [pathname]);
@@ -37,7 +54,6 @@ export default function GoalsLayoutAndPage({
   return (
     <>
       <div className='h-full bg-card border rounded-lg overflow-hidden flex flex-col'>
-        {/* --- Mobile-Only Header --- */}
         <div className='px-4 py-2 flex items-center justify-between border-b md:hidden'>
           <Button
             variant='ghost'
@@ -49,27 +65,24 @@ export default function GoalsLayoutAndPage({
           </Button>
           <h2 className='text-lg font-semibold'>Goals</h2>
           <CreateGoalButton
-            onClick={() => setDialogOptions({ open: true, parentId: null })}
+            onClick={() => setGoalDialogOptions({ open: true, mode: 'create' })}
           />
         </div>
 
         <div className='flex flex-1 overflow-hidden'>
-          {/* --- Sidebar (with responsive classes) --- */}
           <aside
             className={cn(
-              // Mobile styles: hidden, absolute overlay
               'fixed inset-y-0 left-0 z-30 h-full w-full max-w-sm flex-col bg-muted/95 backdrop-blur-sm transition-transform duration-300 ease-in-out md:static md:w-1/3 md:max-w-sm md:flex md:translate-x-0 md:bg-muted/50 md:backdrop-blur-none',
               isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
             )}
           >
-            {/* Sidebar Header (visible on both mobile drawer and desktop) */}
             <div className='px-4 py-3 flex items-center justify-between border-b'>
               <h2 className='text-lg font-semibold'>All Goals</h2>
               <div className='flex items-center gap-2'>
                 <div className='hidden md:block'>
                   <CreateGoalButton
                     onClick={() =>
-                      setDialogOptions({ open: true, parentId: null })
+                      setGoalDialogOptions({ open: true, mode: 'create' })
                     }
                   />
                 </div>
@@ -85,17 +98,17 @@ export default function GoalsLayoutAndPage({
               </div>
             </div>
 
-            {/* Scrollable container for the goal list */}
             <div className='flex-1 overflow-y-auto p-2'>
               <Suspense fallback={<GoalNavigatorSkeleton />}>
                 <GoalTree
                   activeGoalId={selectedGoalId}
-                  openCreationDialog={setDialogOptions}
+                  // Pass the generic dialog handler to GoalTree
+                  openGoalDialog={setGoalDialogOptions}
                 />
               </Suspense>
             </div>
           </aside>
-          {/* Overlay to close sidebar on mobile */}
+
           {isSidebarOpen && (
             <div
               className='fixed inset-0 z-20 bg-black/20 md:hidden'
@@ -103,7 +116,6 @@ export default function GoalsLayoutAndPage({
             />
           )}
 
-          {/* --- Main content area --- */}
           <main className='flex-1 border-l'>
             {selectedGoalId ? (
               <Suspense fallback={<TaskListSkeleton />}>
@@ -116,15 +128,54 @@ export default function GoalsLayoutAndPage({
         </div>
       </div>
 
-      <GoalCreationDialog
-        options={dialogOptions}
-        onOpenChange={(open) => setDialogOptions({ ...dialogOptions, open })}
+      {/* Use our new, more powerful GoalDialog component */}
+      <GoalDialog
+        options={goalDialogOptions}
+        onOpenChange={(open) =>
+          setGoalDialogOptions({ ...goalDialogOptions, open })
+        }
       />
     </>
   );
 }
 
-// --- Helper components (skeletons, placeholder) remain the same ---
+// NEW: A dedicated component for the Goal Dialog to keep the main page clean
+function GoalDialog({
+  options,
+  onOpenChange,
+}: {
+  options: GoalDialogOptions;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const isEditing = options.mode === 'edit';
+  const title = isEditing ? 'Edit Goal' : 'Create a New Goal';
+  const description = isEditing
+    ? `You are editing "${options.initialData?.title}".`
+    : 'Set a new objective to work towards.';
+
+  // We need this check to prevent the dialog from trying to render without the necessary data.
+  if (!options.open) {
+    return null;
+  }
+
+  return (
+    <Dialog open={options.open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <p className='text-sm text-muted-foreground'>{description}</p>
+        </DialogHeader>
+        <div className='pt-4'>
+          <GoalForm
+            initialData={options.initialData}
+            parentId={options.parentId}
+            onFinished={() => onOpenChange(false)} // Close the dialog on success
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function WelcomePlaceholder() {
   return (

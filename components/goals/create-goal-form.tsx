@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { z } from 'zod';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { Goal } from '@prisma/client';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -31,7 +32,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { GOAL_COLORS } from '@/lib/constants';
 
-// A simple, reusable color picker component for the form
 interface GoalColorPickerProps {
   selectedColor: string | null;
   onSelectColor: (color: string) => void;
@@ -42,9 +42,9 @@ function GoalColorPicker({
 }: GoalColorPickerProps) {
   return (
     <div>
-      <FormLabel>Color (Optional)</FormLabel>
+      <FormLabel>Color</FormLabel>
       <FormDescription className='text-xs pb-2'>
-        Pick a color for your goal, or we'll assign one for you.
+        Pick a color for your goal.
       </FormDescription>
       <div className='flex flex-wrap gap-2'>
         {GOAL_COLORS.map((color) => (
@@ -67,72 +67,119 @@ function GoalColorPicker({
   );
 }
 
-// Form-specific schema for user-friendly inputs (hours/minutes)
 const goalFormSchema = z.object({
   title: z.string().min(1, 'Title is required.').max(100),
-  description: z.string().max(500).optional(),
-  deadline: z.date().optional(),
+  description: z.string().max(500).optional().nullable(),
+  deadline: z.date().optional().nullable(),
 });
 
 type GoalFormValues = z.infer<typeof goalFormSchema>;
 
-// The mutation function now handles the transformation from form values to API payload
-const createGoal = async (
-  values: GoalFormValues & { parentId?: string; color?: string | null }
-) => {
-  // Transform hours and minutes into total seconds
-
-  // Build the object that our backend API expects
+const upsertGoal = async ({
+  values,
+  initialData,
+}: {
+  values: GoalFormValues & { color?: string | null; parentId?: string };
+  initialData?: Goal | null;
+}): Promise<AxiosResponse<Goal>> => {
   const apiPayload = {
-    title: values.title,
-    description: values.description,
-    deadline: values.deadline,
-    parentId: values.parentId,
-    color: values.color, // Pass the color (or null) to the API
+    ...values,
   };
 
-  const { data } = await axios.post('/api/goals', apiPayload);
-  return data;
+  if (initialData?.id) {
+    return axios.patch(`/api/goals/${initialData.id}`, apiPayload);
+  } else {
+    return axios.post('/api/goals', apiPayload);
+  }
 };
 
-interface CreateGoalFormProps {
+interface GoalFormProps {
+  initialData?: Goal | null;
   parentId?: string | null;
-  onFinished: () => void; // Function to close the dialog/modal on success
+  onFinished: () => void;
 }
 
-export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
+export function GoalForm({ initialData, parentId, onFinished }: GoalFormProps) {
   const queryClient = useQueryClient();
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(
+    initialData?.color || null
+  );
 
   const form = useForm<GoalFormValues>({
     resolver: zodResolver(goalFormSchema),
     defaultValues: {
-      title: '',
-      description: '',
-      deadline: undefined,
+      title: initialData?.title || '',
+      description: initialData?.description || '',
+      deadline: initialData?.deadline
+        ? new Date(initialData.deadline)
+        : undefined,
     },
   });
 
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        title: initialData.title,
+        description: initialData.description || '',
+        deadline: initialData.deadline
+          ? new Date(initialData.deadline)
+          : undefined,
+      });
+      setSelectedColor(initialData.color || null);
+    }
+  }, [initialData, form]);
+
   const mutation = useMutation({
-    mutationFn: createGoal,
-    onSuccess: () => {
-      toast.success('Goal successfully created!');
+    mutationFn: upsertGoal,
+    // --- THIS IS THE FIX ---
+    onSuccess: (response, variables) => {
+      const isEditing = !!variables.initialData;
+      const action = isEditing ? 'updated' : 'created';
+      toast.success(`Goal successfully ${action}!`);
+
+      // 1. Always invalidate the main list of goals to refresh the navigator.
       queryClient.invalidateQueries({ queryKey: ['goals'] });
+
+      // 2. If we were editing, invalidate all queries related to this specific goal
+      //    to ensure all parts of the UI (details page, task list, charts) get the fresh data.
+      if (isEditing && variables.initialData?.id) {
+        const goalId = variables.initialData.id;
+
+        // Invalidate the specific goal's details
+        queryClient.invalidateQueries({ queryKey: ['goal', goalId] });
+
+        // Invalidate the task list for this goal
+        queryClient.invalidateQueries({ queryKey: ['tasks', goalId] });
+
+        // Invalidate analytics charts using partial key matching.
+        // This is the most robust way to ensure charts update their labels.
+        queryClient.invalidateQueries({ queryKey: ['timeAllocation'] });
+        queryClient.invalidateQueries({ queryKey: ['vibeAnalysis'] });
+        queryClient.invalidateQueries({ queryKey: ['taskListData', goalId] });
+      }
+
       onFinished();
     },
+    // --- END OF FIX ---
     onError: (error) => {
-      console.error('Failed to create goal:', error);
-      toast.error('Failed to create goal. Please try again.');
+      const action = initialData ? 'update' : 'create';
+      console.error(`Failed to ${action} goal:`, error);
+      toast.error(`Failed to ${action} goal. Please try again.`);
     },
   });
 
   function onSubmit(values: GoalFormValues) {
     mutation.mutate({
-      ...values,
-      parentId: parentId ?? undefined,
-      color: selectedColor,
+      values: {
+        ...values,
+        parentId: parentId ?? undefined,
+        color: selectedColor,
+      },
+      initialData,
     });
   }
+
+  const isEditing = !!initialData;
 
   return (
     <Form {...form}>
@@ -161,6 +208,7 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
                   placeholder='Describe what success looks like for this goal.'
                   className='resize-none'
                   {...field}
+                  value={field.value ?? ''}
                 />
               </FormControl>
               <FormMessage />
@@ -168,7 +216,6 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
           )}
         />
 
-        {/* Color Picker Component */}
         <GoalColorPicker
           selectedColor={selectedColor}
           onSelectColor={(color) =>
@@ -176,7 +223,6 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
           }
         />
 
-        {/* Deadline Picker Field */}
         <FormField
           control={form.control}
           name='deadline'
@@ -205,7 +251,7 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
                 <PopoverContent className='w-auto p-0' align='start'>
                   <Calendar
                     mode='single'
-                    selected={field.value}
+                    selected={field.value ?? undefined}
                     onSelect={field.onChange}
                     disabled={(date) =>
                       date < new Date(new Date().setHours(0, 0, 0, 0))
@@ -220,7 +266,13 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
         />
 
         <Button type='submit' className='w-full' disabled={mutation.isPending}>
-          {mutation.isPending ? 'Creating...' : 'Create Goal'}
+          {mutation.isPending
+            ? isEditing
+              ? 'Saving...'
+              : 'Creating...'
+            : isEditing
+            ? 'Save Changes'
+            : 'Create Goal'}
         </Button>
       </form>
     </Form>

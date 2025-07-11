@@ -1,22 +1,22 @@
-'use client'; // <-- IMPORTANT: This is now a client component.
+'use client';
 
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
-import { type GoalCreationOptions } from '@/app/(main)/goals/[[...goalId]]/page';
 import { GoalNavigator } from '@/components/goals/goal-navigator';
+import { type GoalDialogOptions } from '@/components/goals/goal-navigator-item'; // NEW: Import the generic dialog options type
 import { buildGoalTree } from '@/lib/goal-helpers';
-import { GoalWithProgress } from '@/lib/types';
+import { GoalWithProgress, GoalWithProgressAndChildren } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 
+// The props interface is updated to use the new generic type and name
 interface GoalTreeProps {
   activeGoalId: string | null;
-  openCreationDialog: (options: GoalCreationOptions) => void;
+  openGoalDialog: (options: GoalDialogOptions) => void;
 }
 
 /**
  * A fetcher function for TanStack Query.
- * It calls our new API endpoint to get the flat list of goals.
  */
 const fetchGoals = async (): Promise<GoalWithProgress[]> => {
   const { data } = await axios.get('/api/goals/tree');
@@ -27,7 +27,7 @@ const fetchGoals = async (): Promise<GoalWithProgress[]> => {
  * A Client Component that uses TanStack Query to fetch ALL goals for the user,
  * processes them into a tree, and then passes the result to the GoalNavigator.
  */
-export function GoalTree({ activeGoalId, openCreationDialog }: GoalTreeProps) {
+export function GoalTree({ activeGoalId, openGoalDialog }: GoalTreeProps) {
   const {
     data: allGoalsFlat,
     isLoading,
@@ -38,10 +38,7 @@ export function GoalTree({ activeGoalId, openCreationDialog }: GoalTreeProps) {
     queryFn: fetchGoals,
   });
 
-  // --- Render Logic based on query state ---
-
   if (isLoading) {
-    // Use the skeleton loader while the initial fetch is in progress.
     return <GoalNavigatorSkeleton />;
   }
 
@@ -52,8 +49,10 @@ export function GoalTree({ activeGoalId, openCreationDialog }: GoalTreeProps) {
     );
   }
 
-  // If data is available, process it into a tree.
-  const goalTree = allGoalsFlat ? buildGoalTree(allGoalsFlat) : [];
+  // Process the fetched flat list into a hierarchical tree.
+  const goalTree: GoalWithProgressAndChildren[] = allGoalsFlat
+    ? buildGoalTree(allGoalsFlat)
+    : [];
 
   if (goalTree.length === 0) {
     return (
@@ -66,12 +65,12 @@ export function GoalTree({ activeGoalId, openCreationDialog }: GoalTreeProps) {
     );
   }
 
-  // Render the GoalNavigator, passing the client-processed data and the function.
+  // Render the GoalNavigator, passing the client-processed data and the new generic function.
   return (
     <GoalNavigator
       goalTree={goalTree}
       activeGoalId={activeGoalId}
-      openCreationDialog={openCreationDialog}
+      openGoalDialog={openGoalDialog}
     />
   );
 }
