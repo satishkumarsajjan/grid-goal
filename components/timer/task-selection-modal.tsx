@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query'; // Import useQueries
 import axios from 'axios';
 import { TimerMode, type Task } from '@prisma/client';
 import { toast } from 'sonner';
@@ -17,24 +17,20 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'; // Import TabsContent
 import { Timer, Hourglass } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { cn } from '@/lib/utils';
 
-// Type definition for the data fetched from the API
 type TaskWithGoalTitle = Task & { goal: { title: string } };
 
-// API fetching functions
 const fetchQueue = async (): Promise<TaskWithGoalTitle[]> =>
   (await axios.get('/api/daily-queue?includeGoal=true')).data.map(
     (item: any) => item.task
   );
-
 const fetchAllTasks = async (): Promise<TaskWithGoalTitle[]> =>
   (await axios.get('/api/tasks?includeGoal=true')).data;
 
-// Component props
 interface TaskSelectionModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -48,62 +44,86 @@ export function TaskSelectionModal({
 }: TaskSelectionModalProps) {
   const startSession = useTimerStore((state) => state.startSession);
 
-  // State now only stores the ID, which is simpler and more robust.
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedMode, setSelectedMode] = useState<TimerMode>('STOPWATCH');
+  // NEW: State to manage the active tab
+  const [activeTab, setActiveTab] = useState<'queue' | 'all'>('queue');
 
-  // --- Data Fetching with TanStack Query ---
-  const { data: queueItems, isLoading: queueIsLoading } = useQuery<
-    TaskWithGoalTitle[]
-  >({
-    queryKey: ['dailyQueueWithGoal'],
-    queryFn: fetchQueue,
-    enabled: isOpen && !preselectedTask, // Only fetch if the modal is open AND no task is preselected.
+  // --- NEW: Parallel Data Fetching with useQueries ---
+  const [queueQuery, allTasksQuery] = useQueries({
+    queries: [
+      {
+        queryKey: ['dailyQueueWithGoal'],
+        queryFn: fetchQueue,
+        enabled: isOpen && !preselectedTask,
+      },
+      {
+        queryKey: ['allTasksWithGoal'],
+        queryFn: fetchAllTasks,
+        enabled: isOpen && !preselectedTask,
+        staleTime: 1000 * 60 * 5,
+      },
+    ],
   });
 
+  const queueItems = queueQuery.data;
+  const allTasks = allTasksQuery.data;
   const hasQueue = !!queueItems && queueItems.length > 0;
-  const { data: allTasks, isLoading: tasksAreLoading } = useQuery<
-    TaskWithGoalTitle[]
-  >({
-    queryKey: ['allTasksWithGoal'],
-    queryFn: fetchAllTasks,
-    enabled: isOpen && !preselectedTask && !hasQueue, // Only fetch all tasks if the queue is also empty.
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-  });
 
-  const isLoading = queueIsLoading || (tasksAreLoading && !hasQueue);
-  const tasksToShow = hasQueue ? queueItems : allTasks;
+  // Determine which list is currently active based on the tab
+  const activeList = activeTab === 'queue' ? queueItems : allTasks;
+  // Determine the overall loading state
+  const isLoading =
+    queueQuery.isLoading || (allTasksQuery.isLoading && activeTab === 'all');
 
   // --- State Synchronization & Default Selection ---
   useEffect(() => {
-    // This effect correctly sets the selected task ID when the modal opens or data changes.
     if (!isOpen) {
-      setSelectedTaskId(null); // Always reset on close.
+      setSelectedTaskId(null);
       return;
     }
 
     if (preselectedTask) {
       setSelectedTaskId(preselectedTask.id);
-    } else if (hasQueue) {
-      setSelectedTaskId(queueItems[0].id); // Default to first item in queue
-    } else if (allTasks && allTasks.length > 0) {
-      setSelectedTaskId(allTasks[0].id); // Default to first item in all tasks
     } else {
-      setSelectedTaskId(null); // No data, no selection
+      // If the queue exists, default the tab and selection to the queue.
+      if (hasQueue) {
+        setActiveTab('queue');
+        setSelectedTaskId(queueItems[0].id);
+      }
+      // Otherwise, default the tab and selection to all tasks.
+      else if (allTasks && allTasks.length > 0) {
+        setActiveTab('all');
+        setSelectedTaskId(allTasks[0].id);
+      } else {
+        setSelectedTaskId(null);
+      }
     }
   }, [isOpen, preselectedTask, hasQueue, allTasks, queueItems]);
 
-  // --- The CRITICAL Event Handler ---
+  // Adjust default selection when the tab changes
+  useEffect(() => {
+    if (preselectedTask || !isOpen) return;
+
+    if (activeTab === 'queue' && hasQueue) {
+      setSelectedTaskId(queueItems[0].id);
+    } else if (activeTab === 'all' && allTasks && allTasks.length > 0) {
+      setSelectedTaskId(allTasks[0].id);
+    } else {
+      setSelectedTaskId(null);
+    }
+  }, [activeTab, preselectedTask, isOpen, hasQueue, allTasks, queueItems]);
+
   const handleStart = () => {
     let taskPayload: ActiveTask | undefined;
 
-    // Case 1: A task was pre-selected when opening the modal.
     if (preselectedTask) {
       taskPayload = preselectedTask;
-    }
-    // Case 2: No pre-selection, so find the selected task from our fetched data.
-    else if (selectedTaskId && tasksToShow) {
-      const task = tasksToShow.find((t) => t.id === selectedTaskId);
+    } else if (selectedTaskId) {
+      // Find the task from EITHER list.
+      const task =
+        queueItems?.find((t) => t.id === selectedTaskId) ||
+        allTasks?.find((t) => t.id === selectedTaskId);
       if (task) {
         taskPayload = {
           id: task.id,
@@ -114,15 +134,51 @@ export function TaskSelectionModal({
       }
     }
 
-    // If we couldn't determine a task to start, show an error.
     if (!taskPayload) {
       toast.error('Please select a task to focus on.');
       return;
     }
 
-    // If a valid payload was constructed, start the session.
     startSession(taskPayload, selectedMode);
-    onOpenChange(false); // Close the modal
+    onOpenChange(false);
+  };
+
+  // Helper to render the content of a list
+  const renderTaskList = (tasks: TaskWithGoalTitle[] | undefined) => {
+    if (isLoading) {
+      return (
+        <div className='space-y-2 p-2'>
+          <Skeleton className='h-12 w-full' />
+          <Skeleton className='h-12 w-full' />
+          <Skeleton className='h-12 w-full' />
+        </div>
+      );
+    }
+    if (!tasks || tasks.length === 0) {
+      return (
+        <p className='text-sm text-muted-foreground text-center py-4'>
+          No actionable tasks found.
+        </p>
+      );
+    }
+    return tasks.map((task) => (
+      <button
+        key={task.id}
+        onClick={() => setSelectedTaskId(task.id)}
+        aria-selected={selectedTaskId === task.id}
+        className={cn(
+          'w-full text-left p-2 rounded-md transition-colors',
+          selectedTaskId === task.id
+            ? 'bg-primary text-primary-foreground'
+            : 'hover:bg-accent'
+        )}
+      >
+        <span className='font-medium text-sm block'>{task.title}</span>
+        <span className='block text-xs text-muted-foreground'>
+          {task.goal.title}
+        </span>
+      </button>
+    ));
   };
 
   return (
@@ -137,7 +193,6 @@ export function TaskSelectionModal({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Timer Mode Tabs */}
         <div className='pt-4'>
           <Tabs
             value={selectedMode}
@@ -157,50 +212,33 @@ export function TaskSelectionModal({
           </Tabs>
         </div>
 
-        {/* Task Selection List (only shown if no task was preselected) */}
         {!preselectedTask && (
-          <div className='mt-4'>
-            <h4 className='text-sm font-semibold mb-2 text-muted-foreground'>
-              {hasQueue ? 'From Your Focus Queue' : 'Select a Task'}
-            </h4>
-            <ScrollArea className='h-48 border rounded-md'>
-              <div className='p-2'>
-                {isLoading ? (
-                  <div className='space-y-2 p-2'>
-                    <Skeleton className='h-8 w-full' />
-                    <Skeleton className='h-8 w-full' />
-                    <Skeleton className='h-8 w-full' />
-                  </div>
-                ) : !tasksToShow || tasksToShow.length === 0 ? (
-                  <p className='text-sm text-muted-foreground text-center py-4'>
-                    No actionable tasks found.
-                  </p>
-                ) : (
-                  tasksToShow.map((task) => (
-                    <button
-                      key={task.id}
-                      onClick={() => setSelectedTaskId(task.id)}
-                      className={cn(
-                        'w-full text-left p-2 rounded-md text-sm transition-colors',
-                        selectedTaskId === task.id
-                          ? 'bg-primary text-primary-foreground'
-                          : 'hover:bg-accent'
-                      )}
-                    >
-                      {task.title}
-                    </button>
-                  ))
-                )}
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as 'queue' | 'all')}
+            className='w-full mt-4'
+          >
+            <TabsList className='grid w-full grid-cols-2'>
+              <TabsTrigger value='queue' disabled={!hasQueue}>
+                Focus Queue
+              </TabsTrigger>
+              <TabsTrigger value='all'>All Tasks</TabsTrigger>
+            </TabsList>
+            <ScrollArea className='h-48 border rounded-md mt-2'>
+              <div className='p-2 space-y-1'>
+                {/* The content inside the scroll area now depends on the active tab */}
+                {activeTab === 'queue'
+                  ? renderTaskList(queueItems)
+                  : renderTaskList(allTasks)}
               </div>
             </ScrollArea>
-          </div>
+          </Tabs>
         )}
 
         <DialogFooter className='mt-4'>
           <Button variant='outline' onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          {/* The disabled state is now simpler: just check if any task is selected. */}
           <Button
             onClick={handleStart}
             disabled={preselectedTask ? false : !selectedTaskId}

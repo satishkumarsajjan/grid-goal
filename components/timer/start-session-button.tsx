@@ -5,8 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Play } from 'lucide-react';
 import { TaskSelectionModal } from './task-selection-modal';
 
-// This component is a simple "trigger". Its only job is to manage the
-// open/closed state of the modal. It does not pass a preselectedTask.
 export function StartSessionButton() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
