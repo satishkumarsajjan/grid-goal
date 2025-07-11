@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { Category } from '@prisma/client';
+import { useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -18,53 +20,69 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 
-const createCategorySchema = z.object({
+const categoryFormSchema = z.object({
   name: z
     .string()
     .min(1, 'Category name is required.')
     .max(50, 'Name must be 50 characters or less.'),
 });
 
-type FormValues = z.infer<typeof createCategorySchema>;
+type FormValues = z.infer<typeof categoryFormSchema>;
 
-const createCategory = (values: FormValues) => {
+// This function now handles both POST (create) and PATCH (update)
+const upsertCategory = (values: FormValues & { id?: string }) => {
+  if (values.id) {
+    return axios.patch(`/api/categories/${values.id}`, { name: values.name });
+  }
   return axios.post('/api/categories', values);
 };
 
-interface CreateCategoryFormProps {
+interface CategoryFormProps {
+  initialData?: Category | null;
   onFinished: () => void;
 }
 
-export function CreateCategoryForm({ onFinished }: CreateCategoryFormProps) {
+export function CategoryForm({ initialData, onFinished }: CategoryFormProps) {
   const queryClient = useQueryClient();
   const form = useForm<FormValues>({
-    resolver: zodResolver(createCategorySchema),
-    defaultValues: { name: '' },
+    resolver: zodResolver(categoryFormSchema),
+    defaultValues: { name: initialData?.name || '' },
   });
 
+  // Reset the form if the initialData changes (e.g., opening a new edit dialog)
+  useEffect(() => {
+    form.reset({ name: initialData?.name || '' });
+  }, [initialData, form]);
+
   const mutation = useMutation({
-    mutationFn: createCategory,
+    mutationFn: upsertCategory,
     onSuccess: () => {
-      toast.success('Category created!');
-      // Invalidate the categories query to refetch the list for all dropdowns
+      const action = initialData ? 'updated' : 'created';
+      toast.success(`Category ${action}!`);
+      // Invalidate all relevant queries to ensure UI updates everywhere
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      queryClient.invalidateQueries({ queryKey: ['timeAllocation'] });
+      queryClient.invalidateQueries({ queryKey: ['vibeAnalysis'] });
       onFinished();
-      form.reset(); // Clear the form for the next time it opens
     },
     onError: (error: any) => {
-      // Handle specific duplicate error from the API
       if (error?.response?.status === 409) {
         toast.error('A category with this name already exists.');
       } else {
-        toast.error('Failed to create category.');
+        toast.error('Failed to save category.');
       }
     },
   });
 
+  const isEditing = !!initialData;
+
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+        onSubmit={form.handleSubmit((values) =>
+          mutation.mutate({ ...values, id: initialData?.id })
+        )}
         className='space-y-4'
       >
         <FormField
@@ -84,7 +102,13 @@ export function CreateCategoryForm({ onFinished }: CreateCategoryFormProps) {
           )}
         />
         <Button type='submit' className='w-full' disabled={mutation.isPending}>
-          {mutation.isPending ? 'Creating...' : 'Create Category'}
+          {mutation.isPending
+            ? isEditing
+              ? 'Saving...'
+              : 'Creating...'
+            : isEditing
+            ? 'Save Changes'
+            : 'Create Category'}
         </Button>
       </form>
     </Form>

@@ -73,22 +73,20 @@ function BreakDisciplineStats({
 }) {
   const stats = useMemo(() => {
     if (!data || data.WORK === 0) return null;
-
     const expectedShortBreaks = data.WORK - Math.floor(data.WORK / 4);
     const expectedLongBreaks = Math.floor(data.WORK / 4);
-
-    const shortBreakAdherence = Math.min(
-      data.SHORT_BREAK / expectedShortBreaks,
-      1
-    );
-    const longBreakAdherence = Math.min(
-      data.LONG_BREAK / expectedLongBreaks,
-      1
-    );
-
+    const shortBreakAdherence =
+      expectedShortBreaks > 0
+        ? Math.min(data.SHORT_BREAK / expectedShortBreaks, 1)
+        : 1;
+    const longBreakAdherence =
+      expectedLongBreaks > 0
+        ? Math.min(data.LONG_BREAK / expectedLongBreaks, 1)
+        : 1;
     const overallAdherence =
-      shortBreakAdherence * 0.75 + longBreakAdherence * 0.25;
-
+      expectedLongBreaks > 0
+        ? shortBreakAdherence * 0.75 + longBreakAdherence * 0.25
+        : shortBreakAdherence;
     let rating: string;
     let color: string;
     if (overallAdherence >= 0.9) {
@@ -101,7 +99,6 @@ function BreakDisciplineStats({
       rating = 'Needs Improvement';
       color = 'text-red-500';
     }
-
     return {
       ...data,
       adherence: Math.round(overallAdherence * 100),
@@ -141,8 +138,7 @@ function BreakDisciplineStats({
         </p>
         <p className='text-xs font-semibold'>{stats.rating} Adherence</p>
       </div>
-
-      <dl className='flex-1 grid grid-cols-3 gap-2 text-xs text-muted-foreground'>
+      <dl className='flex-1 grid grid-cols-3 gap-2 text-xs text-muted-foreground mt-8'>
         <div className='flex flex-col'>
           <dt className='font-medium'>Work</dt>
           <dd className='text-lg font-mono'>{stats.WORK}</dd>
@@ -208,27 +204,28 @@ export function SustainabilityReport() {
       <CardHeader>
         <div className='flex items-center justify-between'>
           <CardTitle>Work-Life Health</CardTitle>
-
           <InsightTooltip
             content={
               <>
+                {' '}
                 <p className='font-medium'>
                   This report is your work-life health check.
-                </p>
+                </p>{' '}
                 <ul className='mt-2 list-disc list-inside space-y-1 text-xs'>
+                  {' '}
                   <li>
                     <strong>Weekly Balance:</strong> Shows your focus
                     distribution across weekdays vs. weekends.
-                  </li>
+                  </li>{' '}
                   <li>
                     <strong>Break Discipline:</strong> Analyzes how effectively
                     you take breaks during Pomodoro sessions.
-                  </li>
-                </ul>
+                  </li>{' '}
+                </ul>{' '}
                 <p className='mt-2'>
                   Use it to prevent burnout and ensure your work habits are
                   sustainable.
-                </p>
+                </p>{' '}
               </>
             }
           />
@@ -257,19 +254,6 @@ export function SustainabilityReport() {
                 data={weeklyChartData}
                 margin={{ top: 5, right: 10, left: -20, bottom: -5 }}
               >
-                <defs>
-                  <pattern
-                    id='weekendPattern'
-                    patternUnits='userSpaceOnUse'
-                    width='4'
-                    height='4'
-                  >
-                    <path
-                      d='M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2'
-                      style={{ stroke: 'var(--chart-2)', strokeWidth: 1 }}
-                    />
-                  </pattern>
-                </defs>
                 <CartesianGrid vertical={false} />
                 <XAxis
                   dataKey='day'
@@ -297,9 +281,7 @@ export function SustainabilityReport() {
                     <Cell
                       key={`cell-${index}`}
                       fill={
-                        entry.isWeekend
-                          ? 'url(#weekendPattern)'
-                          : 'var(--chart-1)'
+                        entry.isWeekend ? 'var(--chart-2)' : 'var(--chart-1)'
                       }
                     />
                   ))}
@@ -309,7 +291,26 @@ export function SustainabilityReport() {
           )}
         </div>
         <div className='border-t pt-6'>
-          <h4 className='font-semibold text-sm mb-2'>Break Discipline</h4>
+          <div className='flex items-center gap-2 mb-2'>
+            <h4 className='font-semibold text-sm'>Break Discipline</h4>
+            <InsightTooltip
+              content={
+                <>
+                  <p>
+                    Your adherence score reflects how consistently you take
+                    breaks during Pomodoro sessions. A high score means you're
+                    respecting the work-rest cycles.
+                  </p>
+                  <p className='mt-2 text-xs'>
+                    <strong>Why it matters:</strong> Deliberate breaks are
+                    crucial for maintaining focus, preventing mental fatigue,
+                    and consolidating information. Skipping them can lead to
+                    burnout and lower quality work over time.
+                  </p>
+                </>
+              }
+            />
+          </div>
           <BreakDisciplineStats
             data={pomodoroStatsQuery.data}
             isLoading={pomodoroStatsQuery.isLoading}

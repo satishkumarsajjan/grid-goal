@@ -20,7 +20,7 @@ import {
 import { DeleteCategoriesButton } from '@/components/goals/DeleteCategoriesButton';
 import { GoalForm } from '@/components/goals/create-goal-form';
 // NEW: Import the CreateCategoryForm
-import { CreateCategoryForm } from '@/components/goals/CreateCategoryForm';
+import { CategoryForm } from '@/components/goals/CategoryForm';
 
 export interface GoalDialogOptions {
   open: boolean;
@@ -149,9 +149,7 @@ export default function GoalsLayoutAndPage({
             <DialogTitle>Create New Category</DialogTitle>
           </DialogHeader>
           <div className='pt-4'>
-            <CreateCategoryForm
-              onFinished={() => setIsCreateCategoryOpen(false)}
-            />
+            <CategoryForm onFinished={() => setIsCreateCategoryOpen(false)} />
           </div>
         </DialogContent>
       </Dialog>

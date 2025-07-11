@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Category } from '@prisma/client';
 import { toast } from 'sonner';
-import { Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react'; // Import Pencil icon
 
 import {
   Card,
@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { CreateCategoryForm } from '@/components/goals/CreateCategoryForm';
+import { CategoryForm } from '@/components/goals/CategoryForm'; // Use the new reusable form
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,7 +46,11 @@ const deleteCategory = async (categoryId: string) => {
 
 export function CategoryManagementSection() {
   const queryClient = useQueryClient();
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [dialogState, setDialogState] = useState<{
+    open: boolean;
+    mode: 'create' | 'edit';
+    initialData?: Category | null;
+  }>({ open: false, mode: 'create', initialData: null });
 
   const {
     data: categories,
@@ -61,7 +65,6 @@ export function CategoryManagementSection() {
     mutationFn: deleteCategory,
     onSuccess: () => {
       toast.success('Category deleted.');
-      // Refetch categories and goals to update the UI everywhere
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       queryClient.invalidateQueries({ queryKey: ['timeAllocation'] });
@@ -72,32 +75,34 @@ export function CategoryManagementSection() {
     },
   });
 
+  const handleOpenDialog = (mode: 'create' | 'edit', category?: Category) => {
+    setDialogState({ open: true, mode, initialData: category || null });
+  };
+
+  const handleCloseDialog = () => {
+    setDialogState({ open: false, mode: 'create', initialData: null });
+  };
+
   const renderContent = () => {
-    if (isLoading) {
+    if (isLoading)
       return (
         <div className='space-y-2 mt-4'>
           <Skeleton className='h-10 w-full' />
           <Skeleton className='h-10 w-full' />
-          <Skeleton className='h-10 w-full' />
         </div>
       );
-    }
-
-    if (isError) {
+    if (isError)
       return (
         <p className='text-sm text-destructive mt-4'>
           Failed to load categories.
         </p>
       );
-    }
-
-    if (!categories || categories.length === 0) {
+    if (!categories || categories.length === 0)
       return (
         <p className='text-sm text-muted-foreground mt-4'>
           You have no categories yet.
         </p>
       );
-    }
 
     return (
       <div className='mt-4 space-y-2'>
@@ -107,36 +112,48 @@ export function CategoryManagementSection() {
             className='flex items-center justify-between rounded-md border p-3'
           >
             <span className='font-medium text-sm'>{category.name}</span>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  className='h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
-                >
-                  <Trash2 className='h-4 w-4' />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete "{category.name}"?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete the category. Any goals
-                    currently in this category will become uncategorized. This
-                    action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteMutation.mutate(category.id)}
-                    className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+            <div className='flex items-center'>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8 text-muted-foreground'
+                onClick={() => handleOpenDialog('edit', category)}
+              >
+                <Pencil className='h-4 w-4' />
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
                   >
-                    Yes, Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                    <Trash2 className='h-4 w-4' />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Delete "{category.name}"?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete the category. Goals in this
+                      category will become uncategorized. This action cannot be
+                      undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => deleteMutation.mutate(category.id)}
+                      className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                    >
+                      Yes, Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         ))}
       </div>
@@ -154,7 +171,7 @@ export function CategoryManagementSection() {
                 Create, edit, and delete your work categories.
               </CardDescription>
             </div>
-            <Button onClick={() => setIsCreateOpen(true)}>
+            <Button onClick={() => handleOpenDialog('create')}>
               <Plus className='mr-2 h-4 w-4' />
               New Category
             </Button>
@@ -163,13 +180,23 @@ export function CategoryManagementSection() {
         <CardContent>{renderContent()}</CardContent>
       </Card>
 
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+      <Dialog
+        open={dialogState.open}
+        onOpenChange={(open) => !open && handleCloseDialog()}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Category</DialogTitle>
+            <DialogTitle>
+              {dialogState.mode === 'edit'
+                ? 'Edit Category'
+                : 'Create New Category'}
+            </DialogTitle>
           </DialogHeader>
           <div className='pt-4'>
-            <CreateCategoryForm onFinished={() => setIsCreateOpen(false)} />
+            <CategoryForm
+              onFinished={handleCloseDialog}
+              initialData={dialogState.initialData}
+            />
           </div>
         </DialogContent>
       </Dialog>
