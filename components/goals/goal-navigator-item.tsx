@@ -1,40 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { Goal, GoalStatus } from '@prisma/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import { Archive, CheckCircle2, ChevronRight, PauseCircle } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { Goal, GoalStatus } from '@prisma/client';
-import {
-  ChevronRight,
-  PlusCircle,
-  MoreHorizontal,
-  PauseCircle,
-  Play,
-  Archive,
-  ArchiveRestore,
-  CheckCircle2,
-  Trash2,
-  Pencil,
-} from 'lucide-react';
 
-import { cn } from '@/lib/utils';
-import { type GoalWithProgressAndChildren } from '@/lib/types';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,7 +19,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { type GoalWithProgressAndChildren } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import { DeadlineBadge } from './deadline-badge';
+import { GoalActionsMenu } from './goal-action-menu';
 
 const INDENT_SIZE_REM = 1.25;
 
@@ -303,104 +286,4 @@ function GoalStatusIcon({
     );
   }
   return <div className='h-7 w-7' />;
-}
-
-function GoalActionsMenu({
-  goal,
-  onStatusUpdate,
-  onAddSubGoal,
-  onEdit,
-  onDelete,
-}: {
-  goal: GoalWithProgressAndChildren;
-  onStatusUpdate: (status: GoalStatus) => void;
-  onAddSubGoal: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  const isPaused = goal.status === 'PAUSED';
-  const isArchived = goal.status === 'ARCHIVED';
-  const handleActionClick = (e: React.MouseEvent, action: () => void) => {
-    e.stopPropagation();
-    e.preventDefault();
-    action();
-  };
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant='ghost'
-          size='icon'
-          className='h-7 w-7'
-          onClick={(e) => e.preventDefault()}
-        >
-          {' '}
-          <MoreHorizontal className='h-4 w-4' />{' '}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align='end' onClick={(e) => e.stopPropagation()}>
-        {!isArchived && (
-          <DropdownMenuItem onClick={(e) => handleActionClick(e, onEdit)}>
-            {' '}
-            <Pencil className='mr-2 h-4 w-4' /> <span>Edit</span>{' '}
-          </DropdownMenuItem>
-        )}
-        {!isArchived && !isPaused && (
-          <DropdownMenuItem onClick={(e) => handleActionClick(e, onAddSubGoal)}>
-            {' '}
-            <PlusCircle className='mr-2 h-4 w-4' /> <span>Add Sub-Goal</span>{' '}
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
-        {goal.status === 'ACTIVE' && (
-          <DropdownMenuItem
-            onClick={(e) =>
-              handleActionClick(e, () => onStatusUpdate(GoalStatus.PAUSED))
-            }
-          >
-            {' '}
-            <PauseCircle className='mr-2 h-4 w-4' /> <span>Pause Goal</span>{' '}
-          </DropdownMenuItem>
-        )}
-        {isPaused && (
-          <DropdownMenuItem
-            onClick={(e) =>
-              handleActionClick(e, () => onStatusUpdate(GoalStatus.ACTIVE))
-            }
-          >
-            {' '}
-            <Play className='mr-2 h-4 w-4' /> <span>Resume Goal</span>{' '}
-          </DropdownMenuItem>
-        )}
-        {!isArchived ? (
-          <DropdownMenuItem
-            onClick={(e) =>
-              handleActionClick(e, () => onStatusUpdate(GoalStatus.ARCHIVED))
-            }
-          >
-            {' '}
-            <Archive className='mr-2 h-4 w-4' /> <span>Archive Goal</span>{' '}
-          </DropdownMenuItem>
-        ) : (
-          <DropdownMenuItem
-            onClick={(e) =>
-              handleActionClick(e, () => onStatusUpdate(GoalStatus.ACTIVE))
-            }
-          >
-            {' '}
-            <ArchiveRestore className='mr-2 h-4 w-4' />{' '}
-            <span>Restore Goal</span>{' '}
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className='text-destructive focus:bg-destructive focus:text-destructive-foreground'
-          onClick={(e) => handleActionClick(e, onDelete)}
-        >
-          {' '}
-          <Trash2 className='mr-2 h-4 w-4' /> <span>Delete</span>{' '}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
 }
