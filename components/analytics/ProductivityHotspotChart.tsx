@@ -159,7 +159,7 @@ export function ProductivityHotspotChart() {
                       <p className='text-sm font-semibold'>
                         {formatSecondsForTooltip(value)}
                       </p>
-                      <p className='text-xs text-muted-foreground'>
+                      <p className='text-xs text-muted'>
                         {DAYS[dayIndex]}s around {hourLabel}
                       </p>
                     </TooltipContent>

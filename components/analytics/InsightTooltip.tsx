@@ -29,7 +29,7 @@ export function InsightTooltip({ content }: InsightTooltipProps) {
         <TooltipContent
           side='top'
           align='start'
-          className='max-w-xs p-3 leading-relaxed shadow-lg'
+          className='max-w-xs p-3 leading-relaxed shadow-lg text-wrap'
         >
           {content}
         </TooltipContent>
