@@ -3,16 +3,21 @@
 import { useAppStore } from '@/store/app-store';
 import { Button } from '@/components/ui/button';
 import { PartyPopper } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface WeeklyResetPromptProps {
-  // We pass this down from a server component to avoid layout shift.
   shouldShow: boolean;
 }
 
 export function WeeklyResetPrompt({ shouldShow }: WeeklyResetPromptProps) {
-  const startResetFlow = useAppStore((state) => state.startResetFlow);
+  const { startResetFlow, resetCompletionCount } = useAppStore();
   const [isVisible, setIsVisible] = useState(shouldShow);
+
+  useEffect(() => {
+    if (resetCompletionCount > 0) {
+      setIsVisible(false);
+    }
+  }, [resetCompletionCount]);
 
   if (!isVisible) {
     return null;
@@ -33,7 +38,13 @@ export function WeeklyResetPrompt({ shouldShow }: WeeklyResetPromptProps) {
         <Button variant='ghost' size='sm' onClick={() => setIsVisible(false)}>
           Maybe Later
         </Button>
-        <Button size='sm' onClick={startResetFlow}>
+        <Button
+          size='sm'
+          onClick={() => {
+            setIsVisible(false);
+            startResetFlow();
+          }}
+        >
           Start Reset
         </Button>
       </div>
