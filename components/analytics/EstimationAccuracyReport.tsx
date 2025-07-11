@@ -38,10 +38,13 @@ import type {
   EstimationAccuracyItem,
 } from '@/app/api/analytics/estimation-accuracy/route';
 import { InsightTooltip } from './InsightTooltip';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 type ProcessedAccuracyItem = EstimationAccuracyItem & {
   variancePercent: number | null;
   isOver: boolean;
+  wasEstimated: boolean; // NEW: Flag to track if an estimate was made
 };
 
 const formatSecondsToHM = (seconds: number): string => {
@@ -72,30 +75,32 @@ export function EstimationAccuracyReport() {
   const processedData: ProcessedAccuracyItem[] | null = useMemo(() => {
     if (!data?.data) return null;
     return data.data.map((item) => {
-      if (item.totalEstimatedSeconds === 0) {
+      const wasEstimated = item.totalEstimatedSeconds > 0;
+      if (!wasEstimated) {
         return {
           ...item,
           variancePercent: null,
           isOver: item.totalActualSeconds > 0,
+          wasEstimated,
         };
       }
       const variance = item.totalActualSeconds - item.totalEstimatedSeconds;
       const variancePercent = (variance / item.totalEstimatedSeconds) * 100;
-      return { ...item, variancePercent, isOver: variance > 0 };
+      return { ...item, variancePercent, isOver: variance > 0, wasEstimated };
     });
   }, [data]);
 
-  // IMPROVEMENT: Overall "Net Score" calculation
   const averageAccuracy = useMemo(() => {
     if (!processedData || processedData.length === 0) return null;
-    const totalVariance = processedData.reduce((acc, item) => {
-      if (item.variancePercent !== null) return acc + item.variancePercent;
-      return acc;
-    }, 0);
-    return (
-      totalVariance /
-      processedData.filter((p) => p.variancePercent !== null).length
+    const itemsWithVariance = processedData.filter(
+      (p) => p.variancePercent !== null
     );
+    if (itemsWithVariance.length === 0) return null;
+    const totalVariance = itemsWithVariance.reduce(
+      (acc, item) => acc + item.variancePercent!,
+      0
+    );
+    return totalVariance / itemsWithVariance.length;
   }, [processedData]);
 
   const renderContent = () => {
@@ -134,7 +139,6 @@ export function EstimationAccuracyReport() {
               key={item.goalId}
               className={isLoading ? 'opacity-50' : ''}
             >
-              {/* IMPROVEMENT: Added scope="row" for better a11y */}
               <TableCell scope='row' className='font-medium'>
                 <p className='truncate max-w-xs'>{item.goalTitle}</p>
                 <p className='text-xs text-muted-foreground'>
@@ -147,8 +151,12 @@ export function EstimationAccuracyReport() {
               <TableCell className='text-right'>
                 {formatSecondsToHM(item.totalActualSeconds)}
               </TableCell>
-              <TableCell className='text-right'>
-                {item.variancePercent === null ? (
+              <TableCell className='text-right flex items-center justify-end'>
+                {!item.wasEstimated ? (
+                  <Badge variant='outline' className='text-muted-foreground'>
+                    Not Estimated
+                  </Badge>
+                ) : item.variancePercent === null ? (
                   '—'
                 ) : (
                   <Badge
@@ -160,7 +168,6 @@ export function EstimationAccuracyReport() {
                     ) : (
                       <TrendingDown className='h-3 w-3' />
                     )}
-                    {/* IMPROVEMENT: Added sr-only text for a11y */}
                     <span className='sr-only'>
                       {item.isOver ? 'Over estimate by' : 'Under estimate by'}
                     </span>
@@ -198,51 +205,59 @@ export function EstimationAccuracyReport() {
           future.
         </CardDescription>
       </CardHeader>
-      <CardContent>{renderContent()}</CardContent>
-      <CardFooter className='flex flex-col items-center gap-4'>
+      <CardContent>
+        {/* --- FIX: Move summary to a more prominent position --- */}
         {averageAccuracy !== null && (
-          <div className='text-sm text-muted-foreground'>
+          <div className='text-sm text-muted-foreground border-l-4 rounded p-3 mb-4 bg-muted/50'>
             On average, you tend to{' '}
-            <span
-              className={`font-semibold ${
+            <strong
+              className={cn(
                 averageAccuracy > 0 ? 'text-destructive' : 'text-green-600'
-              }`}
+              )}
             >
               {averageAccuracy > 0 ? 'underestimate' : 'overestimate'}
-            </span>{' '}
+            </strong>{' '}
             by{' '}
-            <span className='font-bold'>
+            <strong className='text-foreground'>
               {Math.abs(averageAccuracy).toFixed(0)}%
-            </span>
+            </strong>
             .
           </div>
         )}
+        {renderContent()}
+      </CardContent>
+      <CardFooter>
         {pageCount > 1 && (
+          // --- FIX: Use buttons for pagination actions for better a11y ---
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious
-                  href='#'
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setCurrentPage((p) => Math.max(1, p - 1));
-                  }}
-                />
+                <Button
+                  variant='ghost'
+                  size='sm'
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1 || isLoading}
+                >
+                  <PaginationPrevious className='static' />
+                </Button>
+              </PaginationItem>
+              {/* Note: A more complex pagination would render page numbers here */}
+              <PaginationItem>
+                <Button variant='outline' size='sm' className='cursor-default'>
+                  Page {currentPage} of {pageCount}
+                </Button>
               </PaginationItem>
               <PaginationItem>
-                <PaginationLink href='#'>{currentPage}</PaginationLink>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationEllipsis />
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationNext
-                  href='#'
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setCurrentPage((p) => Math.min(pageCount, p + 1));
-                  }}
-                />
+                <Button
+                  variant='ghost'
+                  size='sm'
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(pageCount, p + 1))
+                  }
+                  disabled={currentPage >= pageCount || isLoading}
+                >
+                  <PaginationNext className='static' />
+                </Button>
               </PaginationItem>
             </PaginationContent>
           </Pagination>
@@ -252,10 +267,12 @@ export function EstimationAccuracyReport() {
   );
 }
 
-// --- Skeleton Component ---
 function ReportSkeleton() {
   return (
     <div className='p-4 space-y-3'>
+      <div className='w-full space-y-1 bg-muted/50 p-3 rounded'>
+        <Skeleton className='h-4 w-3/4' />
+      </div>
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className='flex justify-between items-center'>
           <div className='w-2/5 space-y-1'>

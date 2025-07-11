@@ -17,7 +17,7 @@ import {
   ArchiveRestore,
   CheckCircle2,
   Trash2,
-  Pencil, // NEW: Import Pencil icon
+  Pencil,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -64,7 +64,6 @@ const deleteGoal = async (goalId: string) => {
   await axios.delete(`/api/goals/${goalId}`);
 };
 
-// NEW: Define options for opening the goal form dialog
 export interface GoalDialogOptions {
   open: boolean;
   mode: 'create' | 'edit';
@@ -76,7 +75,6 @@ interface GoalNavigatorItemProps {
   goal: GoalWithProgressAndChildren;
   activeGoalId: string | null;
   level: number;
-
   openGoalDialog: (options: GoalDialogOptions) => void;
 }
 
@@ -106,9 +104,14 @@ export function GoalNavigatorItem({
 
   const statusMutation = useMutation({
     mutationFn: updateGoalStatus,
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       toast.success(`Goal status updated to ${data.status.toLowerCase()}.`);
+
       queryClient.invalidateQueries({ queryKey: ['goals'] });
+
+      if (variables.status === 'ARCHIVED' || isArchived) {
+        queryClient.invalidateQueries({ queryKey: ['estimationAccuracy'] });
+      }
     },
     onError: (error) => {
       toast.error('Failed to update goal status.');
@@ -120,7 +123,11 @@ export function GoalNavigatorItem({
     mutationFn: deleteGoal,
     onSuccess: () => {
       toast.success('Goal and all its sub-goals deleted.');
+
       queryClient.invalidateQueries({ queryKey: ['goals'] });
+
+      queryClient.invalidateQueries({ queryKey: ['estimationAccuracy'] });
+
       if (isActive) {
         router.push('/goals');
       }
@@ -142,7 +149,6 @@ export function GoalNavigatorItem({
     openGoalDialog({ open: true, mode: 'create', parentId: goal.id });
   };
 
-  // NEW: Handler to open the edit dialog
   const handleEditGoal = () => {
     openGoalDialog({ open: true, mode: 'edit', initialData: goal });
   };
@@ -194,7 +200,7 @@ export function GoalNavigatorItem({
                 goal={goal}
                 onStatusUpdate={handleStatusUpdate}
                 onAddSubGoal={handleAddSubGoal}
-                onEdit={handleEditGoal} // NEW
+                onEdit={handleEditGoal}
                 onDelete={() => setShowDeleteDialog(true)}
               />
             </div>
@@ -286,12 +292,13 @@ function GoalStatusIcon({
         }}
         aria-label={isExpanded ? 'Collapse' : 'Expand'}
       >
+        {' '}
         <ChevronRight
           className={cn(
             'h-4 w-4 transition-transform duration-200',
             isExpanded && 'rotate-90'
           )}
-        />
+        />{' '}
       </Button>
     );
   }
@@ -302,13 +309,13 @@ function GoalActionsMenu({
   goal,
   onStatusUpdate,
   onAddSubGoal,
-  onEdit, // NEW
+  onEdit,
   onDelete,
 }: {
   goal: GoalWithProgressAndChildren;
   onStatusUpdate: (status: GoalStatus) => void;
   onAddSubGoal: () => void;
-  onEdit: () => void; // NEW
+  onEdit: () => void;
   onDelete: () => void;
 }) {
   const isPaused = goal.status === 'PAUSED';
@@ -327,21 +334,21 @@ function GoalActionsMenu({
           className='h-7 w-7'
           onClick={(e) => e.preventDefault()}
         >
-          <MoreHorizontal className='h-4 w-4' />
+          {' '}
+          <MoreHorizontal className='h-4 w-4' />{' '}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='end' onClick={(e) => e.stopPropagation()}>
-        {/* NEW: Edit Option */}
         {!isArchived && (
           <DropdownMenuItem onClick={(e) => handleActionClick(e, onEdit)}>
-            <Pencil className='mr-2 h-4 w-4' />
-            <span>Edit</span>
+            {' '}
+            <Pencil className='mr-2 h-4 w-4' /> <span>Edit</span>{' '}
           </DropdownMenuItem>
         )}
         {!isArchived && !isPaused && (
           <DropdownMenuItem onClick={(e) => handleActionClick(e, onAddSubGoal)}>
-            <PlusCircle className='mr-2 h-4 w-4' />
-            <span>Add Sub-Goal</span>
+            {' '}
+            <PlusCircle className='mr-2 h-4 w-4' /> <span>Add Sub-Goal</span>{' '}
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
@@ -351,8 +358,8 @@ function GoalActionsMenu({
               handleActionClick(e, () => onStatusUpdate(GoalStatus.PAUSED))
             }
           >
-            <PauseCircle className='mr-2 h-4 w-4' />
-            <span>Pause Goal</span>
+            {' '}
+            <PauseCircle className='mr-2 h-4 w-4' /> <span>Pause Goal</span>{' '}
           </DropdownMenuItem>
         )}
         {isPaused && (
@@ -361,8 +368,8 @@ function GoalActionsMenu({
               handleActionClick(e, () => onStatusUpdate(GoalStatus.ACTIVE))
             }
           >
-            <Play className='mr-2 h-4 w-4' />
-            <span>Resume Goal</span>
+            {' '}
+            <Play className='mr-2 h-4 w-4' /> <span>Resume Goal</span>{' '}
           </DropdownMenuItem>
         )}
         {!isArchived ? (
@@ -371,8 +378,8 @@ function GoalActionsMenu({
               handleActionClick(e, () => onStatusUpdate(GoalStatus.ARCHIVED))
             }
           >
-            <Archive className='mr-2 h-4 w-4' />
-            <span>Archive Goal</span>
+            {' '}
+            <Archive className='mr-2 h-4 w-4' /> <span>Archive Goal</span>{' '}
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem
@@ -380,8 +387,9 @@ function GoalActionsMenu({
               handleActionClick(e, () => onStatusUpdate(GoalStatus.ACTIVE))
             }
           >
-            <ArchiveRestore className='mr-2 h-4 w-4' />
-            <span>Restore Goal</span>
+            {' '}
+            <ArchiveRestore className='mr-2 h-4 w-4' />{' '}
+            <span>Restore Goal</span>{' '}
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
@@ -389,8 +397,8 @@ function GoalActionsMenu({
           className='text-destructive focus:bg-destructive focus:text-destructive-foreground'
           onClick={(e) => handleActionClick(e, onDelete)}
         >
-          <Trash2 className='mr-2 h-4 w-4' />
-          <span>Delete</span>
+          {' '}
+          <Trash2 className='mr-2 h-4 w-4' /> <span>Delete</span>{' '}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
