@@ -102,9 +102,6 @@ export default function GoalsLayoutAndPage({
                 />
               </Suspense>
             </div>
-            <div className='p-2 border-t'>
-              <DeleteCategoriesButton />
-            </div>
           </aside>
           {isSidebarOpen && (
             <div

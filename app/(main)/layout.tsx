@@ -9,15 +9,13 @@ import { FocusSessionUI } from '@/components/timer/focus-session-ui';
 import { CommandPalette } from '@/components/command/command-palette';
 import { WeeklyResetFlow } from '@/components/reset/weekly-reset-flow';
 import { useTimerStore } from '@/store/timer-store';
-import { Skeleton } from '@/components/ui/skeleton'; // For a better loading state
+import { Skeleton } from '@/components/ui/skeleton';
+// --- NEW: Import the onboarding components ---
+import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
+import { OnboardingTrigger } from '@/components/onboarding/OnboardingTrigger';
 
 /**
  * This is the main layout for the authenticated part of the application.
- * It is a Client Component ('use client') because it needs to reactively
- * subscribe to both the NextAuth session state and our custom Zustand timer state.
- *
- * Its primary responsibility is to decide whether to show the standard
- * application UI (sidebar + main content) or the full-screen FocusSessionUI.
  */
 export default function MainLayout({
   children,
@@ -38,6 +36,9 @@ export default function MainLayout({
     <SidebarProvider>
       <CommandPalette />
       <WeeklyResetFlow />
+
+      <OnboardingTrigger />
+      <OnboardingFlow />
 
       {isInSession ? (
         <FocusSessionUI />
@@ -67,7 +68,6 @@ function AppLoadingSkeleton() {
           <Skeleton className='h-9 w-full' />
         </div>
       </div>
-
       <div className='flex-1 p-8'>
         <Skeleton className='h-10 w-64 mb-8' />
         <div className='space-y-4'>
