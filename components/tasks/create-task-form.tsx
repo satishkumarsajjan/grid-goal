@@ -63,9 +63,6 @@ export function CreateTaskForm({
   const mutation = useMutation({
     mutationFn: createTask,
     onSuccess: () => {
-      // --- THIS IS THE FIX ---
-      // Invalidate the correct query key to refetch the goal details,
-      // which now includes the full list of tasks.
       queryClient.invalidateQueries({ queryKey: ['goal', goalId] });
       toast.success('Task created!');
       form.reset();

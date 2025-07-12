@@ -101,7 +101,7 @@ export function TaskItem({
     mutationFn: updateTask,
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['taskListData', task.goalId],
+        queryKey: ['goal', task.goalId],
       });
     },
     onError: () => toast.error('Failed to update task.'),
@@ -116,7 +116,7 @@ export function TaskItem({
     onSuccess: () => {
       toast.success('Task deleted.');
       queryClient.invalidateQueries({
-        queryKey: ['taskListData', task.goalId],
+        queryKey: ['goal', task.goalId],
       });
     },
     onError: () => toast.error('Failed to delete task.'),

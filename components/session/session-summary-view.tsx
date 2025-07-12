@@ -106,7 +106,7 @@ export function SessionSummaryView({
     mutationFn: createFocusSession,
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['taskListData', task.goalId],
+        queryKey: ['goal', task.goalId],
       });
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });

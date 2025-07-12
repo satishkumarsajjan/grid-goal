@@ -50,7 +50,7 @@ export function useTimerEngine() {
     mutationFn: logCycle,
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ['taskListData', variables.goalId],
+        queryKey: ['goal', variables.goalId],
       });
       console.log('Successfully logged cycle:', data);
     },

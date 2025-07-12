@@ -155,7 +155,7 @@ export function GoalForm({ initialData, parentId, onFinished }: GoalFormProps) {
         // This is the most robust way to ensure charts update their labels.
         queryClient.invalidateQueries({ queryKey: ['timeAllocation'] });
         queryClient.invalidateQueries({ queryKey: ['vibeAnalysis'] });
-        queryClient.invalidateQueries({ queryKey: ['taskListData', goalId] });
+        queryClient.invalidateQueries({ queryKey: ['goal', goalId] });
       }
 
       onFinished();
