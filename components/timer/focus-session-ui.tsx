@@ -43,11 +43,7 @@ export function FocusSessionUI() {
   } | null>(null);
 
   const handleFinishSession = () => {
-    // --- THIS IS THE FIX ---
-    // First, ensure we are no longer in a transitioning state.
-    // This is the key step that was missing.
     setTimerState({ isTransitioning: false, transitionTo: null });
-    // --- END OF FIX ---
 
     const timerStateBeforePause = useTimerStore.getState();
     if (timerStateBeforePause.isActive) {
@@ -77,8 +73,6 @@ export function FocusSessionUI() {
 
   if (!activeTask) return null;
 
-  // This check is now robust. handleFinishSession will set isTransitioning to false,
-  // causing this condition to fail and allowing the main UI to render.
   if (isTransitioning && transitionTo) {
     return (
       <PomodoroTransition

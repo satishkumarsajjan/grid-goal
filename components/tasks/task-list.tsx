@@ -23,13 +23,12 @@ import {
 
 interface TaskListProps {
   goalId: string | null;
-  // This prop is now required to connect the "Create New" button in the header
   onOpenCreateCategoryDialog: () => void;
 }
 
-// Fetcher now uses the standard goal detail endpoint and expects the full data shape
 const fetchGoalDetails = async (goalId: string): Promise<FullGoalDetails> => {
   const { data } = await axios.get(`/api/goals/${goalId}`);
+
   return data;
 };
 
@@ -58,21 +57,18 @@ export function TaskList({
     isError,
     error,
   } = useQuery({
-    // Use a more specific query key to avoid conflicts
     queryKey: ['goal', goalId],
     queryFn: () => fetchGoalDetails(goalId!),
     enabled: !!goalId,
   });
 
-  // Separate the goal object from its tasks array
-  const goal = goalData ? { ...goalData, tasks: undefined } : undefined;
+  const goal = goalData;
   const fetchedTasks = goalData?.tasks;
 
   useEffect(() => {
     if (fetchedTasks) {
       setOrderedTasks(fetchedTasks);
     }
-    // Reset filters and sort when the goal changes
     setActiveFilter('ALL');
     setActiveSort('sortOrder');
   }, [fetchedTasks, goalId]);
@@ -116,7 +112,6 @@ export function TaskList({
   const orderMutation = useMutation({
     mutationFn: updateTaskOrder,
     onSuccess: () => {
-      // Use the correct query key for invalidation
       queryClient.invalidateQueries({ queryKey: ['goal', goalId] });
     },
     onError: () => {
@@ -175,12 +170,11 @@ export function TaskList({
       <AriaLiveRegion message={announcement} />
       <div className='flex h-full flex-col rounded-lg'>
         <TaskListHeader
-          goal={goal as any} // The fetched 'goal' object is now compatible
+          goal={goal}
           taskCount={orderedTasks.length}
           completedTaskCount={completedTaskCount}
           inProgressTaskCount={inProgressTaskCount}
           isSavingOrder={orderMutation.isPending}
-          // Pass the handler down to the header
           onOpenCreateCategoryDialog={onOpenCreateCategoryDialog}
         />
         <TaskListControls
@@ -190,16 +184,18 @@ export function TaskList({
           onSortChange={setActiveSort}
           isDisabled={orderMutation.isPending}
         />
-        <SortableTasks
-          tasks={displayedTasks}
-          onDragEnd={handleDragEnd}
-          onStartSession={(task) => {
-            setTaskForSession(task);
-            setIsModalOpen(true);
-          }}
-          totalTaskCount={displayedTasks.length}
-          isDisabled={orderMutation.isPending || activeSort !== 'sortOrder'}
-        />
+        <div className='flex-1 overflow-y-auto'>
+          <SortableTasks
+            tasks={orderedTasks}
+            totalTaskCount={orderedTasks.length}
+            onDragEnd={handleDragEnd}
+            onStartSession={(task) => {
+              setTaskForSession(task);
+              setIsModalOpen(true);
+            }}
+            isDisabled={orderMutation.isPending || activeSort !== 'sortOrder'}
+          />
+        </div>
         <div className='p-4 border-t bg-background/50 sticky bottom-0'>
           <CreateTaskForm
             goalId={goal.id}

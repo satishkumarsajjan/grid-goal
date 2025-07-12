@@ -126,7 +126,6 @@ export const useTimerStore = create<TimerState & TimerActions>()(
         isTransitioning: state.isTransitioning,
         transitionTo: state.transitionTo,
         sessionStartTime: state.sessionStartTime,
-        // NEW: Persist the total accumulated time
         totalAccumulatedTime: state.totalAccumulatedTime,
       }),
     }

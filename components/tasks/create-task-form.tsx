@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 
 interface CreateTaskFormProps {
   goalId: string;
-  isDisabled?: boolean; // NEW PROP
+  isDisabled?: boolean;
 }
 
 const taskFormSchema = z.object({
@@ -63,7 +63,10 @@ export function CreateTaskForm({
   const mutation = useMutation({
     mutationFn: createTask,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['taskListData', goalId] });
+      // --- THIS IS THE FIX ---
+      // Invalidate the correct query key to refetch the goal details,
+      // which now includes the full list of tasks.
+      queryClient.invalidateQueries({ queryKey: ['goal', goalId] });
       toast.success('Task created!');
       form.reset();
     },
@@ -75,7 +78,6 @@ export function CreateTaskForm({
     mutation.mutate(values);
   }
 
-  // Combine local mutation state with the parent's disabled state
   const isFormDisabled = mutation.isPending || isDisabled;
 
   return (
@@ -95,7 +97,7 @@ export function CreateTaskForm({
                   <Input
                     placeholder='Add a new task...'
                     className='pl-9'
-                    disabled={isFormDisabled} // USE COMBINED DISABLED STATE
+                    disabled={isFormDisabled}
                     autoComplete='off'
                     {...field}
                   />
@@ -117,7 +119,7 @@ export function CreateTaskForm({
                     type='number'
                     placeholder='Hours'
                     className='pl-9'
-                    disabled={isFormDisabled} // USE COMBINED DISABLED STATE
+                    disabled={isFormDisabled}
                     step='0.1'
                     {...field}
                     onChange={(e) =>
@@ -136,8 +138,6 @@ export function CreateTaskForm({
           )}
         />
         <Button type='submit' disabled={isFormDisabled}>
-          {' '}
-          {/* USE COMBINED DISABLED STATE */}
           {mutation.isPending ? 'Adding...' : 'Add'}
         </Button>
       </form>
