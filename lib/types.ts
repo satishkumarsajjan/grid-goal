@@ -67,5 +67,7 @@ export type DailyQueueResponse<T extends boolean = boolean> = T extends true
 export type FullGoalDetails = Goal & {
   category: Category | null;
   focusSessions: Pick<FocusSession, 'startTime' | 'durationSeconds'>[];
-  tasks: TaskWithTime[]; // Assuming tasks from the API also include time
+  tasks: TaskWithTime[];
 };
+
+export type TaskWithGoal = Task & { goal: { title: string } };
