@@ -88,6 +88,7 @@ export default async function DashboardPage() {
       goal.tasks.map((task) => ({
         id: task.id,
         title: task.title,
+        goalId: goal.id,
         goalTitle: goal.title,
         deadline: goal.deadline,
       }))
