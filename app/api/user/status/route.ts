@@ -13,6 +13,7 @@ export async function GET() {
       where: { id: session.user.id },
       select: {
         hasCompletedOnboarding: true,
+        dailyFocusGoalMinutes: true,
       },
     });
 
@@ -20,9 +21,7 @@ export async function GET() {
       return new NextResponse('User not found', { status: 404 });
     }
 
-    return NextResponse.json({
-      hasCompletedOnboarding: user.hasCompletedOnboarding,
-    });
+    return NextResponse.json(user);
   } catch (error) {
     console.error('[API:USER_STATUS]', error);
     return new NextResponse('Internal Server Error', { status: 500 });

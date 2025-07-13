@@ -71,22 +71,22 @@ model User {
 
   // --- GridGoal Application Relationships ---
   // All user data is cascaded on delete for privacy and data integrity.
-  subscription    UserSubscription?
-  workspaces      Workspace[] // Pro Feature
-  goals           Goal[]
-  tasks           Task[]
-  focusSessions   FocusSession[]
-  dailyQueue      DailyQueueItem[] // For the Daily Focus Queue (Phase 2).
-  pausePeriods    PausePeriod[] // For Vacation Mode (Phase 2).
-  squads          SquadMember[] // Pro Feature
-  apiKeys         ApiKey[] // Pro Feature
-  rewindSummaries RewindSummary[]
-  awards          UserAward[]
-  categories      Category[]
-  tags            Tag[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  subscription          UserSubscription?
+  workspaces            Workspace[] // Pro Feature
+  goals                 Goal[]
+  tasks                 Task[]
+  focusSessions         FocusSession[]
+  dailyQueue            DailyQueueItem[] // For the Daily Focus Queue (Phase 2).
+  pausePeriods          PausePeriod[] // For Vacation Mode (Phase 2).
+  squads                SquadMember[] // Pro Feature
+  apiKeys               ApiKey[] // Pro Feature
+  rewindSummaries       RewindSummary[]
+  awards                UserAward[]
+  categories            Category[]
+  tags                  Tag[]
+  dailyFocusGoalMinutes Int?              @default(180)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 }
 
 // =======================================================
@@ -119,26 +119,27 @@ model Goal {
   categoryId    String?
   category      Category?      @relation(fields: [categoryId], references: [id], onUpdate: NoAction, onDelete: SetNull)
 }
-model Task {
-  id                   String     @id @default(cuid())
-  title                String
-  status               TaskStatus @default(PENDING)
-  sortOrder            Int
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
-  
-  estimatedTimeSeconds Int?       @default(0)
-  
-  userId               String
-  user                 User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  goalId               String
-  goal                 Goal       @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  focusSessions        FocusSession[]
-  dailyQueueItems      DailyQueueItem[]
 
+model Task {
+  id        String     @id @default(cuid())
+  title     String
+  status    TaskStatus @default(PENDING)
+  sortOrder Int
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  estimatedTimeSeconds Int? @default(0)
+
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalId          String
+  goal            Goal             @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  focusSessions   FocusSession[]
+  dailyQueueItems DailyQueueItem[]
 
   @@index([estimatedTimeSeconds])
 }
+
 // ===================================================
 // ========= 4. CORE ACTION & DATA MODELS =========
 // ===================================================
@@ -156,9 +157,8 @@ model FocusSession {
   mode TimerMode @default(STOPWATCH)
 
   pomodoroCycle PomodoroCycle?
-  
 
-  sequenceId String? 
+  sequenceId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
