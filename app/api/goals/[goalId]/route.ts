@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
-import { AwardService } from '@/lib/services/award.service'; // 1. Import the service
+import { AwardService } from '@/lib/services/award.service';
 
-// --- GET (No changes needed) ---
 export async function GET(
   request: Request,
   { params }: { params: { goalId: string } }
@@ -17,16 +16,19 @@ export async function GET(
     }
     const userId = session.user.id;
     const goalId = params.goalId;
+
     const goalOwnerCheck = await prisma.goal.findFirst({
       where: { id: goalId, userId: userId },
       include: { category: true },
     });
+
     if (!goalOwnerCheck) {
       return new NextResponse(
         JSON.stringify({ error: 'Goal not found or access denied' }),
         { status: 404 }
       );
     }
+
     const goalAndSubGoalIds = await prisma.$queryRaw<[{ id: string }]>`
       WITH RECURSIVE "GoalHierarchy" AS (
         SELECT id FROM "Goal" WHERE id = ${goalId}
@@ -37,6 +39,7 @@ export async function GET(
       SELECT id FROM "GoalHierarchy";
     `;
     const allIdsInHierarchy = goalAndSubGoalIds.map((g) => g.id);
+
     const [sessions, tasks, timePerTask] = await Promise.all([
       prisma.focusSession.findMany({
         where: { goalId: { in: allIdsInHierarchy } },
@@ -47,20 +50,29 @@ export async function GET(
         where: { goalId: goalId, userId: userId },
         orderBy: { sortOrder: 'asc' },
       }),
+
       prisma.focusSession.groupBy({
         by: ['taskId'],
-        where: { goalId: goalId, userId: userId },
+        where: {
+          goalId: goalId,
+          userId: userId,
+
+          OR: [{ pomodoroCycle: 'WORK' }, { mode: 'STOPWATCH' }],
+        },
         _sum: { durationSeconds: true },
       }),
     ]);
+
     const timeMap = timePerTask.reduce((acc, curr) => {
       acc[curr.taskId] = curr._sum.durationSeconds || 0;
       return acc;
     }, {} as Record<string, number>);
+
     const tasksWithTime = tasks.map((task) => ({
       ...task,
       totalTimeSpentSeconds: timeMap[task.id] || 0,
     }));
+
     const responsePayload = {
       ...goalOwnerCheck,
       focusSessions: sessions,
@@ -76,7 +88,6 @@ export async function GET(
   }
 }
 
-// --- PATCH (Award logic added) ---
 export async function PATCH(
   request: Request,
   { params }: { params: { goalId: string } }
@@ -90,10 +101,8 @@ export async function PATCH(
     }
     const userId = session.user.id;
     const { goalId } = params;
-
     const body = await request.json();
     const { title, description, status, deadline, color, categoryId } = body;
-
     const goalToUpdate = await prisma.goal.findFirst({
       where: { id: goalId, userId },
     });
@@ -102,7 +111,6 @@ export async function PATCH(
         status: 404,
       });
     }
-
     const dataToUpdate: any = {};
     if (title !== undefined) dataToUpdate.title = title;
     if (description !== undefined) dataToUpdate.description = description;
@@ -112,8 +120,6 @@ export async function PATCH(
     if (categoryId !== undefined)
       dataToUpdate.categoryId =
         categoryId === '__UNCATEGORIZED__' ? null : categoryId;
-
-    // This part handles the creation of a new category if a raw string was passed
     if (
       categoryId &&
       !categoryId.startsWith('cat_') &&
@@ -126,20 +132,16 @@ export async function PATCH(
       });
       dataToUpdate.categoryId = newCategory.id;
     }
-
     const updatedGoal = await prisma.goal.update({
       where: { id: goalId },
       data: dataToUpdate,
       include: { category: true },
     });
-
-    // 2. After the goal is updated, process awards
     try {
       await AwardService.processAwards(userId, 'GOAL_UPDATED', updatedGoal);
     } catch (awardError) {
       console.error('Failed to process goal-update awards:', awardError);
     }
-
     return NextResponse.json(updatedGoal);
   } catch (error) {
     console.error('[API:UPDATE_GOAL]', error);
@@ -149,8 +151,6 @@ export async function PATCH(
     );
   }
 }
-
-// --- DELETE (No changes needed) ---
 export async function DELETE(
   request: Request,
   { params }: { params: { goalId: string } }
