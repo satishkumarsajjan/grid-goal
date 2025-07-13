@@ -2,8 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { UserAward } from '@prisma/client';
-import { AWARDS_METADATA } from '@/lib/constants/awards';
+import { UserAward, AwardId } from '@prisma/client';
+import { AWARD_CATEGORIES } from '@/lib/constants/awards';
 import {
   Card,
   CardContent,
@@ -11,23 +11,24 @@ import {
   CardHeader,
   CardTitle,
 } from '../ui/card';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../ui/tooltip';
 import { Skeleton } from '../ui/skeleton';
-import { Trophy } from 'lucide-react';
+import { Trophy, ArrowRight } from 'lucide-react';
+import { MiniAwardIcon } from '../awards/MiniAwardIcon';
+import { Button } from '../ui/button';
+import Link from 'next/link';
 
 const fetchAwards = async (): Promise<UserAward[]> => {
   const { data } = await axios.get('/api/awards');
   return data;
 };
 
+// Flatten the categories into a simple array of all possible awards for easy lookup
+const ALL_AWARDS = AWARD_CATEGORIES.flatMap((category) => category.awards);
+const ALL_AWARD_IDS = ALL_AWARDS.map((a) => a.id);
+
 export function Achievements() {
   const {
-    data: awards,
+    data: earnedAwards,
     isLoading,
     isError,
   } = useQuery<UserAward[]>({
@@ -36,70 +37,82 @@ export function Achievements() {
   });
 
   const renderContent = () => {
-    if (isLoading)
-      return (
-        <div className='grid grid-cols-4 gap-4'>
-          <Skeleton className='h-16 w-16 rounded-lg' />
-          <Skeleton className='h-16 w-16 rounded-lg' />
-          <Skeleton className='h-16 w-16 rounded-lg' />
-          <Skeleton className='h-16 w-16 rounded-lg' />
-        </div>
-      );
+    if (isLoading) return <AchievementsSkeleton />;
     if (isError)
       return (
         <p className='text-xs text-destructive'>Could not load achievements.</p>
       );
-    if (!awards || awards.length === 0) {
+
+    const earnedAwardIds = new Set(earnedAwards?.map((a) => a.awardId) || []);
+
+    // Find the 4 most recently earned awards
+    const recentUnlocked =
+      earnedAwards?.slice(0, 4).map((a) => a.awardId) || [];
+
+    // Find up to 4 locked awards to show as "Next Up"
+    const nextUpLocked = ALL_AWARD_IDS.filter(
+      (id) => !earnedAwardIds.has(id)
+    ).slice(0, 4);
+
+    const awardsToShow = [...recentUnlocked, ...nextUpLocked];
+
+    if (awardsToShow.length === 0) {
       return (
         <div className='text-center text-sm text-muted-foreground p-4 border-2 border-dashed rounded-lg'>
           <Trophy className='mx-auto h-8 w-8 mb-2' />
           <p>
-            Your first achievement is waiting! Start a focus session or create a
-            goal to begin.
+            Your first achievement is waiting! Start a focus session to begin.
           </p>
         </div>
       );
     }
 
     return (
-      <TooltipProvider delayDuration={100}>
-        <div className='flex flex-wrap gap-4'>
-          {awards.slice(0, 8).map((award) => {
-            // Show up to 8 most recent
-            const metadata = AWARDS_METADATA[award.awardId];
-            if (!metadata) return null;
-            const Icon = metadata.icon;
-
-            return (
-              <Tooltip key={award.id}>
-                <TooltipTrigger asChild>
-                  <div className='w-16 h-16 bg-accent/50 rounded-lg flex items-center justify-center border-2 border-primary/20 transition-all hover:border-primary hover:scale-105 cursor-default'>
-                    <Icon className='h-8 w-8 text-primary' />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className='font-bold'>{metadata.name}</p>
-                  <p className='text-xs text-muted-foreground'>
-                    {metadata.description}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </div>
-      </TooltipProvider>
+      <div className='flex flex-wrap gap-3'>
+        {awardsToShow.map((awardId) => (
+          <MiniAwardIcon
+            key={awardId}
+            awardId={awardId}
+            isUnlocked={earnedAwardIds.has(awardId)}
+          />
+        ))}
+      </div>
     );
   };
 
   return (
-    <Card>
+    <Card className='flex flex-col'>
       <CardHeader>
-        <CardTitle>Achievements</CardTitle>
+        <div className='flex items-center justify-between'>
+          <CardTitle>Achievements</CardTitle>
+          {!isLoading && earnedAwards && (
+            <span className='text-sm font-bold text-amber-600 dark:text-amber-500'>
+              {earnedAwards.length} / {ALL_AWARD_IDS.length}
+            </span>
+          )}
+        </div>
         <CardDescription>
           Celebrating your milestones and consistency.
         </CardDescription>
       </CardHeader>
-      <CardContent>{renderContent()}</CardContent>
+      <CardContent className='flex-grow'>{renderContent()}</CardContent>
+      <div className='p-4 border-t'>
+        <Button variant='secondary' className='w-full' asChild>
+          <Link href='/awards'>
+            View All Achievements <ArrowRight className='ml-2 h-4 w-4' />
+          </Link>
+        </Button>
+      </div>
     </Card>
+  );
+}
+
+function AchievementsSkeleton() {
+  return (
+    <div className='flex flex-wrap gap-3'>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Skeleton key={i} className='h-12 w-12 rounded-full' />
+      ))}
+    </div>
   );
 }

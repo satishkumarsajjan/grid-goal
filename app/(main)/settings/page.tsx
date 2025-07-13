@@ -1,4 +1,4 @@
-import Awards from '@/components/awards/awards';
+import { AwardsPage } from '@/components/awards/awards';
 import { CategoryManagementSection } from '@/components/settings/CategoryManagementSection';
 import { VacationModeSection } from '@/components/settings/vacation-mode-section';
 
@@ -11,7 +11,7 @@ export default function SettingsPage() {
           <CategoryManagementSection />
           <VacationModeSection />
         </div>
-        <Awards />
+        <AwardsPage />
       </div>
     </div>
   );
