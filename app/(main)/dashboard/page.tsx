@@ -111,7 +111,7 @@ export default async function DashboardPage() {
       <WeeklyResetPrompt shouldShow={shouldShowResetPrompt} />
 
       {/* --- NEW, ROBUST LAYOUT GRID --- */}
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-8 items-start'>
+      <div className='grid grid-cols-1 lg:grid-cols-3 gap-8 items-start pb-8'>
         {/* Main Content Column (fixed height items) */}
         <div className='lg:col-span-2 space-y-8'>
           <StatsCards

@@ -4,7 +4,7 @@ import { prisma } from '@/prisma';
 import { AwardId } from '@prisma/client';
 
 // This is a Server Component that fetches the user's awards
-export default async function AwardsPage() {
+export default async function Awards() {
   const session = await auth();
   if (!session?.user?.id) {
     return <p>Not authorized. Please sign in.</p>;

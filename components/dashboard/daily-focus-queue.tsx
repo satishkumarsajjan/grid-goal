@@ -68,9 +68,6 @@ export function DailyFocusQueue() {
         <CardDescription>Your prioritized tasks for today.</CardDescription>
       </CardHeader>
       <CardContent className='flex-1 flex flex-col gap-4'>
-        {/* NEW: Add the Quick Add form here */}
-        <QuickAddTaskForm />
-
         <div className='flex-1 overflow-y-auto pr-1'>{renderContent()}</div>
       </CardContent>
     </Card>
@@ -87,7 +84,6 @@ function QueueSkeleton() {
   );
 }
 
-// You will also need a FocusQueueItem component if you don't have one
 function FocusQueueItem({ task }: { task: TaskWithGoal }) {
   // This is a placeholder implementation
   return (
