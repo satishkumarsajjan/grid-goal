@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
+import { AwardService } from '@/lib/services/award.service'; // 1. Import the service
 
+// --- GET (No changes needed) ---
 export async function GET(
   request: Request,
   { params }: { params: { goalId: string } }
@@ -15,19 +17,16 @@ export async function GET(
     }
     const userId = session.user.id;
     const goalId = params.goalId;
-
     const goalOwnerCheck = await prisma.goal.findFirst({
       where: { id: goalId, userId: userId },
       include: { category: true },
     });
-
     if (!goalOwnerCheck) {
       return new NextResponse(
         JSON.stringify({ error: 'Goal not found or access denied' }),
         { status: 404 }
       );
     }
-
     const goalAndSubGoalIds = await prisma.$queryRaw<[{ id: string }]>`
       WITH RECURSIVE "GoalHierarchy" AS (
         SELECT id FROM "Goal" WHERE id = ${goalId}
@@ -38,53 +37,35 @@ export async function GET(
       SELECT id FROM "GoalHierarchy";
     `;
     const allIdsInHierarchy = goalAndSubGoalIds.map((g) => g.id);
-
-    // --- THIS IS THE FIX ---
-    // We run all three data fetches in parallel for maximum efficiency.
     const [sessions, tasks, timePerTask] = await Promise.all([
-      // 1. Fetch focus sessions for the entire goal hierarchy (for pace indicator)
       prisma.focusSession.findMany({
         where: { goalId: { in: allIdsInHierarchy } },
         orderBy: { startTime: 'asc' },
         select: { startTime: true, durationSeconds: true },
       }),
-      // 2. Fetch the raw tasks for the specific goal
       prisma.task.findMany({
         where: { goalId: goalId, userId: userId },
         orderBy: { sortOrder: 'asc' },
       }),
-      // 3. NEW: Fetch the aggregated time spent per task for this goal
       prisma.focusSession.groupBy({
         by: ['taskId'],
-        where: {
-          goalId: goalId,
-          userId: userId,
-        },
-        _sum: {
-          durationSeconds: true,
-        },
+        where: { goalId: goalId, userId: userId },
+        _sum: { durationSeconds: true },
       }),
     ]);
-
-    // Create a simple map for easy lookup of time spent per task
     const timeMap = timePerTask.reduce((acc, curr) => {
       acc[curr.taskId] = curr._sum.durationSeconds || 0;
       return acc;
     }, {} as Record<string, number>);
-
-    // Combine the raw task data with the calculated time spent
     const tasksWithTime = tasks.map((task) => ({
       ...task,
       totalTimeSpentSeconds: timeMap[task.id] || 0,
     }));
-    // --- END OF FIX ---
-
     const responsePayload = {
       ...goalOwnerCheck,
       focusSessions: sessions,
-      tasks: tasksWithTime, // Return the newly enriched tasks array
+      tasks: tasksWithTime,
     };
-
     return NextResponse.json(responsePayload);
   } catch (error) {
     console.error('[API:GET_GOAL_DETAILS]', error);
@@ -95,12 +76,12 @@ export async function GET(
   }
 }
 
-// --- PATCH and DELETE handlers remain unchanged ---
+// --- PATCH (Award logic added) ---
 export async function PATCH(
   request: Request,
   { params }: { params: { goalId: string } }
 ) {
-  /* ... unchanged ... */ try {
+  try {
     const session = await auth();
     if (!session?.user?.id) {
       return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
@@ -109,8 +90,10 @@ export async function PATCH(
     }
     const userId = session.user.id;
     const { goalId } = params;
+
     const body = await request.json();
     const { title, description, status, deadline, color, categoryId } = body;
+
     const goalToUpdate = await prisma.goal.findFirst({
       where: { id: goalId, userId },
     });
@@ -119,20 +102,44 @@ export async function PATCH(
         status: 404,
       });
     }
+
     const dataToUpdate: any = {};
     if (title !== undefined) dataToUpdate.title = title;
     if (description !== undefined) dataToUpdate.description = description;
     if (status !== undefined) dataToUpdate.status = status;
     if (deadline !== undefined) dataToUpdate.deadline = deadline;
     if (color !== undefined) dataToUpdate.color = color;
-    if (categoryId !== undefined) {
-      dataToUpdate.categoryId = categoryId;
+    if (categoryId !== undefined)
+      dataToUpdate.categoryId =
+        categoryId === '__UNCATEGORIZED__' ? null : categoryId;
+
+    // This part handles the creation of a new category if a raw string was passed
+    if (
+      categoryId &&
+      !categoryId.startsWith('cat_') &&
+      categoryId !== '__UNCATEGORIZED__'
+    ) {
+      const newCategory = await prisma.category.upsert({
+        where: { userId_name: { userId, name: categoryId } },
+        create: { userId, name: categoryId },
+        update: {},
+      });
+      dataToUpdate.categoryId = newCategory.id;
     }
+
     const updatedGoal = await prisma.goal.update({
       where: { id: goalId },
       data: dataToUpdate,
       include: { category: true },
     });
+
+    // 2. After the goal is updated, process awards
+    try {
+      await AwardService.processAwards(userId, 'GOAL_UPDATED', updatedGoal);
+    } catch (awardError) {
+      console.error('Failed to process goal-update awards:', awardError);
+    }
+
     return NextResponse.json(updatedGoal);
   } catch (error) {
     console.error('[API:UPDATE_GOAL]', error);
@@ -142,11 +149,13 @@ export async function PATCH(
     );
   }
 }
+
+// --- DELETE (No changes needed) ---
 export async function DELETE(
   request: Request,
   { params }: { params: { goalId: string } }
 ) {
-  /* ... unchanged ... */ try {
+  try {
     const session = await auth();
     if (!session?.user?.id) {
       return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {

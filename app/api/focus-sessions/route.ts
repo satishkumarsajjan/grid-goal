@@ -8,6 +8,7 @@ import {
   TimerMode,
   PomodoroCycle,
 } from '@prisma/client';
+import { AwardService } from '@/lib/services/award.service'; // 1. Import the service
 
 const createFocusSessionSchema = z.object({
   startTime: z.string().datetime(),
@@ -23,7 +24,6 @@ const createFocusSessionSchema = z.object({
   mode: z.nativeEnum(TimerMode),
   pomodoroCycle: z.nativeEnum(PomodoroCycle).optional(),
   sequenceId: z.string().uuid().optional().nullable(),
-  // NEW: Add the flag to complete the task
   markTaskAsComplete: z.boolean().optional(),
 });
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       goalId,
       tags,
       sequenceId,
-      markTaskAsComplete, // Destructure the new flag
+      markTaskAsComplete,
       ...sessionData
     } = validation.data;
 
@@ -124,7 +124,6 @@ export async function POST(request: Request) {
         },
       });
 
-      // --- NEW: LOGIC TO UPDATE TASK STATUS ---
       let newStatus = task.status;
       if (task.status === TaskStatus.PENDING) {
         newStatus = TaskStatus.IN_PROGRESS;
@@ -139,10 +138,15 @@ export async function POST(request: Request) {
           data: { status: newStatus },
         });
       }
-      // --- END NEW LOGIC ---
-
       return [createdSession];
     });
+
+    // 2. After the session is saved, process awards
+    try {
+      await AwardService.processAwards(userId, 'SESSION_SAVED', newSession);
+    } catch (awardError) {
+      console.error('Failed to process awards for focus-session:', awardError);
+    }
 
     return NextResponse.json(newSession, { status: 201 });
   } catch (error: any) {

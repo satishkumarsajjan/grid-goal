@@ -5,13 +5,13 @@ import { calculateStreak, calculateTodayFocus } from '@/lib/streak-helpers';
 import { isBefore, addDays, startOfToday, add } from 'date-fns';
 
 import { StartSessionButton } from '@/components/timer/start-session-button';
+import { WeeklyResetPrompt } from '@/components/reset/weekly-reset-prompt';
 import { StatsCards } from '@/components/dashboard/stats-cards';
 import { DailyFocusQueue } from '@/components/dashboard/daily-focus-queue';
-import { WeeklyResetPrompt } from '@/components/reset/weekly-reset-prompt';
-import { ActivityGrid } from '@/components/dashboard/activity-grid';
-// --- NEW: Import the new components ---
 import { UpcomingDeadlines } from '@/components/dashboard/UpcomingDeadlines';
 import { ActiveGoals } from '@/components/dashboard/ActiveGoals';
+import { ActivityGrid } from '@/components/dashboard/activity-grid';
+import { Achievements } from '@/components/dashboard/Achievements';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -20,6 +20,7 @@ export default async function DashboardPage() {
   }
   const userId = session.user.id;
 
+  // --- Data Fetching (remains the same) ---
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
   const twoWeeksFromNow = add(new Date(), { weeks: 2 });
@@ -28,7 +29,7 @@ export default async function DashboardPage() {
     user,
     sessions,
     pausePeriods,
-    activeGoalsWithTasks,
+    activeGoals,
     goalsWithUpcomingDeadlines,
   ] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
@@ -49,10 +50,7 @@ export default async function DashboardPage() {
       where: {
         userId,
         status: 'ACTIVE',
-        deadline: {
-          gte: startOfToday(),
-          lte: twoWeeksFromNow,
-        },
+        deadline: { gte: startOfToday(), lte: twoWeeksFromNow },
       },
       include: {
         tasks: {
@@ -68,6 +66,7 @@ export default async function DashboardPage() {
     return <p>Could not find user data.</p>;
   }
 
+  // --- Data Processing (remains the same) ---
   const streakData = calculateStreak(sessions, pausePeriods);
   const totalFocusTodayInSeconds = calculateTodayFocus(sessions);
   const gridProps = processSessionsForGrid(sessions);
@@ -75,7 +74,7 @@ export default async function DashboardPage() {
   const shouldShowResetPrompt =
     !lastReset || isBefore(lastReset, addDays(new Date(), -6));
 
-  const processedActiveGoals = activeGoalsWithTasks.map((goal) => {
+  const processedActiveGoals = activeGoals.map((goal) => {
     const totalTasks = goal.tasks.length;
     const completedTasks = goal.tasks.filter(
       (task) => task.status === 'COMPLETED'
@@ -98,11 +97,12 @@ export default async function DashboardPage() {
 
   return (
     <div className='space-y-8'>
+      {/* Header Section */}
       <div className='flex items-center justify-between'>
         <div>
           <h1 className='text-3xl font-bold tracking-tight'>Dashboard</h1>
           <p className='mt-1 text-lg text-muted-foreground'>
-            Welcome back, {session.user.name || 'friend'}! Let's get focused.
+            Welcome back, {session.user.name || 'friend'}!
           </p>
         </div>
         <StartSessionButton />
@@ -110,9 +110,9 @@ export default async function DashboardPage() {
 
       <WeeklyResetPrompt shouldShow={shouldShowResetPrompt} />
 
-      {/* --- NEW, FINAL LAYOUT --- */}
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-        {/* Main Content Column */}
+      {/* --- NEW, ROBUST LAYOUT GRID --- */}
+      <div className='grid grid-cols-1 lg:grid-cols-3 gap-8 items-start'>
+        {/* Main Content Column (fixed height items) */}
         <div className='lg:col-span-2 space-y-8'>
           <StatsCards
             streakData={streakData}
@@ -120,9 +120,10 @@ export default async function DashboardPage() {
           />
           <ActiveGoals goals={processedActiveGoals} />
           <ActivityGrid {...gridProps} />
+          <Achievements />
         </div>
 
-        {/* Sidebar Column */}
+        {/* Sidebar Column (vertically growing items) */}
         <div className='lg:col-span-1 space-y-8'>
           <UpcomingDeadlines tasks={upcomingTasks} />
           <DailyFocusQueue />

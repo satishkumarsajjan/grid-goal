@@ -1,6 +1,7 @@
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
 import { NextResponse } from 'next/server';
+import { AwardService } from '@/lib/services/award.service'; // 1. Import the service
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +15,6 @@ export async function POST(request: Request) {
     const { action } = body;
 
     switch (action) {
-      // --- NEW CASE FOR ONBOARDING ---
       case 'COMPLETE_ONBOARDING':
         await prisma.user.update({
           where: { id: userId },
@@ -30,6 +30,14 @@ export async function POST(request: Request) {
           where: { id: userId },
           data: { lastResetAt: new Date() },
         });
+
+        // 2. After the reset is marked as complete, process the relevant awards.
+        try {
+          await AwardService.processAwards(userId, 'RESET_COMPLETED');
+        } catch (awardError) {
+          console.error('Failed to process weekly reset awards:', awardError);
+        }
+
         return NextResponse.json({
           success: true,
           message: 'Weekly reset completed.',

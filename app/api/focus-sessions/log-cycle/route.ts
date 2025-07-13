@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/prisma';
 import { z } from 'zod';
 import { PomodoroCycle, TimerMode, TaskStatus } from '@prisma/client';
+import { AwardService } from '@/lib/services/award.service'; // 1. Import the service
 
 const logCycleSchema = z.object({
   startTime: z.string().datetime(),
@@ -35,7 +36,6 @@ export async function POST(request: Request) {
 
     const { taskId, goalId, ...sessionData } = validation.data;
 
-    // The transaction now creates the session and updates the task
     const [newSession] = await prisma.$transaction(async (tx) => {
       const task = await tx.task.findUnique({
         where: { id: taskId, userId },
@@ -44,18 +44,16 @@ export async function POST(request: Request) {
 
       const createdSession = await tx.focusSession.create({
         data: {
-          ...sessionData, // This now includes sequenceId
+          ...sessionData,
           userId,
           taskId,
           goalId,
-          // These are null because this is a background log
           noteAccomplished: null,
           noteNextStep: null,
           vibe: null,
         },
       });
 
-      // If it was a WORK cycle, mark the task as IN_PROGRESS
       if (sessionData.pomodoroCycle === 'WORK' && task.status === 'PENDING') {
         await tx.task.update({
           where: { id: taskId },
@@ -66,7 +64,12 @@ export async function POST(request: Request) {
       return [createdSession];
     });
 
-    // Return the created session so the client can use its ID if needed
+    try {
+      await AwardService.processAwards(userId, 'SESSION_SAVED', newSession);
+    } catch (awardError) {
+      console.error('Failed to process awards for log-cycle:', awardError);
+    }
+
     return NextResponse.json(newSession, { status: 201 });
   } catch (error) {
     console.error('[API:LOG_CYCLE]', error);

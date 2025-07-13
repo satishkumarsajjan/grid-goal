@@ -2,6 +2,7 @@
 
 import { auth } from '@/auth';
 import { GOAL_COLORS } from '@/lib/constants';
+import { AwardService } from '@/lib/services/award.service';
 import { createGoalSchema } from '@/lib/zod-schemas';
 import { prisma } from '@/prisma';
 import { NextResponse } from 'next/server';
@@ -130,7 +131,11 @@ export async function POST(request: Request) {
         color: finalColor, // Use the determined color
       },
     });
-
+    try {
+      await AwardService.processAwards(userId, 'GOAL_CREATED', newGoal);
+    } catch (awardError) {
+      console.error('Failed to process goal-creation awards:', awardError);
+    }
     return NextResponse.json(newGoal, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
