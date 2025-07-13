@@ -90,27 +90,25 @@ export function StatsCards({
                 {/* This conditional logic now only runs AFTER isLoading is false. */}
                 {dailyGoalMinutes ? (
                   <div
-                    className='relative h-16 w-16 cursor-pointer'
+                    className='relative h-24 w-24 cursor-pointer transition-transform hover:scale-105'
                     onClick={() => setIsModalOpen(true)}
                   >
-                    <PieChart width={64} height={64}>
+                    <PieChart width={96} height={96}>
                       <Pie
                         data={pieData}
                         dataKey='value'
-                        innerRadius={22}
-                        outerRadius={28}
+                        innerRadius={40}
+                        outerRadius={46}
                         startAngle={90}
                         endAngle={-270}
                         stroke='none'
                       >
-                        <Cell
-                          fill={isGoalMet ? 'var(--success)' : 'var(--primary)'}
-                        />
+                        <Cell fill={isGoalMet ? '#22C55E' : 'var(--primary)'} />
                         <Cell fill='var(--muted)' />
                       </Pie>
                     </PieChart>
                     <div className='absolute inset-0 flex flex-col items-center justify-center'>
-                      <span className='text-lg font-bold'>
+                      <span className='text-xl font-bold text-foreground'>
                         {Math.round(progress)}%
                       </span>
                     </div>
