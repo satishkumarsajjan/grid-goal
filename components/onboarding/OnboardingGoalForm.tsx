@@ -20,7 +20,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
-// A simpler schema for just the essential fields
 const onboardingGoalSchema = z.object({
   title: z.string().min(1, 'Title is required.').max(100),
   description: z.string().max(500).optional().nullable(),
@@ -28,7 +27,6 @@ const onboardingGoalSchema = z.object({
 
 type OnboardingGoalFormValues = z.infer<typeof onboardingGoalSchema>;
 
-// This mutation function uses the standard /api/goals endpoint
 const createGoal = async (
   values: OnboardingGoalFormValues
 ): Promise<AxiosResponse<Goal>> => {

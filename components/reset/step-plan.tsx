@@ -17,7 +17,6 @@ const fetchActionableTasks = async (): Promise<TaskWithGoal[]> => {
   return data;
 };
 
-// API functions for adding/removing from queue
 const updateQueue = ({
   taskId,
   action,
@@ -28,7 +27,7 @@ const updateQueue = ({
   if (action === 'add') {
     return axios.post('/api/daily-queue', { taskId });
   }
-  // Assumes your API for daily-queue can handle a DELETE request by taskId
+
   return axios.delete(`/api/daily-queue/${taskId}`);
 };
 
@@ -48,7 +47,6 @@ export function StepPlan() {
   const mutation = useMutation({
     mutationFn: updateQueue,
     onSuccess: (_, { taskId, action }) => {
-      // Optimistically update the local state
       setQueuedTaskIds((prev) => {
         const newSet = new Set(prev);
         if (action === 'add') {

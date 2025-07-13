@@ -1,12 +1,12 @@
 'use client';
 
-import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { useAppStore } from '@/store/app-store';
+import { type Goal } from '@prisma/client';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import * as React from 'react';
 import { toast } from 'sonner';
-import { type Goal } from '@prisma/client';
-import { useAppStore } from '@/store/app-store';
 
 import {
   CommandDialog,
@@ -17,8 +17,8 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command';
-import { Home, Rocket, Settings, Plus, LogOut } from 'lucide-react';
 import { signOutAction } from '@/lib/auth/actions';
+import { Home, LogOut, Plus, Rocket, Settings } from 'lucide-react';
 
 const fetchGoalsForCommand = async (): Promise<Goal[]> => {
   const { data } = await axios.get<Goal[]>('/api/goals/tree');

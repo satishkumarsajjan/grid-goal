@@ -15,8 +15,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { TaskStatus } from '@prisma/client';
-import { ListFilter, ArrowDownUp, Info } from 'lucide-react'; // Import Info icon
-import { cn } from '@/lib/utils';
+import { ArrowDownUp, Info, ListFilter } from 'lucide-react'; // Import Info icon
 
 export type FilterOption = TaskStatus | 'ALL';
 export type SortOption = 'sortOrder' | 'createdAt' | 'estimatedTimeSeconds';
@@ -36,7 +35,6 @@ export function TaskListControls({
   onSortChange,
   isDisabled,
 }: TaskListControlsProps) {
-  // This logic determines if the "My Order" option should be disabled.
   const isMyOrderDisabled = activeFilter !== 'ALL';
 
   return (

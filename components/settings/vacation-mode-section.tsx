@@ -1,34 +1,27 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
-import { type PausePeriod } from '@prisma/client';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { CalendarIcon, Plus } from 'lucide-react';
+import { type PausePeriod } from '@prisma/client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { format } from 'date-fns';
+import { CalendarIcon, Plus } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from '@/components/ui/form';
-import { toast } from 'sonner';
-import { VacationListItem } from './vacation-list-item';
-import { Skeleton } from '../ui/skeleton';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { Skeleton } from '../ui/skeleton';
+import { VacationListItem } from './vacation-list-item';
 
-// --- Zod Schema, API Functions, and Component ---
 const pausePeriodSchema = z
   .object({
     dateRange: z.object({

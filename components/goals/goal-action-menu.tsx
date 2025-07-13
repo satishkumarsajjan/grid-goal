@@ -1,4 +1,3 @@
-// At the top of your file, make sure all necessary icons are imported
 import {
   Archive,
   ArchiveRestore,
@@ -8,28 +7,19 @@ import {
   Play,
   PlusCircle,
   Trash2,
-  AlertTriangle, // NEW: Import AlertTriangle for the danger zone
 } from 'lucide-react';
 
-// Also import the new DropdownMenuSub components
+import { GoalWithProgressAndChildren } from '@/lib/types';
+import { GoalStatus } from '@prisma/client';
+import { Button } from '../ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuPortal, // NEW
   DropdownMenuSeparator,
-  DropdownMenuSub, // NEW
-  DropdownMenuSubContent, // NEW
-  DropdownMenuSubTrigger, // NEW
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { GoalWithProgressAndChildren } from '@/lib/types';
-import { GoalStatus } from '@prisma/client';
-import { Button } from '../ui/button';
 
-// ... other components and functions from the file
-
-// The updated GoalActionsMenu component
 export function GoalActionsMenu({
   goal,
   onStatusUpdate,
@@ -46,7 +36,6 @@ export function GoalActionsMenu({
   const isPaused = goal.status === 'PAUSED';
   const isArchived = goal.status === 'ARCHIVED';
 
-  // This helper is still useful for actions that trigger dialogs
   const handleActionClick = (e: React.MouseEvent, action: () => void) => {
     e.stopPropagation();
     e.preventDefault();
@@ -60,8 +49,6 @@ export function GoalActionsMenu({
           variant='ghost'
           size='icon'
           className='h-7 w-7'
-          // FIX: No longer using preventDefault here as it's not needed.
-          // FIX: Added a descriptive aria-label for accessibility.
           aria-label={`Actions for goal: ${goal.title}`}
         >
           <MoreHorizontal className='h-4 w-4' />
@@ -81,7 +68,6 @@ export function GoalActionsMenu({
           </DropdownMenuItem>
         )}
 
-        {/* Separator to group actions */}
         {!isArchived && <DropdownMenuSeparator />}
 
         {goal.status === 'ACTIVE' && (

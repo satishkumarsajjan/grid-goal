@@ -15,7 +15,6 @@ import { PomodoroCycle, TimerMode } from '@prisma/client';
 import { ZenModeFader } from '../focus/ZenModeFader';
 
 export function FocusSessionUI() {
-  // Get setTimerState to update global state directly
   const {
     isActive,
     activeTask,

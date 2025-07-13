@@ -11,7 +11,6 @@ import { InsightTooltip } from '../analytics/InsightTooltip';
 import { GoalCategorySelector } from '../goals/GoalCategorySelector';
 import { TaskStats } from './task-stats';
 
-// The goal prop now expects to include the nested category object
 type GoalWithCategoryAndSessions = GoalWithSessions & {
   category: Category | null;
 };

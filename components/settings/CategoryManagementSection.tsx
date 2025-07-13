@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Category } from '@prisma/client';
 import { toast } from 'sonner';
-import { Pencil, Plus, Trash2 } from 'lucide-react'; // Import Pencil icon
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 
 import {
   Card,
@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { CategoryForm } from '@/components/goals/CategoryForm'; // Use the new reusable form
+import { CategoryForm } from '@/components/goals/CategoryForm';
 import {
   AlertDialog,
   AlertDialogAction,

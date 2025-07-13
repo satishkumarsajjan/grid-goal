@@ -14,7 +14,7 @@ export function TaskStats({
   pending,
 }: TaskStatsProps) {
   if (total === 0) {
-    return null; // Don't show stats if there are no tasks
+    return null;
   }
 
   return (

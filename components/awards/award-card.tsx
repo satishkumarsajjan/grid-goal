@@ -1,6 +1,5 @@
 'use client';
 
-import { cn } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
@@ -8,6 +7,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { type AwardInfo } from '@/lib/constants/awards';
+import { cn } from '@/lib/utils';
 import { Lock } from 'lucide-react';
 
 interface AwardCardProps {

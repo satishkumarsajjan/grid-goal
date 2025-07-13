@@ -1,5 +1,6 @@
 'use client';
 
+import { type TaskWithTime } from '@/lib/types';
 import {
   closestCenter,
   DndContext,
@@ -12,13 +13,12 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import { CheckCircle2, ListX } from 'lucide-react';
 import { TaskItem } from './task-item';
-import { type TaskWithTime } from '@/lib/types';
-import { ListX, CheckCircle2 } from 'lucide-react';
 
 interface SortableTasksProps {
   tasks: TaskWithTime[];
-  totalTaskCount: number; // NEW: The total number of tasks before filtering
+  totalTaskCount: number;
   onDragEnd: (event: DragEndEvent) => void;
   onStartSession: (task: TaskWithTime) => void;
   isDisabled: boolean;

@@ -1,9 +1,13 @@
 'use client';
 
+import { AWARD_CATEGORIES } from '@/lib/constants/awards';
+import { UserAward } from '@prisma/client';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { UserAward, AwardId } from '@prisma/client';
-import { AWARD_CATEGORIES } from '@/lib/constants/awards';
+import { ArrowRight, Trophy } from 'lucide-react';
+import Link from 'next/link';
+import { MiniAwardIcon } from '../awards/MiniAwardIcon';
+import { Button } from '../ui/button';
 import {
   Card,
   CardContent,
@@ -12,17 +16,12 @@ import {
   CardTitle,
 } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
-import { Trophy, ArrowRight } from 'lucide-react';
-import { MiniAwardIcon } from '../awards/MiniAwardIcon';
-import { Button } from '../ui/button';
-import Link from 'next/link';
 
 const fetchAwards = async (): Promise<UserAward[]> => {
   const { data } = await axios.get('/api/awards');
   return data;
 };
 
-// Flatten the categories into a simple array of all possible awards for easy lookup
 const ALL_AWARDS = AWARD_CATEGORIES.flatMap((category) => category.awards);
 const ALL_AWARD_IDS = ALL_AWARDS.map((a) => a.id);
 
@@ -45,11 +44,9 @@ export function Achievements() {
 
     const earnedAwardIds = new Set(earnedAwards?.map((a) => a.awardId) || []);
 
-    // Find the 4 most recently earned awards
     const recentUnlocked =
       earnedAwards?.slice(0, 4).map((a) => a.awardId) || [];
 
-    // Find up to 4 locked awards to show as "Next Up"
     const nextUpLocked = ALL_AWARD_IDS.filter(
       (id) => !earnedAwardIds.has(id)
     ).slice(0, 4);

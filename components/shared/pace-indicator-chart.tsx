@@ -1,26 +1,25 @@
 'use client';
 
-import {
-  Line,
-  LineChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  ReferenceLine,
-} from 'recharts';
+import { Badge, badgeVariants } from '@/components/ui/badge';
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
-import { Badge, badgeVariants } from '@/components/ui/badge'; // Import badgeVariants for type safety
-import { useMemo } from 'react';
-import { startOfToday, differenceInCalendarDays } from 'date-fns';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { VariantProps } from 'class-variance-authority';
+import { differenceInCalendarDays, startOfToday } from 'date-fns';
+import { Minus, TrendingDown, TrendingUp } from 'lucide-react';
+import { useMemo } from 'react';
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
-// --- Type Definitions ---
 interface PaceDataPoint {
   date: string;
   targetPace: number;
@@ -30,16 +29,13 @@ interface PaceProgressChartProps {
   data: PaceDataPoint[];
 }
 
-// FIX 1: Define a specific type for the badge variants for type safety.
 type BadgeVariant = VariantProps<typeof badgeVariants>['variant'];
 
-// --- Chart Configuration ---
 const chartConfig = {
   targetPace: { label: 'Target Pace', color: 'var(--chart-2)' },
   actualPace: { label: 'Actual Pace', color: 'var(--chart-1)' },
 } satisfies ChartConfig;
 
-// --- Helper to calculate Pace Status ---
 const getPaceStatus = (data: PaceDataPoint[]) => {
   const today = startOfToday();
   const todayStr = today.toISOString().split('T')[0];
@@ -59,14 +55,12 @@ const getPaceStatus = (data: PaceDataPoint[]) => {
 
   const { actualPace, targetPace, date } = lastDataPointWithActuals;
 
-  // Check if we can calculate the "days ahead/behind" metric
   const daysIntoGoal =
     differenceInCalendarDays(new Date(date), new Date(data[0].date)) || 1;
   const hoursPerDay = targetPace / daysIntoGoal;
 
   const diffHours = actualPace! - targetPace;
 
-  // Set a threshold (e.g., half a day's work) to be considered "On Pace"
   const onPaceThreshold = hoursPerDay / 2;
 
   if (diffHours > onPaceThreshold) {
@@ -113,7 +107,6 @@ export function PaceProgressChart({ data }: PaceProgressChartProps) {
   return (
     <div className='relative'>
       <div className='absolute -top-4 right-4 z-10'>
-        {/* FIX 2: The `variant` prop now receives a correctly typed value */}
         <Badge variant={paceStatus.variant} className='flex items-center gap-1'>
           <paceStatus.Icon className='h-3 w-3' />
           <span>{paceStatus.status}</span>

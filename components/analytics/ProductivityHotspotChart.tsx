@@ -5,7 +5,6 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import { BrainCircuit } from 'lucide-react';
 
-import { useAnalyticsStore } from '@/store/useAnalyticsStore';
 import {
   Card,
   CardContent,
@@ -14,13 +13,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useAnalyticsStore } from '@/store/useAnalyticsStore';
 import { InsightTooltip } from './InsightTooltip';
 
 type PeakTime = { day: number; hour: number } | null;

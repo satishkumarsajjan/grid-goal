@@ -22,7 +22,7 @@ import {
   ChartTooltip,
 } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // NEW
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'; // NEW
 import { useAnalyticsStore } from '@/store/useAnalyticsStore';
 import { InsightTooltip } from './InsightTooltip';
 

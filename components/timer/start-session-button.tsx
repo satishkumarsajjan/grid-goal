@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Play } from 'lucide-react';
+import { useState } from 'react';
 import { TaskSelectionModal } from './task-selection-modal';
 
 export function StartSessionButton() {

@@ -1,12 +1,12 @@
 'use client';
 
-import { Info } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Info } from 'lucide-react';
 import { ReactNode } from 'react';
 
 interface InsightTooltipProps {

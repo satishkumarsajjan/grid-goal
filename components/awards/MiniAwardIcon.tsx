@@ -7,8 +7,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { AWARD_CATEGORIES } from '@/lib/constants/awards';
-import { type AwardId } from '@prisma/client';
 import { cn } from '@/lib/utils';
+import { type AwardId } from '@prisma/client';
 import { Lock } from 'lucide-react';
 
 interface MiniAwardIconProps {

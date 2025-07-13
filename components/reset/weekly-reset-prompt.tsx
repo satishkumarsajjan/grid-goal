@@ -1,9 +1,9 @@
 'use client';
 
-import { useAppStore } from '@/store/app-store';
 import { Button } from '@/components/ui/button';
+import { useAppStore } from '@/store/app-store';
 import { PartyPopper } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface WeeklyResetPromptProps {
   shouldShow: boolean;

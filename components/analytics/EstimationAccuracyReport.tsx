@@ -2,10 +2,16 @@
 
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { Target, TrendingDown, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
+import { Target, TrendingDown, TrendingUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import type {
+  EstimationAccuracyItem,
+  EstimationAccuracyResponse,
+} from '@/app/api/analytics/estimation-accuracy/route';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -15,6 +21,14 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
   Table,
   TableBody,
   TableCell,
@@ -22,24 +36,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
-import type {
-  EstimationAccuracyResponse,
-  EstimationAccuracyItem,
-} from '@/app/api/analytics/estimation-accuracy/route';
-import { InsightTooltip } from './InsightTooltip';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { InsightTooltip } from './InsightTooltip';
 
 type ProcessedAccuracyItem = EstimationAccuracyItem & {
   variancePercent: number | null;

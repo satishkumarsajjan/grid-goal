@@ -1,8 +1,5 @@
 'use client';
 
-import { useTimerStore } from '@/store/timer-store';
-import { Button } from '@/components/ui/button';
-import { Pause, Play, Square, X } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,15 +11,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { useTimerStore } from '@/store/timer-store';
 import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
+import { Pause, Play, Square, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface SessionControlsProps {
   onFinish: () => void;
 }
 
-// NEW: Mutation function for deleting a session sequence
 const deleteSessionSequence = async (sequenceId: string) => {
   return axios.delete('/api/focus-sessions', { data: { sequenceId } });
 };
@@ -35,7 +34,7 @@ export function SessionControls({ onFinish }: SessionControlsProps) {
     mutationFn: deleteSessionSequence,
     onSuccess: () => {
       toast.success('Session discarded.');
-      reset(); // Reset the store after successful deletion
+      reset();
     },
     onError: () => {
       toast.error('Failed to discard session. Please try again.');
@@ -43,11 +42,9 @@ export function SessionControls({ onFinish }: SessionControlsProps) {
   });
 
   const handleDiscard = () => {
-    // If it's a Pomodoro session with a sequenceId, call the API
     if (mode === 'POMODORO' && sequenceId) {
       deleteMutation.mutate(sequenceId);
     } else {
-      // For stopwatch or sessions without a sequenceId, just reset the store
       reset();
     }
   };
@@ -56,7 +53,6 @@ export function SessionControls({ onFinish }: SessionControlsProps) {
 
   return (
     <div className='flex items-center justify-center gap-4'>
-      {/* DISCARD BUTTON with confirmation dialog */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button
@@ -91,7 +87,6 @@ export function SessionControls({ onFinish }: SessionControlsProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* PAUSE/RESUME BUTTON */}
       <Button
         variant='outline'
         size='lg'
@@ -106,7 +101,6 @@ export function SessionControls({ onFinish }: SessionControlsProps) {
         )}
       </Button>
 
-      {/* FINISH & LOG BUTTON */}
       <Button
         variant='default'
         size='lg'

@@ -2,14 +2,9 @@ import { ChevronRight } from 'lucide-react';
 
 interface SessionHeaderProps {
   taskTitle: string;
-  goalTitle?: string; // Make goalTitle optional to handle edge cases
+  goalTitle?: string;
 }
 
-/**
- * A UI component for the top of the Zen Mode screen.
- * It displays the parent Goal and the current Task, providing crucial
- * context for the user during a focus session.
- */
 export function SessionHeader({ taskTitle, goalTitle }: SessionHeaderProps) {
   return (
     <div className=' text-center px-4 w-full max-w-2xl'>
@@ -28,7 +23,6 @@ export function SessionHeader({ taskTitle, goalTitle }: SessionHeaderProps) {
         </div>
       )}
 
-      {/* Current Task Title */}
       <h3 className='text-xl font-semibold truncate' title={taskTitle}>
         {taskTitle}
       </h3>

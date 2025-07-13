@@ -131,28 +131,19 @@ export function GoalForm({ initialData, parentId, onFinished }: GoalFormProps) {
 
   const mutation = useMutation({
     mutationFn: upsertGoal,
-    // --- THIS IS THE FIX ---
+
     onSuccess: (response, variables) => {
       const isEditing = !!variables.initialData;
       const action = isEditing ? 'updated' : 'created';
       toast.success(`Goal successfully ${action}!`);
 
-      // 1. Always invalidate the main list of goals to refresh the navigator.
       queryClient.invalidateQueries({ queryKey: ['goals'] });
 
-      // 2. If we were editing, invalidate all queries related to this specific goal
-      //    to ensure all parts of the UI (details page, task list, charts) get the fresh data.
       if (isEditing && variables.initialData?.id) {
         const goalId = variables.initialData.id;
 
-        // Invalidate the specific goal's details
         queryClient.invalidateQueries({ queryKey: ['goal', goalId] });
-
-        // Invalidate the task list for this goal
         queryClient.invalidateQueries({ queryKey: ['tasks', goalId] });
-
-        // Invalidate analytics charts using partial key matching.
-        // This is the most robust way to ensure charts update their labels.
         queryClient.invalidateQueries({ queryKey: ['timeAllocation'] });
         queryClient.invalidateQueries({ queryKey: ['vibeAnalysis'] });
         queryClient.invalidateQueries({ queryKey: ['goal', goalId] });
@@ -160,7 +151,7 @@ export function GoalForm({ initialData, parentId, onFinished }: GoalFormProps) {
 
       onFinished();
     },
-    // --- END OF FIX ---
+
     onError: (error) => {
       const action = initialData ? 'update' : 'create';
       console.error(`Failed to ${action} goal:`, error);

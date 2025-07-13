@@ -1,12 +1,12 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type PausePeriod } from '@prisma/client';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
-import { Trash2 } from 'lucide-react';
 
 const deletePeriod = (periodId: string) =>
   axios.delete(`/api/pause-periods/${periodId}`);

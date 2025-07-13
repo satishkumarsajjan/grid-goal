@@ -8,10 +8,10 @@ import {
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { GoalWithProgressAndChildren } from '@/lib/types';
 import { type Goal } from '@prisma/client';
 import Link from 'next/link';
 import { DeadlineBadge } from './deadline-badge';
-import { GoalWithProgressAndChildren } from '@/lib/types';
 
 export type GoalWithProgress = Goal & {
   _count: {

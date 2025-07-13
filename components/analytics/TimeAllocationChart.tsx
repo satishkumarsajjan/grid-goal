@@ -21,13 +21,12 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from '@/components/ui/chart';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAnalyticsStore } from '@/store/useAnalyticsStore';
 import { InsightTooltip } from './InsightTooltip';
 
 type ViewMode = 'category' | 'goal';
 
-// Updated type to include the optional color property
 type TimeAllocationData = {
   chartData: {
     name: string;
@@ -68,7 +67,6 @@ const chartConfig: Record<
   },
 };
 
-// Fallback colors for when a goal has no specific color
 const FALLBACK_CHART_COLORS = [
   'var(--chart-1)',
   'var(--chart-2)',
@@ -76,7 +74,7 @@ const FALLBACK_CHART_COLORS = [
   'var(--chart-4)',
   'var(--chart-5)',
 ];
-// Generic color for the "Other" slice
+
 const OTHER_COLOR = 'var(--muted)';
 
 const formatSecondsForTooltip = (seconds: number): string => {
@@ -192,7 +190,6 @@ export function TimeAllocationChart() {
             strokeWidth={5}
           >
             {chartDataWithPercentage.map((entry, index) => {
-              // --- NEW COLOR LOGIC ---
               let fillColor =
                 FALLBACK_CHART_COLORS[index % FALLBACK_CHART_COLORS.length];
               if (viewMode === 'goal') {
@@ -202,13 +199,11 @@ export function TimeAllocationChart() {
                   fillColor = entry.color;
                 }
               }
-              // For category view, we always use the fallback palette.
 
               return (
                 <Cell
                   key={`cell-${index}`}
                   fill={fillColor}
-                  // Optional: Add a subtle stroke to all cells for better separation
                   className='stroke-background'
                 />
               );
@@ -256,7 +251,6 @@ export function TimeAllocationChart() {
           </div>
         )}
         {!isLoading && !isError && data && data.chartData.length > 0 && (
-          // The legend now automatically uses the correct colors from the Cells
           <ChartLegend
             content={<ChartLegendContent nameKey='name' payload={{}} />}
             className='-mx-2 mt-2 w-full'

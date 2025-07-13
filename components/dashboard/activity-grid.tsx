@@ -1,5 +1,3 @@
-// components/dashboard/activity-grid.tsx
-
 'use client';
 
 import useDeviceDetect from '@/lib/hooks/use-hover-support';
@@ -14,12 +12,7 @@ import {
 } from '../ui/tooltip';
 import { GridCellData, ProcessedGridData } from '@/lib/grid-helpers';
 
-// Props now reflect the new data structure
 interface ActivityGridProps extends ProcessedGridData {}
-
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-// --- Helper Functions & Sub-components ---
 
 const getColorClass = (level: GridCellData['level']): string => {
   switch (level) {
@@ -55,7 +48,6 @@ const Cell = React.memo(function Cell({
   cell: GridCellData;
   isTouch: boolean;
 }) {
-  // A padding cell, render an empty div
   if (cell.totalSeconds === -1) {
     return <div className='size-3.5' />;
   }
@@ -66,7 +58,7 @@ const Cell = React.memo(function Cell({
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-    timeZone: 'UTC', // Ensure UTC for consistency
+    timeZone: 'UTC',
   });
 
   const timeText = formatFocusTime(totalSeconds);
@@ -81,7 +73,6 @@ const Cell = React.memo(function Cell({
         'size-3.5 rounded-[3px] transition-transform duration-150 ease-in-out hover:scale-125',
         getColorClass(level)
       )}
-      // For a11y, provides a label for screen readers
       aria-label={tooltipText}
     />
   );
@@ -107,8 +98,6 @@ const Cell = React.memo(function Cell({
   );
 });
 
-// --- Main Component ---
-
 export function ActivityGrid({
   totalHours,
   gridData,
@@ -124,7 +113,6 @@ export function ActivityGrid({
     );
   }
 
-  // Calculate the total number of columns for the CSS grid layout
   const totalColumns = Math.ceil(gridData.length / 7);
 
   return (
@@ -135,13 +123,9 @@ export function ActivityGrid({
         </h2>
       </div>
 
-      {/* Use a single TooltipProvider for performance */}
       <TooltipProvider delayDuration={150}>
         <div className='relative flex  overflow-x-auto pb-4'>
-          {/* Day Labels (Left Gutter) */}
-
           <div className='relative'>
-            {/* Month Labels (Top) */}
             <div
               className='grid h-6'
               style={{
@@ -159,7 +143,6 @@ export function ActivityGrid({
               ))}
             </div>
 
-            {/* The Activity Grid */}
             <div
               className='grid grid-flow-col grid-rows-7 gap-1'
               style={{ gridTemplateColumns: `repeat(${totalColumns}, 14px)` }}
@@ -176,7 +159,6 @@ export function ActivityGrid({
         </div>
       </TooltipProvider>
 
-      {/* Legend */}
       <div className='w-full flex items-center justify-between mt-4 text-xs text-muted-foreground'>
         <p>{isTouch ? 'Tap a cell for details' : 'Hover a cell for details'}</p>
         <div className='flex items-center gap-2'>

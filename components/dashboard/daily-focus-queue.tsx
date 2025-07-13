@@ -2,7 +2,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { ListTodo } from 'lucide-react';
 
 import {
   Card,
@@ -12,11 +11,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { type TaskWithGoal } from '@/lib/types'; // Assuming this type exists
+import { type TaskWithGoal } from '@/lib/types';
 
-import { QuickAddTaskForm } from './QuickAddTaskForm'; // NEW: Import the form
-
-// Assuming this type is defined for the API response
 type QueueItem = { task: TaskWithGoal };
 
 const fetchQueue = async (): Promise<QueueItem[]> => {
@@ -85,7 +81,6 @@ function QueueSkeleton() {
 }
 
 function FocusQueueItem({ task }: { task: TaskWithGoal }) {
-  // This is a placeholder implementation
   return (
     <div className='p-2 border rounded-md bg-background text-sm'>
       <p className='font-medium truncate'>{task.title}</p>

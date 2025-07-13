@@ -19,15 +19,13 @@ export function ResetStepper({ steps, currentStepId }: ResetStepperProps) {
             key={step.name}
             className={cn(
               'relative',
-              // Use padding on the container instead of the connector for more robust spacing
+
               stepIdx !== steps.length - 1 ? 'flex-1' : ''
             )}
           >
-            {/* The colored bar connecting the steps */}
             <div
               className='absolute left-4 top-1/2 -ml-px mt-0.5 h-0.5 w-full transition-colors duration-300'
               aria-hidden='true'
-              // The connector is colored if the *previous* step is complete
               style={{
                 backgroundColor:
                   stepIdx <= currentStepIndex
@@ -37,7 +35,6 @@ export function ResetStepper({ steps, currentStepId }: ResetStepperProps) {
             />
 
             <div className='relative flex items-center justify-start'>
-              {/* Step Indicator Circle */}
               <div
                 className={cn(
                   'relative flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300',
@@ -65,7 +62,6 @@ export function ResetStepper({ steps, currentStepId }: ResetStepperProps) {
                 )}
               </div>
 
-              {/* Step Name Label */}
               <span
                 className={cn(
                   'ml-4 text-sm font-medium',
@@ -77,7 +73,6 @@ export function ResetStepper({ steps, currentStepId }: ResetStepperProps) {
                 {step.name}
               </span>
 
-              {/* Screen-reader only text for better accessibility */}
               <span className='sr-only'>
                 {stepIdx < currentStepIndex
                   ? `${step.name} - Completed`

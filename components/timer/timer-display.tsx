@@ -37,11 +37,6 @@ export function TimerDisplay({
 
   return (
     <div className='relative w-80 h-80 md:w-96 md:h-96 flex items-center justify-center'>
-      {/*
-        THIS IS THE FIX:
-        The entire SVG element is now wrapped in a conditional check.
-        It will only be rendered to the DOM if the timer mode is 'POMODORO'.
-      */}
       {mode === 'POMODORO' && (
         <svg
           className='absolute inset-0 w-full h-full'

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -9,9 +8,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Link from 'next/link';
 import { GoalProgressBar } from './GoalProgressBar';
 
-// The shape of the goal data passed down from the server component
 type ActiveGoal = {
   id: string;
   title: string;

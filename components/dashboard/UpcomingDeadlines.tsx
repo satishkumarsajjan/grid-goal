@@ -7,11 +7,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Clock } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
+import { Clock } from 'lucide-react';
 
-// The shape of the task data passed down from the server component
 type UpcomingTask = {
   id: string;
   title: string;

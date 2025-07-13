@@ -1,9 +1,8 @@
 'use client';
 
-import { forwardRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { forwardRef } from 'react';
 
-// This is a placeholder component. Replace with your actual review content.
 export const StepReview = forwardRef<HTMLHeadingElement>((props, ref) => {
   return (
     <div className='text-center'>
@@ -23,7 +22,7 @@ export const StepReview = forwardRef<HTMLHeadingElement>((props, ref) => {
           <p className='text-center text-muted-foreground p-8'>
             (Your Review Content Goes Here)
           </p>
-          {/* Example of long content to test scrolling: */}
+
           {Array.from({ length: 20 }).map((_, i) => (
             <p key={i}>Review item {i + 1}</p>
           ))}

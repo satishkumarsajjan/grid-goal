@@ -4,29 +4,21 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
 import { GoalNavigator } from '@/components/goals/goal-navigator';
-import { type GoalDialogOptions } from '@/components/goals/goal-navigator-item'; // NEW: Import the generic dialog options type
+import { type GoalDialogOptions } from '@/components/goals/goal-navigator-item';
 import { buildGoalTree } from '@/lib/goal-helpers';
 import { GoalWithProgress, GoalWithProgressAndChildren } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 
-// The props interface is updated to use the new generic type and name
 interface GoalTreeProps {
   activeGoalId: string | null;
   openGoalDialog: (options: GoalDialogOptions) => void;
 }
 
-/**
- * A fetcher function for TanStack Query.
- */
 const fetchGoals = async (): Promise<GoalWithProgress[]> => {
   const { data } = await axios.get('/api/goals/tree');
   return data;
 };
 
-/**
- * A Client Component that uses TanStack Query to fetch ALL goals for the user,
- * processes them into a tree, and then passes the result to the GoalNavigator.
- */
 export function GoalTree({ activeGoalId, openGoalDialog }: GoalTreeProps) {
   const {
     data: allGoalsFlat,
@@ -49,7 +41,6 @@ export function GoalTree({ activeGoalId, openGoalDialog }: GoalTreeProps) {
     );
   }
 
-  // Process the fetched flat list into a hierarchical tree.
   const goalTree: GoalWithProgressAndChildren[] = allGoalsFlat
     ? buildGoalTree(allGoalsFlat)
     : [];
@@ -65,7 +56,6 @@ export function GoalTree({ activeGoalId, openGoalDialog }: GoalTreeProps) {
     );
   }
 
-  // Render the GoalNavigator, passing the client-processed data and the new generic function.
   return (
     <GoalNavigator
       goalTree={goalTree}
@@ -75,9 +65,6 @@ export function GoalTree({ activeGoalId, openGoalDialog }: GoalTreeProps) {
   );
 }
 
-/**
- * A dedicated skeleton component for the navigator loading state.
- */
 function GoalNavigatorSkeleton() {
   return (
     <div className='space-y-2 p-2'>

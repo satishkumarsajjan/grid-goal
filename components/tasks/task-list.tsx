@@ -1,25 +1,25 @@
 'use client';
 
+import { type DragEndEvent } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 import { TaskStatus } from '@prisma/client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { useMemo, useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { type DragEndEvent } from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
 
+import { TaskListSkeleton } from '@/app/(main)/goals/[[...goalId]]/page';
 import { TaskSelectionModal } from '@/components/timer/task-selection-modal';
+import { AriaLiveRegion } from '@/components/ui/AriaLiveRegion';
 import { type FullGoalDetails, type TaskWithTime } from '@/lib/types';
 import { CreateTaskForm } from './create-task-form';
-import { TaskListSkeleton } from '@/app/(main)/goals/[[...goalId]]/page';
-import { TaskListHeader } from './TaskListHeader';
 import { SortableTasks } from './SortableTasks';
-import { AriaLiveRegion } from '@/components/ui/AriaLiveRegion';
 import {
   TaskListControls,
   type FilterOption,
   type SortOption,
 } from './TaskListControls';
+import { TaskListHeader } from './TaskListHeader';
 
 interface TaskListProps {
   goalId: string | null;

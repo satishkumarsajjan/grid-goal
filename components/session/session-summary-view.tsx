@@ -1,30 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { PomodoroCycle, SessionVibe, TimerMode } from '@prisma/client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { SessionVibe, TimerMode, PomodoroCycle } from '@prisma/client';
-import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react'; // NEW: Import X icon
+import { X } from 'lucide-react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { z } from 'zod';
 
-import { sessionSummarySchema } from '@/lib/zod-schemas';
-import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import { TagInput } from '@/components/ui/tag-input';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,9 +22,23 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useTimerStore } from '@/store/timer-store';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { TagInput } from '@/components/ui/tag-input';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { sessionSummarySchema } from '@/lib/zod-schemas';
+import { useTimerStore } from '@/store/timer-store';
 
 interface SessionSummaryViewProps {
   task: { id: string; title: string; goalId: string };
@@ -49,7 +49,7 @@ interface SessionSummaryViewProps {
   };
   onSessionSaved: () => void;
   onSessionDiscarded: () => void;
-  onClose: () => void; // NEW: Add onClose to props
+  onClose: () => void;
 }
 
 type SummaryFormValues = z.infer<typeof sessionSummarySchema>;
@@ -79,7 +79,7 @@ export function SessionSummaryView({
   sessionData,
   onSessionSaved,
   onSessionDiscarded,
-  onClose, // Destructure onClose
+  onClose,
 }: SessionSummaryViewProps) {
   const queryClient = useQueryClient();
   const [tags, setTags] = useState<string[]>([]);
@@ -184,7 +184,6 @@ export function SessionSummaryView({
       className='fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex justify-center items-center'
     >
       <div className='w-full max-w-lg h-full max-h-[95vh] sm:max-h-[90vh] bg-card border rounded-xl shadow-2xl flex flex-col relative'>
-        {/* NEW: Close button */}
         <Button
           type='button'
           variant='ghost'
@@ -196,7 +195,6 @@ export function SessionSummaryView({
         >
           <X className='h-5 w-5' />
         </Button>
-        {/* END NEW */}
 
         <div className='p-6 border-b'>
           <h2 className='text-xl font-bold'>Session Summary</h2>

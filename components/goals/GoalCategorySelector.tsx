@@ -29,7 +29,6 @@ const updateGoalCategory = async ({
   goalId: string;
   categoryId: string | null;
 }) => {
-  // Use the PATCH endpoint for updating an existing goal
   const { data } = await axios.patch(`/api/goals/${goalId}`, { categoryId });
   return data;
 };
@@ -52,9 +51,8 @@ export function GoalCategorySelector({
 
   const mutation = useMutation({
     mutationFn: updateGoalCategory,
-    onSuccess: (updatedGoal) => {
+    onSuccess: () => {
       toast.success(`Goal category updated.`);
-      // Invalidate all goal-related queries to ensure UI consistency
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       queryClient.invalidateQueries({ queryKey: ['goal', goal.id] });
       queryClient.invalidateQueries({ queryKey: ['timeAllocation'] });
@@ -66,12 +64,11 @@ export function GoalCategorySelector({
   });
 
   const handleSelect = (newCategoryId: string) => {
-    // This special value triggers the dialog opening in the parent
     if (newCategoryId === '__CREATE_NEW__') {
       onOpenCreateCategoryDialog();
       return;
     }
-    // This special value handles un-assigning the category
+
     const finalId =
       newCategoryId === '__UNCATEGORIZED__' ? null : newCategoryId;
     mutation.mutate({ goalId: goal.id, categoryId: finalId });
@@ -101,9 +98,6 @@ export function GoalCategorySelector({
               {category.name}
             </SelectItem>
           ))}
-          {/* A separator and button can't be put inside a SelectContent directly. */}
-          {/* A better UX is to have the button outside or handle this differently. */}
-          {/* For simplicity and stability, we'll rely on a separate button. */}
         </SelectContent>
       </Select>
       <Button

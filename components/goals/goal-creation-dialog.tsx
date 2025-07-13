@@ -1,13 +1,13 @@
 'use client';
 
+import { type GoalDialogOptions } from '@/app/(main)/goals/[[...goalId]]/page';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { GoalForm } from './create-goal-form'; // Assuming you have this form component
-import { type GoalDialogOptions } from '@/app/(main)/goals/[[...goalId]]/page';
+import { GoalForm } from './create-goal-form';
 
 interface GoalCreationDialogProps {
   options: GoalDialogOptions;

@@ -1,23 +1,22 @@
-'use client'; // This component will have client-side hooks for path checking
+'use client';
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuItem,
   SidebarMenuButton,
-  SidebarFooter,
-} from '@/components/ui/sidebar'; // Assuming these are the components from your library
+  SidebarMenuItem,
+} from '@/components/ui/sidebar';
 
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
-import { UserButton } from './user-button'; // We will create this next
 import { type User } from 'next-auth';
-
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { UserButton } from './user-button';
 import { mainNav } from '@/lib/config/nav-menu';
-import GridGoalLogo from '../landing-page/grid-goal-logo';
 import { LayoutDashboardIcon, Settings } from 'lucide-react';
+import GridGoalLogo from '../landing-page/grid-goal-logo';
 import { Separator } from '../ui/separator';
 
 interface AppSidebarProps {

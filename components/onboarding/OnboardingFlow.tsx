@@ -40,16 +40,16 @@ export function OnboardingFlow() {
 
   const handleGoalCreated = (goal: Goal) => {
     setCreatedGoal(goal);
-    // When the goal is created, also mark the onboarding as complete on the server.
+
     completeMutation.mutate();
-    // Invalidate goal queries so the app feels fresh after onboarding
+
     queryClient.invalidateQueries({ queryKey: ['goals'] });
     setCurrentStep('finish');
   };
 
   const handleFinish = () => {
     endOnboarding();
-    // Navigate the user directly to their newly created goal
+
     if (createdGoal) {
       router.push(`/goals/${createdGoal.id}`);
     }

@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Goal } from '@prisma/client';
-// NEW: Import the simplified form
+
 import { OnboardingGoalForm } from './OnboardingGoalForm';
 
 interface StepProps {

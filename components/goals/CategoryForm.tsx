@@ -1,13 +1,13 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { Category } from '@prisma/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { toast } from 'sonner';
-import { Category } from '@prisma/client';
 import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -29,7 +29,6 @@ const categoryFormSchema = z.object({
 
 type FormValues = z.infer<typeof categoryFormSchema>;
 
-// This function now handles both POST (create) and PATCH (update)
 const upsertCategory = (values: FormValues & { id?: string }) => {
   if (values.id) {
     return axios.patch(`/api/categories/${values.id}`, { name: values.name });
@@ -49,7 +48,6 @@ export function CategoryForm({ initialData, onFinished }: CategoryFormProps) {
     defaultValues: { name: initialData?.name || '' },
   });
 
-  // Reset the form if the initialData changes (e.g., opening a new edit dialog)
   useEffect(() => {
     form.reset({ name: initialData?.name || '' });
   }, [initialData, form]);
@@ -59,7 +57,7 @@ export function CategoryForm({ initialData, onFinished }: CategoryFormProps) {
     onSuccess: () => {
       const action = initialData ? 'updated' : 'created';
       toast.success(`Category ${action}!`);
-      // Invalidate all relevant queries to ensure UI updates everywhere
+
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       queryClient.invalidateQueries({ queryKey: ['timeAllocation'] });

@@ -57,7 +57,6 @@ export function WeeklyResetFlow() {
   const completeMutation = useMutation({
     mutationFn: completeResetAction,
     onSuccess: () => {
-      // This triggers the prompt to hide itself.
       incrementResetCompletionCount();
     },
     onError: () => {
@@ -134,7 +133,6 @@ export function WeeklyResetFlow() {
           <div className='p-6 border-b flex flex-col items-center gap-6'>
             <h2 className='text-xl font-bold'>Weekly Reset</h2>
             {currentStepId !== 'finished' && (
-              // Add w-full and some padding to ensure the stepper has room to expand
               <div className='w-full px-4 sm:px-8'>
                 <ResetStepper steps={STEPS} currentStepId={currentStepId} />
               </div>

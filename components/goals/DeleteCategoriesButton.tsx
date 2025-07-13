@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { toast } from 'sonner';
 import { Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 const deleteAllCategories = async () => {
   return axios.delete('/api/categories');
@@ -31,7 +31,6 @@ export function DeleteCategoriesButton() {
     mutationFn: deleteAllCategories,
     onSuccess: () => {
       toast.success('All categories have been deleted.');
-      // Invalidate goals to reflect the un-assigned categories
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       queryClient.invalidateQueries({ queryKey: ['timeAllocation'] });
       queryClient.invalidateQueries({ queryKey: ['vibeAnalysis'] });

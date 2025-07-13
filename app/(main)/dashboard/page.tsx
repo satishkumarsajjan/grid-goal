@@ -1,17 +1,18 @@
 import { auth } from '@/auth';
-import { prisma } from '@/prisma';
 import { processSessionsForGrid } from '@/lib/grid-helpers';
 import { calculateStreak, calculateTodayFocus } from '@/lib/streak-helpers';
-import { isBefore, addDays, startOfToday, add } from 'date-fns';
+import { prisma } from '@/prisma';
+import { add, addDays, isBefore, startOfToday } from 'date-fns';
 
-import { StartSessionButton } from '@/components/timer/start-session-button';
 import { WeeklyResetPrompt } from '@/components/reset/weekly-reset-prompt';
-import { StatsCards } from '@/components/dashboard/stats-cards';
-import { DailyFocusQueue } from '@/components/dashboard/daily-focus-queue';
-import { UpcomingDeadlines } from '@/components/dashboard/UpcomingDeadlines';
+import { StartSessionButton } from '@/components/timer/start-session-button';
+
+import { Achievements } from '@/components/dashboard/Achievements';
 import { ActiveGoals } from '@/components/dashboard/ActiveGoals';
 import { ActivityGrid } from '@/components/dashboard/activity-grid';
-import { Achievements } from '@/components/dashboard/Achievements';
+import { DailyFocusQueue } from '@/components/dashboard/daily-focus-queue';
+import { StatsCards } from '@/components/dashboard/StatsCards';
+import { UpcomingDeadlines } from '@/components/dashboard/UpcomingDeadlines';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -20,7 +21,6 @@ export default async function DashboardPage() {
   }
   const userId = session.user.id;
 
-  // --- Data Fetching (remains the same) ---
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
   const twoWeeksFromNow = add(new Date(), { weeks: 2 });
@@ -66,7 +66,6 @@ export default async function DashboardPage() {
     return <p>Could not find user data.</p>;
   }
 
-  // --- Data Processing (remains the same) ---
   const streakData = calculateStreak(sessions, pausePeriods);
   const totalFocusTodayInSeconds = calculateTodayFocus(sessions);
   const gridProps = processSessionsForGrid(sessions);
@@ -97,7 +96,6 @@ export default async function DashboardPage() {
 
   return (
     <div className='space-y-8'>
-      {/* Header Section */}
       <div className='flex items-center justify-between'>
         <div>
           <h1 className='text-3xl font-bold tracking-tight'>Dashboard</h1>
@@ -110,9 +108,7 @@ export default async function DashboardPage() {
 
       <WeeklyResetPrompt shouldShow={shouldShowResetPrompt} />
 
-      {/* --- NEW, ROBUST LAYOUT GRID --- */}
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-8 items-start pb-8'>
-        {/* Main Content Column (fixed height items) */}
         <div className='lg:col-span-2 space-y-8'>
           <StatsCards
             streakData={streakData}
@@ -120,11 +116,10 @@ export default async function DashboardPage() {
           />
           <ActiveGoals goals={processedActiveGoals} />
           <ActivityGrid {...gridProps} />
-          <Achievements />
         </div>
 
-        {/* Sidebar Column (vertically growing items) */}
         <div className='lg:col-span-1 space-y-8'>
+          <Achievements />
           <UpcomingDeadlines tasks={upcomingTasks} />
           <DailyFocusQueue />
         </div>

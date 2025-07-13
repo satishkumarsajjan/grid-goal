@@ -1,26 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useQueries, useQuery } from '@tanstack/react-query'; // Import useQueries
-import axios from 'axios';
 import { TimerMode, type Task } from '@prisma/client';
+import { useQueries } from '@tanstack/react-query';
+import axios from 'axios';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
-import { useTimerStore, type ActiveTask } from '@/store/timer-store';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'; // Import TabsContent
-import { Timer, Hourglass } from 'lucide-react';
-import { Skeleton } from '../ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { useTimerStore, type ActiveTask } from '@/store/timer-store';
+import { Hourglass, Timer } from 'lucide-react';
+import { Skeleton } from '../ui/skeleton';
 
 type TaskWithGoalTitle = Task & { goal: { title: string } };
 
@@ -46,10 +46,9 @@ export function TaskSelectionModal({
 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedMode, setSelectedMode] = useState<TimerMode>('STOPWATCH');
-  // NEW: State to manage the active tab
+
   const [activeTab, setActiveTab] = useState<'queue' | 'all'>('queue');
 
-  // --- NEW: Parallel Data Fetching with useQueries ---
   const [queueQuery, allTasksQuery] = useQueries({
     queries: [
       {
@@ -70,13 +69,9 @@ export function TaskSelectionModal({
   const allTasks = allTasksQuery.data;
   const hasQueue = !!queueItems && queueItems.length > 0;
 
-  // Determine which list is currently active based on the tab
-  const activeList = activeTab === 'queue' ? queueItems : allTasks;
-  // Determine the overall loading state
   const isLoading =
     queueQuery.isLoading || (allTasksQuery.isLoading && activeTab === 'all');
 
-  // --- State Synchronization & Default Selection ---
   useEffect(() => {
     if (!isOpen) {
       setSelectedTaskId(null);
@@ -86,13 +81,10 @@ export function TaskSelectionModal({
     if (preselectedTask) {
       setSelectedTaskId(preselectedTask.id);
     } else {
-      // If the queue exists, default the tab and selection to the queue.
       if (hasQueue) {
         setActiveTab('queue');
         setSelectedTaskId(queueItems[0].id);
-      }
-      // Otherwise, default the tab and selection to all tasks.
-      else if (allTasks && allTasks.length > 0) {
+      } else if (allTasks && allTasks.length > 0) {
         setActiveTab('all');
         setSelectedTaskId(allTasks[0].id);
       } else {
@@ -101,7 +93,6 @@ export function TaskSelectionModal({
     }
   }, [isOpen, preselectedTask, hasQueue, allTasks, queueItems]);
 
-  // Adjust default selection when the tab changes
   useEffect(() => {
     if (preselectedTask || !isOpen) return;
 
@@ -120,7 +111,6 @@ export function TaskSelectionModal({
     if (preselectedTask) {
       taskPayload = preselectedTask;
     } else if (selectedTaskId) {
-      // Find the task from EITHER list.
       const task =
         queueItems?.find((t) => t.id === selectedTaskId) ||
         allTasks?.find((t) => t.id === selectedTaskId);
@@ -143,7 +133,6 @@ export function TaskSelectionModal({
     onOpenChange(false);
   };
 
-  // Helper to render the content of a list
   const renderTaskList = (tasks: TaskWithGoalTitle[] | undefined) => {
     if (isLoading) {
       return (
@@ -226,7 +215,6 @@ export function TaskSelectionModal({
             </TabsList>
             <ScrollArea className='h-48 border rounded-md mt-2'>
               <div className='p-2 space-y-1'>
-                {/* The content inside the scroll area now depends on the active tab */}
                 {activeTab === 'queue'
                   ? renderTaskList(queueItems)
                   : renderTaskList(allTasks)}
