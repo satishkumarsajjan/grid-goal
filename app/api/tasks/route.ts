@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/prisma';
 import { z } from 'zod'; // Assuming this comes from your lib
 import { updateGoalTreeEstimates } from '@/lib/goal-estimate-updater';
+import { AwardService } from '@/lib/services/award.service';
 
 // Define the schema here for clarity or import it from your lib
 const createTaskSchema = z.object({
@@ -94,6 +95,11 @@ export async function POST(request: Request) {
       return createdTask;
     });
 
+    try {
+      await AwardService.processAwards(userId, 'TASK_CREATED');
+    } catch (awardError) {
+      console.error('Failed to process task-creation awards:', awardError);
+    }
     return NextResponse.json(newTask, { status: 201 });
   } catch (error: any) {
     console.error('[API:CREATE_TASK]', error);
