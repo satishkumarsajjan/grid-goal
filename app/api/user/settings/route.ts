@@ -17,7 +17,6 @@ export async function PATCH(request: Request) {
 
     const body = await request.json();
     const validation = settingsSchema.safeParse(body);
-    console.log('DAILYGOAL:', validation);
 
     if (!validation.success) {
       return new NextResponse(

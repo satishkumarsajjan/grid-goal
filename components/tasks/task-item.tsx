@@ -193,7 +193,6 @@ export function TaskItem({
   };
 
   const accumulatedTimeFormatted = formatTime(task.totalTimeSpentSeconds);
-  console.log('TASK:', task);
 
   const estimatedTimeFormatted = formatTime(task.estimatedTimeSeconds);
 

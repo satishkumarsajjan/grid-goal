@@ -54,9 +54,10 @@ export function CategoryForm({ initialData, onFinished }: CategoryFormProps) {
 
   const mutation = useMutation({
     mutationFn: upsertCategory,
-    onSuccess: () => {
+    onSuccess: (data) => {
       const action = initialData ? 'updated' : 'created';
       toast.success(`Category ${action}!`);
+      console.log('UPSERT CAT:', data);
 
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['goals'] });

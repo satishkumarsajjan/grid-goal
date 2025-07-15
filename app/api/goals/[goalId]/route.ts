@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
 import { AwardService } from '@/lib/services/award.service';
+import { z } from 'zod';
 
 export async function GET(
   request: Request,
@@ -88,6 +89,17 @@ export async function GET(
   }
 }
 
+const updateGoalSchema = z
+  .object({
+    title: z.string().min(1).max(100).optional(),
+    description: z.string().max(500).optional().nullable(),
+    status: z.enum(['ACTIVE', 'PAUSED', 'ARCHIVED']).optional(),
+    deadline: z.coerce.date().optional().nullable(),
+    color: z.string().startsWith('#').length(7).optional().nullable(),
+    categoryId: z.string().optional().nullable(),
+  })
+  .strict();
+
 export async function PATCH(
   request: Request,
   { params }: { params: { goalId: string } }
@@ -101,47 +113,41 @@ export async function PATCH(
     }
     const userId = session.user.id;
     const { goalId } = params;
+
     const body = await request.json();
-    const { title, description, status, deadline, color, categoryId } = body;
+    const validation = updateGoalSchema.safeParse(body);
+
+    if (!validation.success) {
+      return new NextResponse(
+        JSON.stringify({ error: validation.error.format() }),
+        { status: 400 }
+      );
+    }
+
+    const dataToUpdate = validation.data;
+
     const goalToUpdate = await prisma.goal.findFirst({
       where: { id: goalId, userId },
     });
     if (!goalToUpdate) {
-      return new NextResponse(JSON.stringify({ error: 'Goal not found' }), {
-        status: 404,
-      });
+      return new NextResponse(
+        JSON.stringify({ error: 'Goal not found or permission denied' }),
+        { status: 404 }
+      );
     }
-    const dataToUpdate: any = {};
-    if (title !== undefined) dataToUpdate.title = title;
-    if (description !== undefined) dataToUpdate.description = description;
-    if (status !== undefined) dataToUpdate.status = status;
-    if (deadline !== undefined) dataToUpdate.deadline = deadline;
-    if (color !== undefined) dataToUpdate.color = color;
-    if (categoryId !== undefined)
-      dataToUpdate.categoryId =
-        categoryId === '__UNCATEGORIZED__' ? null : categoryId;
-    if (
-      categoryId &&
-      !categoryId.startsWith('cat_') &&
-      categoryId !== '__UNCATEGORIZED__'
-    ) {
-      const newCategory = await prisma.category.upsert({
-        where: { userId_name: { userId, name: categoryId } },
-        create: { userId, name: categoryId },
-        update: {},
-      });
-      dataToUpdate.categoryId = newCategory.id;
-    }
+
     const updatedGoal = await prisma.goal.update({
       where: { id: goalId },
       data: dataToUpdate,
       include: { category: true },
     });
+
     try {
       await AwardService.processAwards(userId, 'GOAL_UPDATED', updatedGoal);
     } catch (awardError) {
       console.error('Failed to process goal-update awards:', awardError);
     }
+
     return NextResponse.json(updatedGoal);
   } catch (error) {
     console.error('[API:UPDATE_GOAL]', error);

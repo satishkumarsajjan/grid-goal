@@ -19,6 +19,8 @@ type GoalWithCategory = Goal & { category: Category | null };
 
 const fetchCategories = async (): Promise<Category[]> => {
   const { data } = await axios.get('/api/categories');
+  console.log('FETCH CAT:', data);
+
   return data;
 };
 
@@ -30,6 +32,8 @@ const updateGoalCategory = async ({
   categoryId: string | null;
 }) => {
   const { data } = await axios.patch(`/api/goals/${goalId}`, { categoryId });
+  console.log('UPDATE GOAL CAT:', data);
+
   return data;
 };
 
@@ -71,6 +75,8 @@ export function GoalCategorySelector({
 
     const finalId =
       newCategoryId === '__UNCATEGORIZED__' ? null : newCategoryId;
+    console.log('FINALID:', finalId);
+
     mutation.mutate({ goalId: goal.id, categoryId: finalId });
   };
 
