@@ -1,7 +1,7 @@
 'use client';
 
 import { Category } from '@prisma/client';
-import { Loader2 } from 'lucide-react';
+import { ChevronRight, Loader2 } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { PaceProgressChart } from '@/components/shared/pace-indicator-chart';
@@ -10,6 +10,12 @@ import { type GoalWithSessions } from '@/lib/types';
 import { InsightTooltip } from '../analytics/InsightTooltip';
 import { GoalCategorySelector } from '../goals/GoalCategorySelector';
 import { TaskStats } from './task-stats';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '../ui/collapsible';
+import { Button } from '../ui/button';
 
 type GoalWithCategoryAndSessions = GoalWithSessions & {
   category: Category | null;
@@ -72,45 +78,54 @@ export function TaskListHeader({
         )}
       </div>
 
-      <div className='flex items-center gap-6'>
+      <div className='flex items-center justify-between gap-6'>
         <TaskStats {...taskStats} />
         <GoalCategorySelector
           goal={goal}
           onOpenCreateCategoryDialog={onOpenCreateCategoryDialog}
         />
       </div>
-
-      {paceData && paceData.length > 0 && (
-        <div className='pt-2'>
-          <div className='flex items-center mb-1 gap-2'>
-            <h3 className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
+      <Collapsible>
+        <div className='flex items-center gap-2'>
+          <CollapsibleTrigger asChild>
+            <Button variant='ghost' size='sm' className='group flex gap-1'>
               Pace Indicator
-            </h3>
-            <InsightTooltip
-              content={
-                <div className='text-wrap'>
-                  {' '}
-                  <p className='font-medium'>
-                    This chart helps you stay on track to meet your deadline.
-                  </p>{' '}
-                  <ul className='mt-2 list-disc list-inside space-y-1 text-xs'>
-                    {' '}
-                    <li>
-                      The <span className='font-semibold'>solid line</span> is
-                      your actual progress.
-                    </li>{' '}
-                    <li>
-                      The <span className='font-semibold'>dashed line</span> is
-                      your target pace.
-                    </li>{' '}
-                  </ul>{' '}
-                </div>
-              }
-            />
-          </div>
-          <PaceProgressChart data={paceData} />
+              <ChevronRight className='h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-90' />
+            </Button>
+          </CollapsibleTrigger>
+          <InsightTooltip
+            content={
+              <div className='text-wrap'>
+                <p className='font-medium'>
+                  This chart helps you stay on track to meet your deadline.
+                </p>
+                <ul className='mt-2 list-disc list-inside space-y-1 text-xs'>
+                  <li>
+                    The <span className='font-semibold'>solid line</span> is
+                    your actual progress.
+                  </li>
+                  <li>
+                    The <span className='font-semibold'>dashed line</span> is
+                    your target pace.
+                  </li>
+                </ul>
+              </div>
+            }
+          />
         </div>
-      )}
+
+        <CollapsibleContent>
+          <div className='pt-4'>
+            {paceData && paceData.length > 0 ? (
+              <PaceProgressChart data={paceData} />
+            ) : (
+              <p className='text-sm text-muted-foreground p-4 text-center'>
+                No pace data available to display.
+              </p>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

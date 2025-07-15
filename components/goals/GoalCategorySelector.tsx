@@ -85,7 +85,7 @@ export function GoalCategorySelector({
   }
 
   return (
-    <div className='flex items-center gap-2 text-sm'>
+    <div className='flex items-start justify-end gap-2 text-sm flex-col md:flex-row md:items-center'>
       <span className='text-muted-foreground'>Category:</span>
       <Select
         value={goal.categoryId || '__UNCATEGORIZED__'}

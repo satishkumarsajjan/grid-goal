@@ -8,14 +8,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { TaskStatus } from '@prisma/client';
+import { ArrowDownUp, Info, ListFilter } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { TaskStatus } from '@prisma/client';
-import { ArrowDownUp, Info, ListFilter } from 'lucide-react'; // Import Info icon
+} from '../ui/tooltip';
 
 export type FilterOption = TaskStatus | 'ALL';
 export type SortOption = 'sortOrder' | 'createdAt' | 'estimatedTimeSeconds';
@@ -38,14 +38,14 @@ export function TaskListControls({
   const isMyOrderDisabled = activeFilter !== 'ALL';
 
   return (
-    <div className='flex items-center justify-between gap-4 px-4 py-2 border-b'>
+    <div className='flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-4 px-4 py-2 border-b'>
       <div className='flex items-center gap-2'>
-        <ListFilter className='h-4 w-4 text-muted-foreground' />
-        <div className='flex items-center gap-1 rounded-md bg-muted p-1'>
+        <ListFilter className='h-4 w-4 text-muted-foreground flex-shrink-0' />
+        <div className='grid grid-cols-2 items-center gap-1 rounded-md bg-muted p-1 flex-1 md:grid-cols-4'>
           <Button
             variant={activeFilter === 'ALL' ? 'secondary' : 'ghost'}
             size='sm'
-            className='h-7 px-3'
+            className='h-7 px-2 text-xs md:px-3 md:text-sm'
             onClick={() => onFilterChange('ALL')}
             disabled={isDisabled}
           >
@@ -56,7 +56,7 @@ export function TaskListControls({
               activeFilter === TaskStatus.PENDING ? 'secondary' : 'ghost'
             }
             size='sm'
-            className='h-7 px-3'
+            className='h-7 px-2 text-xs md:px-3 md:text-sm'
             onClick={() => onFilterChange(TaskStatus.PENDING)}
             disabled={isDisabled}
           >
@@ -67,7 +67,7 @@ export function TaskListControls({
               activeFilter === TaskStatus.IN_PROGRESS ? 'secondary' : 'ghost'
             }
             size='sm'
-            className='h-7 px-3'
+            className='h-7 px-2 text-xs md:px-3 md:text-sm'
             onClick={() => onFilterChange(TaskStatus.IN_PROGRESS)}
             disabled={isDisabled}
           >
@@ -78,13 +78,14 @@ export function TaskListControls({
               activeFilter === TaskStatus.COMPLETED ? 'secondary' : 'ghost'
             }
             size='sm'
-            className='h-7 px-3'
+            className='h-7 px-2 text-xs md:px-3 md:text-sm'
             onClick={() => onFilterChange(TaskStatus.COMPLETED)}
             disabled={isDisabled}
           >
             Completed
           </Button>
         </div>
+
         <TooltipProvider delayDuration={100}>
           <Tooltip>
             <TooltipTrigger onClick={(e) => e.stopPropagation()} asChild>
@@ -108,14 +109,12 @@ export function TaskListControls({
           onValueChange={(value: SortOption) => onSortChange(value)}
           disabled={isDisabled}
         >
-          <SelectTrigger className='w-[180px] h-9'>
+          <SelectTrigger className='w-full sm:w-[180px] h-9'>
             <SelectValue placeholder='Sort by...' />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value='sortOrder' disabled={isMyOrderDisabled}>
-              <div className='flex items-center justify-between w-full'>
-                <span>My Order</span>
-              </div>
+              My Order
             </SelectItem>
             <SelectItem value='createdAt'>Creation Date</SelectItem>
             <SelectItem value='estimatedTimeSeconds'>Time Estimate</SelectItem>
