@@ -34,7 +34,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '../ui/alert-dialog';
-import { DeleteCategoriesButton } from '../goals/DeleteCategoriesButton';
 
 const fetchCategories = async (): Promise<Category[]> => {
   const { data } = await axios.get('/api/categories');
@@ -172,13 +171,10 @@ export function CategoryManagementSection() {
                 Create, edit, and delete your work categories.
               </CardDescription>
             </div>
-            <div className='flex justify-center items-center gap-2'>
-              <DeleteCategoriesButton />
-              <Button onClick={() => handleOpenDialog('create')}>
-                <Plus className='mr-2 h-4 w-4' />
-                New Category
-              </Button>
-            </div>
+            <Button onClick={() => handleOpenDialog('create')}>
+              <Plus className='mr-2 h-4 w-4' />
+              New Category
+            </Button>
           </div>
         </CardHeader>
         <CardContent>{renderContent()}</CardContent>

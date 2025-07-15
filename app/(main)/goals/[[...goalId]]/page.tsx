@@ -56,9 +56,9 @@ export default function GoalsLayoutAndPage({
 
   return (
     <>
-      <div className='h-full bg-card border rounded-lg overflow-hidden flex flex-col'>
+      <div className='h-full border rounded-lg overflow-hidden flex flex-col'>
         {/* --- Mobile-Only Header --- */}
-        <div className='px-4 py-2 flex items-center justify-between border-b lg:hidden'>
+        <div className='px-4 flex items-center justify-between border-b lg:hidden'>
           {/* The Sheet component provides its own trigger button */}
           <MobileSidebar
             activeGoalId={selectedGoalId}

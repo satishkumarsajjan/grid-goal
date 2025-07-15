@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { CalendarIcon, Plus } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -17,8 +18,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from '@/components/ui/card'; // Import Card components
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 import { Skeleton } from '../ui/skeleton';
 import { VacationListItem } from './vacation-list-item';
 
@@ -33,9 +40,7 @@ const pausePeriodSchema = z
     message: "End date can't be before start date.",
     path: ['dateRange'],
   });
-
 type FormValues = z.infer<typeof pausePeriodSchema>;
-
 const fetchPeriods = async (): Promise<PausePeriod[]> =>
   (await axios.get('/api/pause-periods')).data;
 const createPeriod = async (data: { startDate: Date; endDate: Date }) =>
@@ -47,11 +52,9 @@ export function VacationModeSection() {
     queryKey: ['pausePeriods'],
     queryFn: fetchPeriods,
   });
-
   const form = useForm<FormValues>({
     resolver: zodResolver(pausePeriodSchema),
   });
-
   const mutation = useMutation({
     mutationFn: createPeriod,
     onSuccess: () => {
@@ -70,16 +73,17 @@ export function VacationModeSection() {
   }
 
   return (
-    <div className='p-6 border rounded-lg'>
-      <h2 className='text-xl font-semibold'>Vacation Mode</h2>
-      <p className='text-muted-foreground mt-1'>
-        Schedule planned breaks to pause your streak counter. No progress will
-        be lost.
-      </p>
-
-      <div className='mt-6 grid gap-8 md:grid-cols-2'>
+    <Card>
+      <CardHeader>
+        <CardTitle>Vacation Mode</CardTitle>
+        <CardDescription>
+          Schedule planned breaks to pause your streak counter. No progress will
+          be lost.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className='space-y-6'>
         <div>
-          <h3 className='font-semibold mb-4'>Schedule a New Break</h3>
+          <h3 className='font-semibold mb-4 text-sm'>Schedule a New Break</h3>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
               <FormField
@@ -131,26 +135,26 @@ export function VacationModeSection() {
             </form>
           </Form>
         </div>
-      </div>
-      <div>
-        <h3 className='font-semibold my-4'>Scheduled Breaks</h3>
-        <div className='space-y-2'>
-          {isLoading && (
-            <>
-              <Skeleton className='h-10 w-full' />
-              <Skeleton className='h-10 w-full' />
-            </>
-          )}
-          {periods?.length === 0 && (
-            <p className='text-sm text-muted-foreground'>
-              No breaks scheduled.
-            </p>
-          )}
-          {periods?.map((period) => (
-            <VacationListItem key={period.id} period={period} />
-          ))}
+        <div>
+          <h3 className='font-semibold mb-4 text-sm'>Scheduled Breaks</h3>
+          <div className='space-y-2'>
+            {isLoading && (
+              <>
+                <Skeleton className='h-10 w-full' />
+                <Skeleton className='h-10 w-full' />
+              </>
+            )}
+            {periods?.length === 0 && (
+              <p className='text-sm text-muted-foreground'>
+                No breaks scheduled.
+              </p>
+            )}
+            {periods?.map((period) => (
+              <VacationListItem key={period.id} period={period} />
+            ))}
+          </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
