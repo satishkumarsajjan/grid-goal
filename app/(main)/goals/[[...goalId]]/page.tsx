@@ -1,25 +1,24 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
 import { Goal } from '@prisma/client';
+import { usePathname } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 
-import { GoalTree } from '@/components/goals/goal-tree';
 import { CreateGoalButton } from '@/components/goals/create-goal-button';
+import { GoalForm } from '@/components/goals/create-goal-form';
+import { GoalTree } from '@/components/goals/goal-tree';
 import { TaskList } from '@/components/tasks/task-list';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, Menu } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { DeleteCategoriesButton } from '@/components/goals/DeleteCategoriesButton';
-import { GoalForm } from '@/components/goals/create-goal-form';
-// NEW: Import the CreateCategoryForm
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { LayoutGrid, Menu } from 'lucide-react';
+
 import { CategoryForm } from '@/components/goals/CategoryForm';
 
 export interface GoalDialogOptions {
@@ -40,7 +39,6 @@ export default function GoalsLayoutAndPage({
   );
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // NEW: State to control the separate "Create Category" dialog
   const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
 
   const pathname = usePathname();
@@ -112,8 +110,6 @@ export default function GoalsLayoutAndPage({
           <main className='flex-1 border-l'>
             {selectedGoalId ? (
               <Suspense fallback={<TaskListSkeleton />}>
-                {/* --- THIS IS THE FIX --- */}
-                {/* Pass the required function down to the TaskList component */}
                 <TaskList
                   goalId={selectedGoalId}
                   onOpenCreateCategoryDialog={() =>

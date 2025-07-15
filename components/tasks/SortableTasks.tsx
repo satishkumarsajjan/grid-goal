@@ -15,6 +15,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CheckCircle2, ListX } from 'lucide-react';
 import { TaskItem } from './task-item';
+import { ScrollArea } from '@/components/ui/scroll-area'; // 1. Import the ScrollArea component
 
 interface SortableTasksProps {
   tasks: TaskWithTime[];
@@ -36,6 +37,8 @@ export function SortableTasks({
   );
 
   const renderEmptyState = () => {
+    // The empty state does not need to be in the scroll area,
+    // so it's rendered directly if there are no tasks.
     if (totalTaskCount === 0) {
       return (
         <div className='text-center text-muted-foreground p-10 flex flex-col items-center gap-4'>
@@ -47,7 +50,7 @@ export function SortableTasks({
         </div>
       );
     }
-
+    // This is the "No matching tasks" state, which should be inside the scroll area.
     return (
       <div className='text-center text-muted-foreground p-10 flex flex-col items-center gap-4'>
         <ListX className='h-12 w-12 text-muted-foreground/50' />
@@ -61,8 +64,15 @@ export function SortableTasks({
     );
   };
 
+  // A small optimization: if there are no tasks at all, don't even render the DndContext or ScrollArea.
+  if (totalTaskCount === 0) {
+    return renderEmptyState();
+  }
+
   return (
-    <div className='flex-1 overflow-y-auto overflow-x-clip p-2'>
+    // 2. Wrap the DndContext with the ScrollArea component
+    // The `h-full` class makes it fill the parent container, which should be a flex item.
+    <ScrollArea className='h-full p-2'>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -83,10 +93,11 @@ export function SortableTasks({
                     isDragDisabled={isDisabled}
                   />
                 ))
-              : renderEmptyState()}
+              : // Render the "No Matching Tasks" state when filters clear the list
+                renderEmptyState()}
           </SortableContext>
         </ul>
       </DndContext>
-    </div>
+    </ScrollArea>
   );
 }

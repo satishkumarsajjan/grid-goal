@@ -12,6 +12,7 @@ import {
 import { signOutAction } from '@/lib/auth/actions';
 import { LogOut } from 'lucide-react';
 import { type User } from 'next-auth';
+import ThemeSwitch from '../landing-page/theme-switch';
 
 interface UserButtonProps {
   user: User;
@@ -37,6 +38,7 @@ export function UserButton({ user }: UserButtonProps) {
           <span className='truncate'>{user.name ?? 'User'}</span>
         </button>
       </DropdownMenuTrigger>
+
       <DropdownMenuContent className='w-56' align='end' forceMount>
         <DropdownMenuLabel className='font-normal'>
           <div className='flex flex-col space-y-1'>
@@ -49,6 +51,9 @@ export function UserButton({ user }: UserButtonProps) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <ThemeSwitch />
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <form action={signOutAction} className='w-full'>
             <button type='submit' className='flex w-full items-center'>
