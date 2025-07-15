@@ -8,14 +8,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { TaskStatus } from '@prisma/client';
-import { ArrowDownUp, Info, ListFilter } from 'lucide-react';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../ui/tooltip';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { TaskStatus } from '@prisma/client';
+import { ArrowDownUp, ListFilter, Plus } from 'lucide-react';
 
 export type FilterOption = TaskStatus | 'ALL';
 export type SortOption = 'sortOrder' | 'createdAt' | 'estimatedTimeSeconds';
@@ -26,7 +27,15 @@ interface TaskListControlsProps {
   activeSort: SortOption;
   onSortChange: (sort: SortOption) => void;
   isDisabled: boolean;
+  onOpenCreateTaskDialog: () => void;
 }
+
+const filterOptions: { label: string; value: FilterOption }[] = [
+  { label: 'All', value: 'ALL' },
+  { label: 'Pending', value: 'PENDING' },
+  { label: 'In Progress', value: 'IN_PROGRESS' },
+  { label: 'Completed', value: 'COMPLETED' },
+];
 
 export function TaskListControls({
   activeFilter,
@@ -34,83 +43,74 @@ export function TaskListControls({
   activeSort,
   onSortChange,
   isDisabled,
+  onOpenCreateTaskDialog,
 }: TaskListControlsProps) {
   const isMyOrderDisabled = activeFilter !== 'ALL';
+  const activeFilterLabel = filterOptions.find(
+    (f) => f.value === activeFilter
+  )?.label;
 
   return (
-    <div className='flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-4 px-4 py-2 border-b'>
+    <div className='flex items-center justify-between gap-2 px-4 py-2 border-b'>
+      {/* Filter Controls: Dropdown on mobile, segmented control on desktop */}
       <div className='flex items-center gap-2'>
-        <ListFilter className='h-4 w-4 text-muted-foreground flex-shrink-0' />
-        <div className='grid grid-cols-2 items-center gap-1 rounded-md bg-muted p-1 flex-1 md:grid-cols-4'>
-          <Button
-            variant={activeFilter === 'ALL' ? 'secondary' : 'ghost'}
-            size='sm'
-            className='h-7 px-2 text-xs md:px-3 md:text-sm'
-            onClick={() => onFilterChange('ALL')}
-            disabled={isDisabled}
-          >
-            All
-          </Button>
-          <Button
-            variant={
-              activeFilter === TaskStatus.PENDING ? 'secondary' : 'ghost'
-            }
-            size='sm'
-            className='h-7 px-2 text-xs md:px-3 md:text-sm'
-            onClick={() => onFilterChange(TaskStatus.PENDING)}
-            disabled={isDisabled}
-          >
-            Pending
-          </Button>
-          <Button
-            variant={
-              activeFilter === TaskStatus.IN_PROGRESS ? 'secondary' : 'ghost'
-            }
-            size='sm'
-            className='h-7 px-2 text-xs md:px-3 md:text-sm'
-            onClick={() => onFilterChange(TaskStatus.IN_PROGRESS)}
-            disabled={isDisabled}
-          >
-            In Progress
-          </Button>
-          <Button
-            variant={
-              activeFilter === TaskStatus.COMPLETED ? 'secondary' : 'ghost'
-            }
-            size='sm'
-            className='h-7 px-2 text-xs md:px-3 md:text-sm'
-            onClick={() => onFilterChange(TaskStatus.COMPLETED)}
-            disabled={isDisabled}
-          >
-            Completed
-          </Button>
+        {/* Mobile Filter Dropdown */}
+        <div className='md:hidden'>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant='outline'
+                size='sm'
+                className='h-9 flex items-center gap-2'
+              >
+                <ListFilter className='h-4 w-4' />
+                <span>{activeFilterLabel}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='start'>
+              <DropdownMenuRadioGroup
+                value={activeFilter}
+                onValueChange={(value) => onFilterChange(value as FilterOption)}
+              >
+                {filterOptions.map((opt) => (
+                  <DropdownMenuRadioItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        <TooltipProvider delayDuration={100}>
-          <Tooltip>
-            <TooltipTrigger onClick={(e) => e.stopPropagation()} asChild>
-              <Info className='h-4 w-4 text-muted-foreground/70 ml-2' />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className='text-wrap'>
-                Select <span className='font-bold'>All</span> filter and select
-                <span className='font-bold'>My order</span> in drop down to
-                revert back to default.
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {/* Desktop Segmented Control */}
+        <div className='hidden md:flex items-center gap-1 rounded-md bg-muted p-1'>
+          {filterOptions.map((opt) => (
+            <Button
+              key={opt.value}
+              variant={activeFilter === opt.value ? 'secondary' : 'ghost'}
+              size='sm'
+              className='h-7 px-3 text-sm'
+              onClick={() => onFilterChange(opt.value)}
+              disabled={isDisabled}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
       </div>
 
+      {/* Sort and Add Task Buttons */}
       <div className='flex items-center gap-2'>
-        <ArrowDownUp className='h-4 w-4 text-muted-foreground' />
         <Select
           value={activeSort}
           onValueChange={(value: SortOption) => onSortChange(value)}
           disabled={isDisabled}
         >
-          <SelectTrigger className='w-full sm:w-[180px] h-9'>
-            <SelectValue placeholder='Sort by...' />
+          <SelectTrigger className='w-[140px] h-9 text-xs sm:text-sm sm:w-[160px]'>
+            <div className='flex items-center gap-2'>
+              <ArrowDownUp className='h-4 w-4' />
+              <SelectValue placeholder='Sort by...' />
+            </div>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value='sortOrder' disabled={isMyOrderDisabled}>
@@ -120,6 +120,10 @@ export function TaskListControls({
             <SelectItem value='estimatedTimeSeconds'>Time Estimate</SelectItem>
           </SelectContent>
         </Select>
+        <Button onClick={onOpenCreateTaskDialog} size='sm' className='h-9'>
+          <Plus className='h-4 w-4 sm:mr-2' />
+          <span className='hidden sm:inline'>Add Task</span>
+        </Button>
       </div>
     </div>
   );
