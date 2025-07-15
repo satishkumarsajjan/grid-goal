@@ -63,7 +63,7 @@ export function SortableTasks({
       </div>
     );
   };
-
+  
   // A small optimization: if there are no tasks at all, don't even render the DndContext or ScrollArea.
   if (totalTaskCount === 0) {
     return renderEmptyState();
@@ -93,8 +93,8 @@ export function SortableTasks({
                     isDragDisabled={isDisabled}
                   />
                 ))
-              : // Render the "No Matching Tasks" state when filters clear the list
-                renderEmptyState()}
+              // Render the "No Matching Tasks" state when filters clear the list
+              : renderEmptyState()} 
           </SortableContext>
         </ul>
       </DndContext>
