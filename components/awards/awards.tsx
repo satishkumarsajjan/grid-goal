@@ -85,7 +85,7 @@ export function AwardsPage() {
   };
 
   return (
-    <div className='container mx-auto px-6 py-12 md:py-24'>
+    <div className='container mx-auto px-6 py-12 md:py-24' id='awards'>
       <div className='text-center mb-16 max-w-3xl mx-auto'>
         <h2 className='text-4xl md:text-5xl font-bold tracking-tighter'>
           A Trophy Case for Your Journey

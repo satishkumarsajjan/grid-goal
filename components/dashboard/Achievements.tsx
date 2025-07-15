@@ -95,7 +95,7 @@ export function Achievements() {
       <CardContent className='flex-grow'>{renderContent()}</CardContent>
       <div className='p-4 border-t'>
         <Button variant='secondary' className='w-full' asChild>
-          <Link href='/awards'>
+          <Link href='/settings/#awards'>
             View All Achievements <ArrowRight className='ml-2 h-4 w-4' />
           </Link>
         </Button>
