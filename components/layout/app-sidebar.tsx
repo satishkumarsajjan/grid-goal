@@ -1,9 +1,9 @@
 'use client';
 
+import { Settings } from 'lucide-react';
 import { type User } from 'next-auth';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Settings } from 'lucide-react';
 
 import {
   Sidebar,
@@ -11,8 +11,8 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import {
   Tooltip,
@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/tooltip';
 import { mainNav } from '@/lib/config/nav-menu';
 import GridGoalLogo from '../landing-page/grid-goal-logo';
-import ThemeSwitch from '../landing-page/theme-switch';
 import { UserButton } from './user-button';
 
 interface AppSidebarProps {
@@ -79,7 +78,11 @@ export function AppSidebar({ user }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar aria-label='Main navigation'>
+    <Sidebar
+      aria-label='Main navigation'
+      variant='floating'
+      collapsible='offcanvas'
+    >
       <SidebarHeader className='p-4'>
         <GridGoalLogo />
       </SidebarHeader>

@@ -1,14 +1,11 @@
 'use client';
 
 import { Goal } from '@prisma/client';
-import { usePathname } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useState } from 'react';
 
-import { CreateGoalButton } from '@/components/goals/create-goal-button';
-import { GoalForm } from '@/components/goals/create-goal-form';
-import { GoalTree } from '@/components/goals/goal-tree';
+import { CategoryForm } from '@/components/goals/CategoryForm';
+import { GoalForm } from '@/components/goals/create-goal-form'; // Corrected import path
 import { TaskList } from '@/components/tasks/task-list';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -16,10 +13,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
-import { LayoutGrid, Menu } from 'lucide-react';
+import { LayoutGrid } from 'lucide-react';
 
-import { CategoryForm } from '@/components/goals/CategoryForm';
+// NEW: Import the new sidebar components
+import { DesktopSidebar } from '@/components/layout/DesktopSidebar';
+import { MobileSidebar } from '@/components/layout/MobileSidebar';
 
 export interface GoalDialogOptions {
   open: boolean;
@@ -34,79 +32,53 @@ export default function GoalsLayoutAndPage({
   params: { goalId?: string[] };
 }) {
   const selectedGoalId = params.goalId?.[0] ?? null;
+
   const [goalDialogOptions, setGoalDialogOptions] = useState<GoalDialogOptions>(
-    { open: false, mode: 'create', parentId: null, initialData: null }
+    {
+      open: false,
+      mode: 'create',
+      parentId: null,
+      initialData: null,
+    }
   );
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
 
-  const pathname = usePathname();
-
-  useEffect(() => {
-    setIsSidebarOpen(false);
-  }, [pathname]);
+  // Helper to open the "Create Goal" dialog in its default state
+  const handleOpenCreateGoalDialog = () => {
+    setGoalDialogOptions({
+      open: true,
+      mode: 'create',
+      parentId: null,
+      initialData: null,
+    });
+  };
 
   return (
     <>
       <div className='h-full bg-card border rounded-lg overflow-hidden flex flex-col'>
-        <div className='px-4 py-2 flex items-center justify-between border-b md:hidden'>
-          <Button
-            variant='ghost'
-            size='icon'
-            onClick={() => setIsSidebarOpen(true)}
-          >
-            <Menu className='h-5 w-5' />
-            <span className='sr-only'>Open Goals Menu</span>
-          </Button>
-          <h2 className='text-lg font-semibold'>Goals</h2>
-          <CreateGoalButton
-            onClick={() => setGoalDialogOptions({ open: true, mode: 'create' })}
+        {/* --- Mobile-Only Header --- */}
+        <div className='px-4 py-2 flex items-center justify-between border-b lg:hidden'>
+          {/* The Sheet component provides its own trigger button */}
+          <MobileSidebar
+            activeGoalId={selectedGoalId}
+            openGoalDialog={setGoalDialogOptions}
+            onOpenCreateGoal={handleOpenCreateGoalDialog}
           />
+          <h2 className='text-lg font-semibold'>Goals</h2>
+          {/* The create button is now inside the sheet, so we can have a placeholder or other icon here */}
+          <div className='w-8 h-8'></div>
         </div>
+
         <div className='flex flex-1 overflow-hidden'>
-          <aside
-            className={cn(
-              'fixed inset-y-0 left-0 z-30 h-full w-full max-w-sm flex-col bg-muted/95 backdrop-blur-sm transition-transform duration-300 ease-in-out md:static md:w-1/3 md:max-w-sm md:flex md:translate-x-0 md:bg-muted/50 md:backdrop-blur-none',
-              isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-            )}
-          >
-            <div className='px-4 py-3 flex items-center justify-between border-b'>
-              <h2 className='text-lg font-semibold'>All Goals</h2>
-              <div className='flex items-center gap-2'>
-                <div className='hidden md:block'>
-                  <CreateGoalButton
-                    onClick={() =>
-                      setGoalDialogOptions({ open: true, mode: 'create' })
-                    }
-                  />
-                </div>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  className='md:hidden'
-                  onClick={() => setIsSidebarOpen(false)}
-                >
-                  <Menu className='h-5 w-5' />
-                  <span className='sr-only'>Close Menu</span>
-                </Button>
-              </div>
-            </div>
-            <div className='flex-1 overflow-y-auto p-2'>
-              <Suspense fallback={<GoalNavigatorSkeleton />}>
-                <GoalTree
-                  activeGoalId={selectedGoalId}
-                  openGoalDialog={setGoalDialogOptions}
-                />
-              </Suspense>
-            </div>
-          </aside>
-          {isSidebarOpen && (
-            <div
-              className='fixed inset-0 z-20 bg-black/20 md:hidden'
-              onClick={() => setIsSidebarOpen(false)}
-            />
-          )}
+          {/* --- Desktop Sidebar --- */}
+          <DesktopSidebar
+            activeGoalId={selectedGoalId}
+            openGoalDialog={setGoalDialogOptions}
+            onOpenCreateGoal={handleOpenCreateGoalDialog}
+          />
+
+          {/* --- Main content area --- */}
           <main className='flex-1 border-l'>
             {selectedGoalId ? (
               <Suspense fallback={<TaskListSkeleton />}>
@@ -124,15 +96,13 @@ export default function GoalsLayoutAndPage({
         </div>
       </div>
 
-      {/* This dialog is for creating/editing GOALS */}
+      {/* --- Dialogs --- */}
       <GoalDialog
         options={goalDialogOptions}
         onOpenChange={(open) =>
           setGoalDialogOptions({ ...goalDialogOptions, open })
         }
       />
-
-      {/* NEW: This dialog is for creating CATEGORIES */}
       <Dialog
         open={isCreateCategoryOpen}
         onOpenChange={setIsCreateCategoryOpen}
@@ -192,31 +162,6 @@ function WelcomePlaceholder() {
         Select a goal from the left to view its tasks, or create a new one to
         get started.{' '}
       </p>{' '}
-    </div>
-  );
-}
-function GoalNavigatorSkeleton() {
-  return (
-    <div className='space-y-3 p-2'>
-      {' '}
-      {[...Array(8)].map((_, i) => (
-        <div
-          key={i}
-          className={cn(
-            'flex items-center gap-3 p-1',
-            i > 1 && i < 5 && 'ml-6',
-            i === 4 && '!ml-12'
-          )}
-        >
-          {' '}
-          <Skeleton className='h-5 w-5 rounded-md' />{' '}
-          <div className='flex-1 space-y-1.5'>
-            {' '}
-            <Skeleton className='h-4 w-3/4' />{' '}
-            <Skeleton className='h-2 w-1/2' />{' '}
-          </div>{' '}
-        </div>
-      ))}{' '}
     </div>
   );
 }
