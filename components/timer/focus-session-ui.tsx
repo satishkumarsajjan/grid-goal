@@ -95,7 +95,7 @@ export function FocusSessionUI() {
         }}
       >
         {!isActive && (
-          <div className='absolute inset-0 bg-black/10 dark:bg-black/30 flex items-center justify-center backdrop-blur-sm'>
+          <div className='z-30 absolute inset-0 bg-black/10 dark:bg-black/30 flex items-center justify-center backdrop-blur-sm'>
             <span className='text-white text-2xl font-bold tracking-widest uppercase bg-black/50 px-4 py-2 rounded-lg'>
               Paused
             </span>
@@ -117,7 +117,7 @@ export function FocusSessionUI() {
           intervalDurationMs={currentIntervalDuration}
         />
 
-        <div className='absolute bottom-16 w-full flex justify-center'>
+        <div className='absolute bottom-16 w-full flex justify-center z-40'>
           <ZenModeFader>
             <SessionControls onFinish={handleFinishSession} />
           </ZenModeFader>

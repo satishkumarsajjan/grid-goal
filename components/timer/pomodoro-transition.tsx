@@ -64,8 +64,8 @@ export function PomodoroTransition({
       animate={{ opacity: 1, scale: 1 }}
       className='fixed inset-0 bg-background z-50 flex flex-col items-center justify-center text-center p-8'
     >
-      <div className='mb-8'>
-        {icon}
+      <div className='mb-8 flex flex-col items-center justify-center'>
+        <span>{icon}</span>
         <h1 className='text-4xl font-bold tracking-tight'>{title}</h1>
         <p className='text-xl text-muted-foreground mt-2'>{subtitle}</p>
       </div>
