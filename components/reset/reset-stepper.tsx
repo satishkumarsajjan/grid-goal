@@ -8,82 +8,95 @@ interface ResetStepperProps {
   currentStepId: string;
 }
 
+// A single Step component for clarity
+function Step({
+  stepName,
+  isCompleted,
+  isCurrent,
+}: {
+  stepName: string;
+  isCompleted: boolean;
+  isCurrent: boolean;
+}) {
+  return (
+    <div className='relative flex flex-col items-center justify-center'>
+      {/* Circle Indicator */}
+      <div
+        className={cn(
+          'flex size-8 items-center justify-center rounded-full border-2 font-semibold transition-all duration-300',
+          isCompleted
+            ? 'border-primary bg-primary text-primary-foreground'
+            : '',
+          isCurrent ? 'border-primary bg-background text-primary' : '',
+          !isCompleted && !isCurrent
+            ? 'border-border bg-background text-muted-foreground'
+            : ''
+        )}
+        aria-current={isCurrent ? 'step' : undefined}
+      >
+        {isCompleted ? (
+          <Check className='size-5' />
+        ) : (
+          <span
+            className={cn(
+              'flex size-2 rounded-full',
+              isCurrent ? 'bg-primary' : 'bg-border'
+            )}
+          />
+        )}
+      </div>
+
+      {/* Label */}
+      <p
+        className={cn(
+          'mt-2 text-center text-xs font-medium transition-colors',
+          isCurrent ? 'text-primary' : 'text-muted-foreground'
+        )}
+      >
+        {stepName}
+      </p>
+    </div>
+  );
+}
+
 export function ResetStepper({ steps, currentStepId }: ResetStepperProps) {
   const currentStepIndex = steps.findIndex((step) => step.id === currentStepId);
 
   return (
     <nav aria-label='Progress'>
-      <ol role='list' className='flex items-center'>
-        {steps.map((step, stepIdx) => (
-          <li
-            key={step.name}
-            className={cn(
-              'relative',
-
-              stepIdx !== steps.length - 1 ? 'flex-1' : ''
-            )}
-          >
-            <div
-              className='absolute left-4 top-1/2 -ml-px mt-0.5 h-0.5 w-full transition-colors duration-300'
-              aria-hidden='true'
-              style={{
-                backgroundColor:
-                  stepIdx <= currentStepIndex
-                    ? 'hsl(var(--primary))'
-                    : 'hsl(var(--border))',
-              }}
-            />
-
-            <div className='relative flex items-center justify-start'>
-              <div
-                className={cn(
-                  'relative flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300',
-                  stepIdx < currentStepIndex
-                    ? 'bg-primary cursor-pointer hover:bg-primary/90'
-                    : '',
-                  stepIdx === currentStepIndex
-                    ? 'border-2 border-primary bg-background'
-                    : '',
-                  stepIdx > currentStepIndex
-                    ? 'border-2 border-border bg-background'
-                    : ''
-                )}
-                aria-current={stepIdx === currentStepIndex ? 'step' : undefined}
-              >
-                {stepIdx < currentStepIndex ? (
-                  <Check className='h-5 w-5 text-primary-foreground' />
-                ) : (
-                  <span
-                    className={cn(
-                      'h-2.5 w-2.5 rounded-full transition-colors duration-300',
-                      stepIdx === currentStepIndex ? 'bg-primary' : 'bg-border'
-                    )}
-                  />
-                )}
-              </div>
-
-              <span
-                className={cn(
-                  'ml-4 text-sm font-medium',
-                  stepIdx <= currentStepIndex
-                    ? 'text-primary'
-                    : 'text-muted-foreground'
-                )}
-              >
-                {step.name}
-              </span>
-
+      <div className='relative'>
+        {/* The step indicators rendered on top */}
+        <ol
+          role='list'
+          className='relative grid'
+          style={{ gridTemplateColumns: `repeat(${steps.length}, 1fr)` }}
+        >
+          {steps.map((step, stepIdx) => (
+            <li
+              key={step.name}
+              className={cn(
+                'flex justify-start items-start',
+                stepIdx === 1 && 'justify-center',
+                stepIdx === 2 && 'justify-end'
+              )}
+            >
+              <Step
+                stepName={step.name}
+                isCompleted={stepIdx < currentStepIndex}
+                isCurrent={stepIdx === currentStepIndex}
+              />
+              {/* Screen-reader only text */}
               <span className='sr-only'>
                 {stepIdx < currentStepIndex
-                  ? `${step.name} - Completed`
+                  ? `${step.name} (Completed)`
                   : stepIdx === currentStepIndex
-                  ? `${step.name} - Current`
-                  : `${step.name} - Upcoming`}
+                  ? `${step.name} (Current)`
+                  : `${step.name} (Upcoming)`}
               </span>
-            </div>
-          </li>
-        ))}
-      </ol>
+            </li>
+          ))}
+        </ol>
+      </div>
     </nav>
   );
 }

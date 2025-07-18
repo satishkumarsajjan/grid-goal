@@ -149,7 +149,7 @@ export function useTimerEngine() {
     activeTask,
     sequenceId,
     pomodoroSettings,
-    notificationSettings, // NEW: Add notificationSettings to dependency array
+    notificationSettings,
     setTimerState,
     addTimeToTotal,
     logCycleMutation,

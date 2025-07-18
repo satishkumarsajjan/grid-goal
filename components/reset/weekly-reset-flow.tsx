@@ -133,7 +133,8 @@ export function WeeklyResetFlow() {
           <div className='p-6 border-b flex flex-col items-center gap-6'>
             <h2 className='text-xl font-bold'>Weekly Reset</h2>
             {currentStepId !== 'finished' && (
-              <div className='w-full px-4 sm:px-8'>
+              // This container gives the stepper room to breathe and looks great.
+              <div className='w-full max-w-md px-4 pt-2'>
                 <ResetStepper steps={STEPS} currentStepId={currentStepId} />
               </div>
             )}
