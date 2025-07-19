@@ -1,5 +1,3 @@
-// app/api/daily-queue/route.ts
-
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
@@ -22,16 +20,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 1. Handle the dynamic 'includeGoal' query parameter
     const { searchParams } = new URL(request.url);
     const includeGoal = searchParams.get('includeGoal') === 'true';
 
-    // 2. Build the Prisma 'include' object dynamically and type-safely
     const include: Prisma.DailyQueueItemInclude = {
       task: {
-        // We always include the task
         include: {
-          // But only include the goal if the query param is set
           goal: includeGoal,
         },
       },
@@ -39,7 +33,7 @@ export async function GET(request: Request) {
 
     const queueItems = await prisma.dailyQueueItem.findMany({
       where: { userId: session.user.id },
-      include, // Use the dynamically constructed include object
+      include,
       orderBy: { sortOrder: 'asc' },
     });
 
@@ -79,20 +73,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Use a database transaction to ensure atomicity and prevent race conditions
     const newItem = await prisma.$transaction(async (tx) => {
-      // 4. Validate that the task exists and belongs to the user
       const task = await tx.task.findUnique({
         where: { id: taskId, userId },
       });
 
       if (!task) {
-        // Throwing an error within the transaction will automatically roll it back.
-        // We will catch this specific error type outside the transaction.
         throw new Error('TaskNotFound');
       }
 
-      // Check if the task is already in the queue
       const existingQueueItem = await tx.dailyQueueItem.findFirst({
         where: { userId, taskId },
       });
@@ -101,7 +90,6 @@ export async function POST(request: Request) {
         throw new Error('TaskAlreadyInQueue');
       }
 
-      // Find the current max sortOrder within the transaction for consistency
       const maxSortOrderItem = await tx.dailyQueueItem.findFirst({
         where: { userId },
         orderBy: { sortOrder: 'desc' },
@@ -109,20 +97,18 @@ export async function POST(request: Request) {
 
       const newSortOrder = (maxSortOrderItem?.sortOrder ?? -1) + 1;
 
-      // Create the new item and return it with the full task details included
       return tx.dailyQueueItem.create({
         data: {
           userId,
           taskId,
           sortOrder: newSortOrder,
         },
-        include: { task: true }, // 5. Return the rich object
+        include: { task: true },
       });
     });
 
     return NextResponse.json(newItem, { status: 201 });
   } catch (error) {
-    // 6. Handle specific, known errors with appropriate client responses
     if (error instanceof Error) {
       if (error.message === 'TaskNotFound') {
         return NextResponse.json(
@@ -133,7 +119,7 @@ export async function POST(request: Request) {
       if (error.message === 'TaskAlreadyInQueue') {
         return NextResponse.json(
           { error: 'This task is already in your daily queue.' },
-          { status: 409 } // 409 Conflict is a good status code for this
+          { status: 409 }
         );
       }
     }

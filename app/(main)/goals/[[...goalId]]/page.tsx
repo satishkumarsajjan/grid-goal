@@ -4,8 +4,7 @@ import { Goal } from '@prisma/client';
 import { Suspense, useState } from 'react';
 
 import { CategoryForm } from '@/components/goals/CategoryForm';
-import { GoalForm } from '@/components/goals/create-goal-form'; // Corrected import path
-import { TaskList } from '@/components/tasks/task-list';
+import { GoalForm } from '@/components/goals/create-goal-form';
 import {
   Dialog,
   DialogContent,
@@ -15,10 +14,9 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { LayoutGrid } from 'lucide-react';
 
-// NEW: Import the new sidebar components
+import { GoalContent } from '@/components/goals/GoalContent';
 import { DesktopSidebar } from '@/components/layout/DesktopSidebar';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
-import { GoalContent } from '@/components/goals/GoalContent';
 
 export interface GoalDialogOptions {
   open: boolean;
@@ -45,7 +43,6 @@ export default function GoalsLayoutAndPage({
 
   const [isCreateCategoryOpen, setIsCreateCategoryOpen] = useState(false);
 
-  // Helper to open the "Create Goal" dialog in its default state
   const handleOpenCreateGoalDialog = () => {
     setGoalDialogOptions({
       open: true,
@@ -59,26 +56,23 @@ export default function GoalsLayoutAndPage({
     <>
       <div className='h-full border rounded-lg overflow-hidden flex flex-col'>
         <div className='px-4 flex items-center justify-between border-b lg:hidden'>
-          {/* The Sheet component provides its own trigger button */}
           <MobileSidebar
             activeGoalId={selectedGoalId}
             openGoalDialog={setGoalDialogOptions}
             onOpenCreateGoal={handleOpenCreateGoalDialog}
           />
           <h2 className='text-lg font-semibold'>Goals</h2>
-          {/* The create button is now inside the sheet, so we can have a placeholder or other icon here */}
+
           <div className='w-8 h-8'></div>
         </div>
 
         <div className='flex flex-1 overflow-hidden'>
-          {/* --- Desktop Sidebar --- */}
           <DesktopSidebar
             activeGoalId={selectedGoalId}
             openGoalDialog={setGoalDialogOptions}
             onOpenCreateGoal={handleOpenCreateGoalDialog}
           />
 
-          {/* --- Main content area --- */}
           <main className='flex-1 border-l'>
             {selectedGoalId ? (
               <Suspense fallback={<TaskListSkeleton />}>
@@ -96,7 +90,6 @@ export default function GoalsLayoutAndPage({
         </div>
       </div>
 
-      {/* --- Dialogs --- */}
       <GoalDialog
         options={goalDialogOptions}
         onOpenChange={(open) =>

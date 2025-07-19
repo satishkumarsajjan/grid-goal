@@ -1,14 +1,14 @@
-import { GoogleAnalytics } from '@next/third-parties/google';
-import { Provider } from '@/components/providers/theme-provider';
+import { QueryProvider } from '@/components/providers/query-provider';
 import { AuthProvider } from '@/components/providers/session-provider';
+import { Provider } from '@/components/providers/theme-provider';
+import { Toaster } from '@/components/ui/sonner';
+import { GoogleAnalytics } from '@next/third-parties/google';
+import { Analytics } from '@vercel/analytics/next';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
-import { Analytics } from '@vercel/analytics/next';
-import { QueryProvider } from '@/components/providers/query-provider';
-import { Toaster } from '@/components/ui/sonner';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

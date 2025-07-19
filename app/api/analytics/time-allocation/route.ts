@@ -1,26 +1,25 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-// A generic data shape that can represent a category, goal, etc.
 export type TimeAllocationChartData = {
   chartData: {
     name: string;
     totalSeconds: number;
   }[];
-  // Time spent on tasks not associated with the grouping (e.g., uncategorized goals)
+
   unallocatedSeconds: number;
 };
 
 const querySchema = z.object({
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
-  // The entity to group the time by
+
   by: z.enum(['category', 'goal']),
 });
 
-const MAX_CHART_SLICES = 4; // Show top 4 items, the rest become "Other"
+const MAX_CHART_SLICES = 4;
 
 export async function GET(request: Request) {
   try {
@@ -48,7 +47,6 @@ export async function GET(request: Request) {
     let chartData: { name: string; totalSeconds: number }[] = [];
     let unallocatedSeconds = 0;
 
-    // --- LOGIC TO GET DATA BY CATEGORY ---
     if (by === 'category') {
       const categorizedTime = await prisma.focusSession.groupBy({
         by: ['goalId'],
@@ -93,9 +91,7 @@ export async function GET(request: Request) {
         },
       });
       unallocatedSeconds = uncategorizedTime._sum.durationSeconds || 0;
-    }
-    // --- LOGIC TO GET DATA BY GOAL ---
-    else if (by === 'goal') {
+    } else if (by === 'goal') {
       const timeByGoal = await prisma.focusSession.groupBy({
         by: ['goalId'],
         where: {
@@ -121,11 +117,10 @@ export async function GET(request: Request) {
         name: goalTitleMap[item.goalId] || 'Untitled Goal',
         totalSeconds: item._sum.durationSeconds || 0,
       }));
-      // There's no concept of "unallocated" for goals, so it's 0.
+
       unallocatedSeconds = 0;
     }
 
-    // --- Process into final chart data ("Other" slice logic) ---
     let processedChartData = chartData;
     if (chartData.length > MAX_CHART_SLICES) {
       const topSlices = chartData.slice(0, MAX_CHART_SLICES);

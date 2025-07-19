@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 export type EstimationAccuracyItem = {
@@ -44,10 +44,6 @@ export async function GET(request: Request) {
     const { page, pageSize } = validation.data;
     const offset = (page - 1) * pageSize;
 
-    // --- THIS IS THE FIX ---
-    // The JOINs have been changed to LEFT JOINs.
-    // This ensures that we get all archived goals, and if they are missing an estimate
-    // or actual time, COALESCE will correctly handle it as 0.
     const [data, totalCountResult] = await prisma.$transaction([
       prisma.$queryRaw<EstimationAccuracyItem[]>`
         WITH "EstimatedTimes" AS (
@@ -66,14 +62,11 @@ export async function GET(request: Request) {
         LEFT JOIN "ActualTimes" act ON g.id = act."goalId"
         WHERE
           g."userId" = ${userId} AND g.status = 'ARCHIVED'
-          -- The filtering logic should happen AFTER joining to get a correct total count.
-          -- We will filter in the application or adjust the count query.
-          -- For now, this returns all archived goals.
+          
         ORDER BY g."updatedAt" DESC
         LIMIT ${pageSize} OFFSET ${offset};
       `,
-      // The count query should match the logic of what we consider a "valid" item for the report.
-      // A valid item is an archived goal that has at least SOME estimated time.
+
       prisma.goal.count({
         where: {
           userId,
@@ -83,7 +76,6 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    // Now, filter out the goals that have neither estimated nor actual time, as they are not useful for this report.
     const filteredData = data.filter(
       (item) => item.totalEstimatedSeconds > 0 || item.totalActualSeconds > 0
     );

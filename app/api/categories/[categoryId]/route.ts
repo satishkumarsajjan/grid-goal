@@ -17,7 +17,6 @@ export async function DELETE(
     const userId = session.user.id;
     const { categoryId } = params;
 
-    // Security check: Ensure the category belongs to the user trying to delete it
     const categoryToDelete = await prisma.category.findFirst({
       where: {
         id: categoryId,
@@ -38,7 +37,7 @@ export async function DELETE(
       },
     });
 
-    return new NextResponse(null, { status: 204 }); // 204 No Content
+    return new NextResponse(null, { status: 204 }); 
   } catch (error) {
     console.error('[API:DELETE_CATEGORY]', error);
     return new NextResponse(
@@ -78,7 +77,7 @@ export async function PATCH(
     }
     const { name } = validation.data;
 
-    // Security Check: Ensure the category belongs to the user
+    
     const categoryToUpdate = await prisma.category.findFirst({
       where: { id: categoryId, userId },
     });
@@ -89,12 +88,12 @@ export async function PATCH(
       );
     }
 
-    // Check for duplicate names (excluding the current category itself)
+    
     const existing = await prisma.category.findFirst({
       where: {
         userId,
         name: { equals: name, mode: 'insensitive' },
-        id: { not: categoryId }, // Don't compare the category to itself
+        id: { not: categoryId }, 
       },
     });
     if (existing) {

@@ -1,5 +1,3 @@
-// app/api/goals/route.ts
-
 import { auth } from '@/auth';
 import { GOAL_COLORS } from '@/lib/constants';
 import { AwardService } from '@/lib/services/award.service';
@@ -7,8 +5,6 @@ import { createGoalSchema } from '@/lib/zod-schemas';
 import { prisma } from '@/prisma';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-
-// This Zod schema now includes the optional 'color' field.
 
 export async function GET(request: Request) {
   try {
@@ -69,11 +65,9 @@ export async function POST(request: Request) {
       color,
     } = validation.data;
 
-    let finalColor = color; // Start with the user's provided color, if any.
+    let finalColor = color;
 
-    // Smart Color Assignment Logic
     if (!finalColor) {
-      // 1. Get all colors currently used by this user's active goals
       const existingGoals = await prisma.goal.findMany({
         where: { userId: userId, status: 'ACTIVE' },
         select: { color: true },
@@ -82,7 +76,6 @@ export async function POST(request: Request) {
         .map((goal) => goal.color)
         .filter(Boolean) as string[];
 
-      // 2. Create a frequency map to count how many times each palette color is used
       const colorFrequency = new Map<string, number>();
       GOAL_COLORS.forEach((c) => colorFrequency.set(c, 0));
       usedColors.forEach((used) => {
@@ -91,14 +84,13 @@ export async function POST(request: Request) {
         }
       });
 
-      // 3. Find the least frequently used color
       let leastUsedColor = GOAL_COLORS[0];
       let minFrequency = Infinity;
 
       for (const [paletteColor, frequency] of colorFrequency.entries()) {
         if (frequency === 0) {
           leastUsedColor = paletteColor;
-          break; // Found a completely unused color, this is perfect.
+          break;
         }
         if (frequency < minFrequency) {
           minFrequency = frequency;
@@ -128,7 +120,7 @@ export async function POST(request: Request) {
         parentId,
         deadline,
         deepEstimateTotalSeconds: estimatedTimeSeconds ?? undefined,
-        color: finalColor, // Use the determined color
+        color: finalColor,
       },
     });
     try {

@@ -1,11 +1,10 @@
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
-import { NextResponse } from 'next/server';
-import { SessionVibe, TimerMode } from '@prisma/client'; // Import TimerMode
+import { SessionVibe, TimerMode } from '@prisma/client';
 import { startOfDay } from 'date-fns';
+import { NextResponse } from 'next/server';
 
 export type GoalSummaryData = {
-  // ... (existing fields)
   id: string;
   title: string;
   description: string | null;
@@ -17,7 +16,7 @@ export type GoalSummaryData = {
   totalSessions: number;
   dailyActivity: { date: string; seconds: number }[];
   vibeCounts: Record<SessionVibe, number>;
-  // --- NEW FIELD ---
+
   modeCounts: Record<TimerMode, number>;
 };
 
@@ -64,7 +63,6 @@ export async function GET(
       { FLOW: 0, NEUTRAL: 0, STRUGGLE: 0 }
     );
 
-    // NEW: Calculate counts for each timer mode
     const modeCounts = goal.focusSessions.reduce(
       (acc, s) => {
         acc[s.mode] = (acc[s.mode] || 0) + 1;
@@ -97,7 +95,7 @@ export async function GET(
       totalSessions: goal.focusSessions.length,
       dailyActivity,
       vibeCounts,
-      modeCounts, // Add new data to response
+      modeCounts,
     };
 
     return NextResponse.json(summaryData);

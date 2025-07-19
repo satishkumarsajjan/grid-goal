@@ -89,14 +89,14 @@ export async function DELETE(request: Request) {
     }
     const userId = session.user.id;
 
-    // Use a transaction to ensure both operations succeed or fail together
+    
     const [_, deletedCategories] = await prisma.$transaction([
-      // 1. Un-assign the categoryId from all goals belonging to the user.
+ 
       prisma.goal.updateMany({
         where: { userId: userId },
         data: { categoryId: null },
       }),
-      // 2. Delete all categories belonging to the user.
+     
       prisma.category.deleteMany({
         where: { userId: userId },
       }),

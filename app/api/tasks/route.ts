@@ -1,19 +1,17 @@
-import { NextResponse, type NextRequest } from 'next/server';
 import { auth } from '@/auth';
-import { prisma } from '@/prisma';
-import { z } from 'zod'; // Assuming this comes from your lib
 import { updateGoalTreeEstimates } from '@/lib/goal-estimate-updater';
 import { AwardService } from '@/lib/services/award.service';
+import { prisma } from '@/prisma';
+import { NextResponse, type NextRequest } from 'next/server';
+import { z } from 'zod';
 
-// Define the schema here for clarity or import it from your lib
 const createTaskSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   goalId: z.string().cuid('Invalid Goal ID.'),
-  // We'll expect seconds directly now for consistency with the DB
+
   estimatedTimeSeconds: z.number().int().min(0).optional(),
 });
 
-// --- GET Function (Unchanged, but reformatted for consistency) ---
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -46,7 +44,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// --- POST Function (Completely Re-implemented with Best Practices) ---
 export async function POST(request: Request) {
   try {
     const session = await auth();
@@ -56,7 +53,7 @@ export async function POST(request: Request) {
     const userId = session.user.id;
 
     const body = await request.json();
-    // It validates against the correct API schema.
+
     const validation = createTaskSchema.safeParse(body);
 
     if (!validation.success) {
@@ -66,7 +63,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // It correctly destructures estimatedTimeSeconds.
     const { title, goalId, estimatedTimeSeconds } = validation.data;
 
     const newTask = await prisma.$transaction(async (tx) => {
@@ -87,7 +83,7 @@ export async function POST(request: Request) {
           goalId,
           title,
           sortOrder: newSortOrder,
-          estimatedTimeSeconds, // This will now be populated correctly.
+          estimatedTimeSeconds,
         },
       });
 

@@ -1,8 +1,7 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
+import { NextResponse } from 'next/server';
 
-// The parameter name should match the dynamic segment of your file path, e.g., [queueItemId]
 export async function DELETE(
   request: Request,
   { params }: { params: { queueItemId: string } }

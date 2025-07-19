@@ -1,7 +1,7 @@
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
-import { NextResponse } from 'next/server';
 import { subDays } from 'date-fns';
+import { NextResponse } from 'next/server';
 
 export type ReviewData = {
   completedGoals: { id: string; title: string }[];
@@ -18,15 +18,13 @@ export async function GET() {
     const userId = session.user.id;
     const sevenDaysAgo = subDays(new Date(), 7);
 
-    // Fetch all necessary data in parallel
     const [completedGoals, completedTasks, sessions] = await Promise.all([
-      // 1. Goals completed in the last 7 days
       prisma.goal.findMany({
         where: { userId, status: 'ARCHIVED', updatedAt: { gte: sevenDaysAgo } },
         select: { id: true, title: true },
         orderBy: { updatedAt: 'desc' },
       }),
-      // 2. Tasks completed in the last 7 days
+
       prisma.task.findMany({
         where: {
           userId,
@@ -35,9 +33,9 @@ export async function GET() {
         },
         include: { goal: { select: { title: true } } },
         orderBy: { updatedAt: 'desc' },
-        take: 10, // Limit to 10 most recent tasks to avoid overload
+        take: 10,
       }),
-      // 3. Sessions to calculate time by category
+
       prisma.focusSession.findMany({
         where: {
           userId,
@@ -50,7 +48,6 @@ export async function GET() {
       }),
     ]);
 
-    // Process sessions to aggregate time by category
     const timeByCategoryMap: Record<string, number> = {};
     for (const sess of sessions) {
       if (sess.goal?.category?.name) {

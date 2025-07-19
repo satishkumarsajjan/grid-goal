@@ -5,8 +5,8 @@ import { z } from 'zod';
 import { getDay, getHours, addSeconds } from 'date-fns';
 
 export type PeakTime = {
-  day: number; // 0-6
-  hour: number; // 0-23
+  day: number;
+  hour: number;
 } | null;
 
 export type ProductivityHotspotData = {

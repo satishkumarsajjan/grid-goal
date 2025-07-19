@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { AwardService } from '@/lib/services/award.service';
 import { prisma } from '@/prisma';
+import { PomodoroCycle, TaskStatus, TimerMode } from '@prisma/client';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { PomodoroCycle, TimerMode, TaskStatus } from '@prisma/client';
-import { AwardService } from '@/lib/services/award.service'; // 1. Import the service
 
 const logCycleSchema = z.object({
   startTime: z.string().datetime(),

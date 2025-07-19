@@ -1,11 +1,10 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-// Define the shape of the data returned by our query
 export type WeeklyBalanceData = {
-  dayOfWeek: number; // 0=Sun, 1=Mon, ..., 6=Sat
+  dayOfWeek: number;
   totalSeconds: number;
 };
 
@@ -36,8 +35,6 @@ export async function GET(request: Request) {
     }
     const { startDate, endDate } = validation.data;
 
-    // Use a raw query to extract the day of the week (DOW) and sum durations.
-    // EXTRACT(DOW FROM ...) is the standard SQL way to do this. 0=Sun, 6=Sat.
     const result = await prisma.$queryRaw<WeeklyBalanceData[]>`
       SELECT
         EXTRACT(DOW FROM "startTime")::int as "dayOfWeek",
@@ -51,7 +48,6 @@ export async function GET(request: Request) {
       ORDER BY "dayOfWeek" ASC;
     `;
 
-    // Convert BigInt to Number for JSON compatibility
     const serializedResult = result.map((item) => ({
       ...item,
       totalSeconds: Number(item.totalSeconds),

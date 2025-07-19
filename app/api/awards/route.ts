@@ -12,7 +12,7 @@ export async function GET(request: Request) {
 
     const awards = await prisma.userAward.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' }, // Show most recent first
+      orderBy: { createdAt: 'desc' },
     });
 
     return NextResponse.json(awards);

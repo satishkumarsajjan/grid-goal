@@ -8,7 +8,6 @@ export async function GET() {
   if (!session?.user?.id)
     return new NextResponse('Unauthorized', { status: 401 });
 
-  // Fetch all actionable tasks from active goals
   const actionableTasks = await prisma.task.findMany({
     where: {
       userId: session.user.id,
@@ -21,7 +20,6 @@ export async function GET() {
     },
     include: {
       goal: {
-        // Include the parent goal's title for context
         select: {
           title: true,
         },

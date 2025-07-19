@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 const settingsSchema = z.object({
-  dailyFocusGoalMinutes: z.number().int().min(0).max(1440), // Allow 0 to 24 hours
+  dailyFocusGoalMinutes: z.number().int().min(0).max(1440),
 });
 
 export async function PATCH(request: Request) {

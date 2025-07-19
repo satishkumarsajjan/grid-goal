@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { AwardService } from '@/lib/services/award.service';
 import { prisma } from '@/prisma';
-import { z } from 'zod';
 import {
+  PomodoroCycle,
   SessionVibe,
   TaskStatus,
   TimerMode,
-  PomodoroCycle,
 } from '@prisma/client';
-import { AwardService } from '@/lib/services/award.service'; // 1. Import the service
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
 const createFocusSessionSchema = z.object({
   startTime: z.string().datetime(),
@@ -141,7 +141,6 @@ export async function POST(request: Request) {
       return [createdSession];
     });
 
-    // 2. After the session is saved, process awards
     try {
       await AwardService.processAwards(userId, 'SESSION_SAVED', newSession);
     } catch (awardError) {

@@ -1,6 +1,3 @@
-// This outer component can remain a Server Component.
-// We will wrap the main content in a client component.
-
 import { InsightsPageClient } from '@/components/analytics/InsightsPageClient';
 
 export default function InsightsPage() {

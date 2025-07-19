@@ -1,7 +1,7 @@
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
 import { NextResponse } from 'next/server';
-import { AwardService } from '@/lib/services/award.service'; // 1. Import the service
+import { AwardService } from '@/lib/services/award.service';
 
 export async function POST(request: Request) {
   try {
@@ -31,7 +31,6 @@ export async function POST(request: Request) {
           data: { lastResetAt: new Date() },
         });
 
-        // 2. After the reset is marked as complete, process the relevant awards.
         try {
           await AwardService.processAwards(userId, 'RESET_COMPLETED');
         } catch (awardError) {

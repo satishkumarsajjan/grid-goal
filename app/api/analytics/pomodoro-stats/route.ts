@@ -1,8 +1,7 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { PomodoroCycle } from '@prisma/client';
 
 export type PomodoroStatsData = {
   WORK: number;
@@ -36,7 +35,6 @@ export async function GET(request: Request) {
     }
     const { startDate, endDate } = validation.data;
 
-    // Use Prisma's groupBy for a clean, type-safe aggregation
     const pomodoroCounts = await prisma.focusSession.groupBy({
       by: ['pomodoroCycle'],
       where: {
@@ -52,7 +50,6 @@ export async function GET(request: Request) {
       },
     });
 
-    // Transform the array from groupBy into a simple key-value object
     const result: PomodoroStatsData = {
       WORK: 0,
       SHORT_BREAK: 0,

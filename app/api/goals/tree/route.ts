@@ -12,9 +12,6 @@ export async function GET() {
     }
     const userId = session.user.id;
 
-    // --- NEW, MORE POWERFUL QUERY ---
-    // This query fetches every goal and, for each one, calculates two new fields:
-    // totalTasks and completedTasks. This is highly efficient.
     const goalsWithCounts: any[] = await prisma.$queryRaw`
       WITH RECURSIVE "GoalHierarchy" AS (
         SELECT id, "parentId" FROM "Goal" WHERE "userId" = ${userId}
@@ -39,7 +36,6 @@ export async function GET() {
       ORDER BY g."createdAt" ASC;
     `;
 
-    // Prisma's raw query returns BigInt for counts, so we convert them.
     const processedGoals = goalsWithCounts.map((g) => ({
       ...g,
       totalTasks: Number(g.totalTasks),

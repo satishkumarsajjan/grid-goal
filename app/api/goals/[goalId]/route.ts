@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { prisma } from '@/prisma';
 import { AwardService } from '@/lib/services/award.service';
+import { prisma } from '@/prisma';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 export async function GET(

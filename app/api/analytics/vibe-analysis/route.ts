@@ -1,12 +1,10 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { SessionVibe } from '@prisma/client';
 
-// Generic data shape for the response
 export type VibeAnalysisData = {
-  name: string; // Will be categoryName or goalTitle
+  name: string;
   FLOW: number;
   NEUTRAL: number;
   STRUGGLE: number;
@@ -16,7 +14,7 @@ export type VibeAnalysisData = {
 const querySchema = z.object({
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
-  // The entity to group the vibe data by
+
   by: z.enum(['category', 'goal']),
 });
 
@@ -47,13 +45,12 @@ export async function GET(request: Request) {
 
     let finalData: VibeAnalysisData[] = [];
 
-    // --- LOGIC TO GET DATA BY CATEGORY ---
     if (by === 'category') {
       const sessionsWithVibe = await prisma.focusSession.findMany({
         where: {
           userId,
           vibe: { not: null },
-          goal: { categoryId: { not: null } }, // Only sessions with categorized goals
+          goal: { categoryId: { not: null } },
           startTime: { gte: startDate, lte: endDate },
         },
         select: {
@@ -83,9 +80,7 @@ export async function GET(request: Request) {
         name,
         ...stats,
       }));
-    }
-    // --- LOGIC TO GET DATA BY GOAL ---
-    else if (by === 'goal') {
+    } else if (by === 'goal') {
       const sessionsWithVibe = await prisma.focusSession.findMany({
         where: {
           userId,
@@ -120,12 +115,10 @@ export async function GET(request: Request) {
       }));
     }
 
-    // Sort by total sessions to get the most active items, then slice.
     const sortedData = finalData
       .sort((a, b) => b.totalSessions - a.totalSessions)
       .slice(0, MAX_ITEMS_TO_RETURN);
 
-    // Finally, sort by flow percentage for a nice default view
     sortedData.sort(
       (a, b) => b.FLOW / b.totalSessions - a.FLOW / a.totalSessions
     );

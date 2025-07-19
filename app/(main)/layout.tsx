@@ -1,22 +1,19 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { type User } from 'next-auth';
+import { useSession } from 'next-auth/react';
 
-import { AppSidebar } from '@/components/layout/app-sidebar';
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { FocusSessionUI } from '@/components/timer/focus-session-ui';
 import { CommandPalette } from '@/components/command/command-palette';
+import { AppSidebar } from '@/components/layout/app-sidebar';
 import { WeeklyResetFlow } from '@/components/reset/weekly-reset-flow';
-import { useTimerStore } from '@/store/timer-store';
+import { FocusSessionUI } from '@/components/timer/focus-session-ui';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
-// --- NEW: Import the onboarding components ---
+import { useTimerStore } from '@/store/timer-store';
+
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import { OnboardingTrigger } from '@/components/onboarding/OnboardingTrigger';
 
-/**
- * This is the main layout for the authenticated part of the application.
- */
 export default function MainLayout({
   children,
 }: {
