@@ -83,6 +83,13 @@ export function Header() {
             Features
           </a>
           <a
+            href='#insights'
+            className='nav-link hover:text-primary transition-colors'
+          >
+            Insights
+          </a>
+
+          <a
             href='#awards'
             className='nav-link hover:text-primary transition-colors'
           >

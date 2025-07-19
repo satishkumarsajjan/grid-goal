@@ -1242,7 +1242,7 @@ function StatsOverviewCard() {
 }
 export default function LandingPageAnalytics() {
   return (
-    <div className='p-4 md:p-8 bg-background'>
+    <div className='p-4 md:p-8' id='insights'>
       <div className='max-w-7xl mx-auto space-y-8'>
         <div className='text-center'>
           <h1 className='text-3xl md:text-4xl font-bold tracking-tight'>
