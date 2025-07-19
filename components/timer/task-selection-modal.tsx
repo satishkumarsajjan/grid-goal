@@ -163,7 +163,12 @@ export function TaskSelectionModal({
         )}
       >
         <span className='font-medium text-sm block'>{task.title}</span>
-        <span className='block text-xs text-muted-foreground'>
+        <span
+          className={cn(
+            'block text-xs text-muted-foreground',
+            selectedTaskId === task.id && 'text-muted'
+          )}
+        >
           {task.goal.title}
         </span>
       </button>

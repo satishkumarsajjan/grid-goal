@@ -92,7 +92,7 @@ const fetchVibeAnalysis = async (
 };
 
 export function FlowTriggersChart() {
-  const [viewMode, setViewMode] = useState<ViewMode>('category');
+  const [viewMode, setViewMode] = useState<ViewMode>('goal');
   const { range } = useAnalyticsStore();
   const { startDate, endDate } = range;
 
@@ -248,8 +248,8 @@ export function FlowTriggersChart() {
           className='w-full'
         >
           <TabsList className='grid w-full grid-cols-2'>
-            <TabsTrigger value='category'>By Category</TabsTrigger>
             <TabsTrigger value='goal'>By Goal</TabsTrigger>
+            <TabsTrigger value='category'>By Category</TabsTrigger>
           </TabsList>
         </Tabs>
         <div className='mt-4'>{renderContent()}</div>
