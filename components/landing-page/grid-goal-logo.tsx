@@ -12,7 +12,6 @@ const GridGoalLogo = () => {
       className='flex items-center gap-2'
       aria-label='GridGoal Home'
     >
-      {/* SVG remains unchanged */}
       <svg
         width={size}
         height={size}
@@ -95,7 +94,6 @@ const GridGoalLogo = () => {
         />
       </svg>
 
-      {/* --- START: MODIFIED TEXT & BADGE --- */}
       <div className='relative'>
         <span className='font-bold text-lg'>GridGoal</span>
         <span
@@ -105,7 +103,6 @@ const GridGoalLogo = () => {
           BETA
         </span>
       </div>
-      {/* --- END: MODIFIED TEXT & BADGE --- */}
     </Link>
   );
 };

@@ -4,27 +4,27 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { type PausePeriod } from '@prisma/client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { format } from 'date-fns';
+import { format, startOfToday } from 'date-fns'; // Import startOfToday
 import { CalendarIcon, Plus } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { toast } from 'sonner';
+import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/components/ui/card'; // Import Card components
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
 import { VacationListItem } from './vacation-list-item';
@@ -39,7 +39,12 @@ const pausePeriodSchema = z
   .refine((data) => data.dateRange.to >= data.dateRange.from, {
     message: "End date can't be before start date.",
     path: ['dateRange'],
+  })
+  .refine((data) => data.dateRange.from >= startOfToday(), {
+    message: 'Start date cannot be in the past.',
+    path: ['dateRange'],
   });
+
 type FormValues = z.infer<typeof pausePeriodSchema>;
 const fetchPeriods = async (): Promise<PausePeriod[]> =>
   (await axios.get('/api/pause-periods')).data;
@@ -55,14 +60,24 @@ export function VacationModeSection() {
   const form = useForm<FormValues>({
     resolver: zodResolver(pausePeriodSchema),
   });
+
   const mutation = useMutation({
     mutationFn: createPeriod,
     onSuccess: () => {
       toast.success('Vacation period scheduled!');
       queryClient.invalidateQueries({ queryKey: ['pausePeriods'] });
+      queryClient.invalidateQueries({ queryKey: ['streakData'] });
       form.reset();
     },
-    onError: () => toast.error('Failed to schedule vacation.'),
+    onError: (error: any) => {
+      if (error?.response?.data?.error?.dateRange) {
+        toast.error('Invalid date range', {
+          description: error.response.data.error.dateRange._errors[0],
+        });
+      } else {
+        toast.error('Failed to schedule vacation.');
+      }
+    },
   });
 
   function onSubmit(data: FormValues) {
@@ -122,6 +137,7 @@ export function VacationModeSection() {
                           selected={field.value}
                           onSelect={field.onChange}
                           numberOfMonths={2}
+                          disabled={(date) => date < startOfToday()}
                         />
                       </PopoverContent>
                     </Popover>

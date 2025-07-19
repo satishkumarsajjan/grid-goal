@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { prisma } from '@/prisma';
-import { z } from 'zod';
 import { AwardService } from '@/lib/services/award.service';
+import { prisma } from '@/prisma';
+import { startOfToday } from 'date-fns';
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
 const pausePeriodSchema = z
   .object({
@@ -11,10 +12,13 @@ const pausePeriodSchema = z
     note: z.string().max(255).optional(),
   })
   .refine((data) => data.endDate >= data.startDate, {
-    message: 'End date cannot be before start date',
+    message: 'End date cannot be before start date.',
     path: ['endDate'],
+  })
+  .refine((data) => data.startDate >= startOfToday(), {
+    message: 'Start date cannot be in the past.',
+    path: ['startDate'],
   });
-
 export async function GET() {
   try {
     const session = await auth();
