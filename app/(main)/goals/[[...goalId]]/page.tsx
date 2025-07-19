@@ -18,6 +18,7 @@ import { LayoutGrid } from 'lucide-react';
 // NEW: Import the new sidebar components
 import { DesktopSidebar } from '@/components/layout/DesktopSidebar';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
+import { GoalContent } from '@/components/goals/GoalContent';
 
 export interface GoalDialogOptions {
   open: boolean;
@@ -57,7 +58,6 @@ export default function GoalsLayoutAndPage({
   return (
     <>
       <div className='h-full border rounded-lg overflow-hidden flex flex-col'>
-        {/* --- Mobile-Only Header --- */}
         <div className='px-4 flex items-center justify-between border-b lg:hidden'>
           {/* The Sheet component provides its own trigger button */}
           <MobileSidebar
@@ -82,7 +82,7 @@ export default function GoalsLayoutAndPage({
           <main className='flex-1 border-l'>
             {selectedGoalId ? (
               <Suspense fallback={<TaskListSkeleton />}>
-                <TaskList
+                <GoalContent
                   goalId={selectedGoalId}
                   onOpenCreateCategoryDialog={() =>
                     setIsCreateCategoryOpen(true)

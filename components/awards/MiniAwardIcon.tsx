@@ -10,6 +10,7 @@ import { AWARD_CATEGORIES } from '@/lib/constants/awards';
 import { cn } from '@/lib/utils';
 import { type AwardId } from '@prisma/client';
 import { Lock } from 'lucide-react';
+import { Badge } from '../ui/badge';
 
 interface MiniAwardIconProps {
   awardId: AwardId;
@@ -52,11 +53,11 @@ export function MiniAwardIcon({ awardId, isUnlocked }: MiniAwardIconProps) {
         </TooltipTrigger>
         <TooltipContent>
           <p className='font-bold'>{details.title}</p>
-          <p className='text-xs text-muted-foreground'>{details.description}</p>
+          <p className='text-xs text-muted'>{details.description}</p>
           {!isUnlocked && (
-            <p className='text-xs text-amber-600 dark:text-amber-500 mt-1 font-semibold'>
+            <Badge className='text-xs bg-background text-amber-600 dark:text-amber-500 mt-1 font-semibold'>
               LOCKED
-            </p>
+            </Badge>
           )}
         </TooltipContent>
       </Tooltip>
