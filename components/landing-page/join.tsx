@@ -10,7 +10,7 @@ const JoinButton = ({ text }: { text: string }) => {
   };
 
   return (
-    <Link href={'https://forms.gle/P5PgoBdk3XKfQXrB9'} target='_blank'>
+    <Link href={'/dashboard'} target='_blank'>
       <div
         className='relative inline-block p-0.5 rounded-lg'
         style={wrapperStyle}

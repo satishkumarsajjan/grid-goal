@@ -120,7 +120,7 @@ export function Header() {
           ) : (
             <SignInButton />
           )}
-          <JoinButton text='Join waitlist' />
+          <JoinButton text='Get Started' />
         </div>
       </div>
     </header>

@@ -16,7 +16,7 @@ export function FinalCTASection() {
           we&apos;re live.
         </p>
         <div className='mt-8'>
-          <JoinButton text='Join the waitlist by completing this quick survey' />
+          <JoinButton text='Get Started' />
         </div>
       </div>
     </section>
