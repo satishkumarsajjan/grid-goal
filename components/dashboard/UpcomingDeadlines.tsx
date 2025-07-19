@@ -9,22 +9,16 @@ import {
 } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
-import { Clock } from 'lucide-react';
+import { Target } from 'lucide-react';
 import Link from 'next/link';
+import { type Goal } from '@prisma/client'; // Import the base Goal type
 
-type UpcomingTask = {
-  id: string;
-  title: string;
-  goalId: string;
-  goalTitle: string;
-  deadline: Date | null;
-};
-
+// The props interface now expects an array of Goals
 interface UpcomingDeadlinesProps {
-  tasks: UpcomingTask[];
+  goals: Goal[];
 }
 
-export function UpcomingDeadlines({ tasks }: UpcomingDeadlinesProps) {
+export function UpcomingDeadlines({ goals }: UpcomingDeadlinesProps) {
   const getUrgencyColor = (deadline: Date): string => {
     const now = new Date();
     const daysUntil = (deadline.getTime() - now.getTime()) / (1000 * 3600 * 24);
@@ -37,35 +31,33 @@ export function UpcomingDeadlines({ tasks }: UpcomingDeadlinesProps) {
     <Card>
       <CardHeader>
         <CardTitle>On the Horizon</CardTitle>
-        <CardDescription>Your nearest upcoming deadlines.</CardDescription>
+        <CardDescription>Your nearest upcoming goal deadlines.</CardDescription>
       </CardHeader>
       <CardContent>
-        {tasks.length > 0 ? (
+        {goals.length > 0 ? (
           <ul className='space-y-1'>
-            {tasks.map((task) => (
-              <li key={task.id}>
+            {goals.map((goal) => (
+              <li key={goal.id}>
                 <Link
-                  href={`/goals/${task.goalId}`}
+                  href={`/goals/${goal.id}`}
                   className='block p-3 -m-3 rounded-lg hover:bg-accent transition-colors'
                 >
-                  <div className='flex items-start gap-3'>
-                    <Clock className='h-4 w-4 mt-1 text-muted-foreground flex-shrink-0' />
-                    <div className='flex-1'>
-                      <p className='font-medium text-sm leading-tight'>
-                        {task.title}
-                      </p>
-                      <p className='text-xs text-muted-foreground'>
-                        {task.goalTitle}
+                  <div className='flex items-center gap-3'>
+                    {/* Use a Target icon for goals */}
+                    <Target className='h-4 w-4 text-muted-foreground flex-shrink-0' />
+                    <div className='flex-1 min-w-0'>
+                      <p className='font-medium text-sm leading-tight truncate'>
+                        {goal.title}
                       </p>
                     </div>
-                    {task.deadline && (
+                    {goal.deadline && (
                       <span
                         className={cn(
                           'text-xs font-semibold flex-shrink-0',
-                          getUrgencyColor(task.deadline)
+                          getUrgencyColor(goal.deadline)
                         )}
                       >
-                        {formatDistanceToNow(task.deadline, {
+                        {formatDistanceToNow(goal.deadline, {
                           addSuffix: true,
                         })}
                       </span>
@@ -77,7 +69,7 @@ export function UpcomingDeadlines({ tasks }: UpcomingDeadlinesProps) {
           </ul>
         ) : (
           <p className='text-center text-sm text-muted-foreground py-6'>
-            No upcoming deadlines in the next two weeks.
+            No upcoming goal deadlines in the next two weeks.
           </p>
         )}
       </CardContent>

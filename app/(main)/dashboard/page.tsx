@@ -83,18 +83,6 @@ export default async function DashboardPage() {
     return { id: goal.id, title: goal.title, color: goal.color, progress };
   });
 
-  const upcomingTasks = goalsWithUpcomingDeadlines
-    .flatMap((goal) =>
-      goal.tasks.map((task) => ({
-        id: task.id,
-        title: task.title,
-        goalId: goal.id,
-        goalTitle: goal.title,
-        deadline: goal.deadline,
-      }))
-    )
-    .slice(0, 5);
-
   return (
     <div className='space-y-8'>
       <div className='flex items-center justify-between'>
@@ -121,7 +109,7 @@ export default async function DashboardPage() {
 
         <div className='lg:col-span-1 space-y-8'>
           <Achievements />
-          <UpcomingDeadlines tasks={upcomingTasks} />
+          <UpcomingDeadlines goals={goalsWithUpcomingDeadlines} />
           <DailyFocusQueue />
         </div>
       </div>
