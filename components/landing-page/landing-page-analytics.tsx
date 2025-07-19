@@ -1,7 +1,15 @@
 'use client';
 
 import { addDays, format, startOfWeek } from 'date-fns';
-import { Info, TrendingDown, TrendingUp } from 'lucide-react';
+import {
+  CheckCircle,
+  Clock,
+  Flame,
+  Info,
+  TrendingDown,
+  TrendingUp,
+  Zap,
+} from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import {
   Bar,
@@ -531,9 +539,6 @@ function FlowTriggersChart() {
   const { startDate, endDate } = range;
 
   const data = DUMMY_FLOW_TRIGGERS[viewMode];
-  const isLoading = false;
-  const isError = false;
-
   const chartConfig = {
     FLOW: { label: 'Flow', color: 'var(--chart-3)' },
     NEUTRAL: { label: 'Neutral', color: 'var(--chart-4)' },
@@ -991,7 +996,7 @@ function ProductivityHotspotChart() {
                         <p className='text-sm font-semibold'>
                           {formatSecondsForTooltip(value)}
                         </p>
-                        <p className='text-xs text-muted-foreground'>
+                        <p className='text-xs'>
                           {DAYS[dayIndex]}s around {hourLabel}
                         </p>
                       </TooltipContent>
@@ -1181,7 +1186,60 @@ function EstimationAccuracyReport() {
 }
 
 // --- MAIN LANDING PAGE COMPONENT ---
+// --- NEW COMPONENT: STATS OVERVIEW ---
+function StatsOverviewCard() {
+  // Dummy data for a motivated user
+  const stats = [
+    {
+      icon: <Clock className='h-5 w-5 text-muted-foreground' />,
+      value: '132',
+      label: 'Total Hours',
+      color: 'text-foreground',
+    },
+    {
+      icon: <Zap className='h-5 w-5 text-muted-foreground' />,
+      value: '189',
+      label: 'Focus Sessions',
+      color: 'text-foreground',
+    },
+    {
+      icon: <Flame className='h-5 w-5 text-amber-500' />,
+      value: '42',
+      label: 'Longest Streak',
+      color: 'text-amber-500',
+    },
+    {
+      icon: <CheckCircle className='h-5 w-5 text-green-500' />,
+      value: '12',
+      label: 'Goals Completed',
+      color: 'text-green-500',
+    },
+  ];
 
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Period at a Glance</CardTitle>
+        <CardDescription>Your key metrics for this date range.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className='grid grid-cols-2 gap-x-4 gap-y-8'>
+          {stats.map((stat) => (
+            <div key={stat.label} className='flex items-start gap-4'>
+              {stat.icon}
+              <div>
+                <p className={`text-3xl font-bold ${stat.color}`}>
+                  {stat.value}
+                </p>
+                <p className='text-sm text-muted-foreground'>{stat.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 export default function LandingPageAnalytics() {
   return (
     <div className='p-4 md:p-8 bg-background'>
@@ -1196,15 +1254,31 @@ export default function LandingPageAnalytics() {
           </p>
         </div>
 
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-          <TimeAllocationChart />
-          <FlowTriggersChart />
-          <SustainabilityReport />
-          <ProductivityHotspotChart />
-          <div className='lg:col-span-2'>
+        {/* --- START: VISUALLY PLEASING LAYOUT --- */}
+        <div className='space-y-6'>
+          {/* Top Row: Two balanced cards */}
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+            <TimeAllocationChart />
+            <FlowTriggersChart />
+          </div>
+
+          {/* Middle Row: A featured component next to a tall one */}
+          <div className='grid grid-cols-1 lg:grid-cols-5 gap-6 items-start'>
+            <div className='lg:col-span-3'>
+              <ProductivityHotspotChart />
+            </div>
+            <div className='lg:col-span-2 grid grid-subgrid gap-6 h-full'>
+              <SustainabilityReport />
+              <StatsOverviewCard />
+            </div>
+          </div>
+
+          {/* Bottom Row: Full-width card */}
+          <div>
             <EstimationAccuracyReport />
           </div>
         </div>
+        {/* --- END: VISUALLY PLEASING LAYOUT --- */}
       </div>
     </div>
   );
