@@ -44,103 +44,93 @@
 }
 
 /**
- * The "Momentum Zenith" Theme
- * The definitive version, refined for ultimate focus, interactivity, and aesthetic harmony.
+ * The "Vivid" Theme
+ * A confident, data-driven theme built around a vibrant green, with chart colors that pop.
  * 
- * - Base Hue: 210 (Calm, Clarity, Sky)
- * - Primary Hue: 255 (Action, Motivation, Indigo)
- * - Destructive/Alert Hue: 55 (Attention, Urgency, Amber)
+ * - Primary Hue: 149.579 (Vibrant Minty Green)
+ * - Destructive Hue: 25 (Clear, Confident Red)
  */
 @layer base {
   :root {
-    --background: oklch(0.99 0.01 210);
-    --foreground: oklch(0.22 0.04 210);
-    --muted: oklch(0.96 0.015 210);
-    --muted-foreground: oklch(0.55 0.03 210);
+    --background: oklch(0.99 0.005 149.579);
+    --foreground: oklch(0.18 0.05 149.579);
+    --muted: oklch(0.95 0.015 149.579);
+    --muted-foreground: oklch(0.5 0.03 149.579);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.22 0.04 210);
+    --popover-foreground: oklch(0.18 0.05 149.579);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.22 0.04 210);
-    --border: oklch(0.92 0.02 210);
-    --input: oklch(0.92 0.02 210);
-    --primary: oklch(0.62 0.16 255);
-    --primary-foreground: oklch(0.2 0.08 255);
-    /* NEW: A slightly darker primary for a tactile "pressed" state on buttons */
-    --primary-active: oklch(0.58 0.16 255);
-    --secondary: oklch(0.94 0.025 210);
-    --secondary-foreground: oklch(0.22 0.04 210);
-    /* REFINED: Accent color is now slightly transparent for softer hover effects */
-    --accent: oklch(0.9 0.03 210 / 80%);
-    --accent-foreground: oklch(0.2 0.04 210);
-    --destructive: oklch(0.7 0.2 55);
-    --destructive-foreground: oklch(0.15 0.08 55);
+    --card-foreground: oklch(0.18 0.05 149.579);
+    --border: oklch(0.92 0.02 149.579);
+    --input: oklch(0.92 0.02 149.579);
+    --primary: oklch(0.723 0.219 149.579);
+    --primary-foreground: oklch(0.15 0.08 149.579);
+    --secondary: oklch(0.94 0.025 149.579);
+    --secondary-foreground: oklch(0.2 0.04 149.579);
+    --accent: oklch(0.9 0.03 149.579);
+    --accent-foreground: oklch(0.18 0.05 149.579);
+    --destructive: oklch(0.65 0.24 25);
+    --destructive-foreground: oklch(0.98 0.02 25);
+    --ring: oklch(0.723 0.219 149.579 / 50%);
     --radius: 0.625rem;
 
-    /* POLISHED: Replaced ring color with a soft, modern box-shadow for accessibility */
-    --ring: 0 0 0 2px oklch(0.99 0.01 210), 0 0 0 4px oklch(0.62 0.16 255);
-
     /* Sidebar: Clean and distinct */
-    --sidebar: oklch(0.97 0.015 210);
-    --sidebar-foreground: oklch(0.22 0.04 210);
-    --sidebar-primary: oklch(0.62 0.16 255);
-    --sidebar-primary-foreground: oklch(0.2 0.08 255);
-    --sidebar-accent: oklch(0.9 0.03 210 / 80%);
-    --sidebar-accent-foreground: oklch(0.2 0.04 210);
-    --sidebar-border: oklch(0.88 0.025 210);
+    --sidebar: oklch(0.97 0.01 149.579);
+    --sidebar-foreground: oklch(0.18 0.05 149.579);
+    --sidebar-primary: oklch(0.723 0.219 149.579);
+    --sidebar-primary-foreground: oklch(0.15 0.08 149.579);
+    --sidebar-accent: oklch(0.9 0.03 149.579);
+    --sidebar-accent-foreground: oklch(0.18 0.05 149.579);
+    --sidebar-border: oklch(0.9 0.02 149.579);
     --sidebar-ring: var(--ring);
 
-    /* Chart Colors: A clear, motivating palette */
-    --chart-1: oklch(0.62 0.16 255); /* Primary Indigo */
-    --chart-2: oklch(0.7 0.16 150); /* Success Green */
-    --chart-3: oklch(0.7 0.2 55); /* Attention Amber */
-    --chart-4: oklch(0.65 0.18 320); /* Deep Magenta */
-    --chart-5: oklch(0.7 0.14 200); /* Sky Cyan */
+    /* CHART COLORS THAT POP: A vibrant, high-chroma, categorical palette */
+    --chart-1: oklch(0.723 0.219 149.579); /* Vivid Green (Primary) */
+    --chart-2: oklch(0.65 0.22 280); /* Electric Violet */
+    --chart-3: oklch(0.75 0.2 50); /* Solar Orange */
+    --chart-4: oklch(0.75 0.18 195); /* Bright Cyan */
+    --chart-5: oklch(0.7 0.25 325); /* Hot Pink */
   }
 
   .dark {
-    /* REFINED: Deep Focus Background */
-    --background: oklch(0.15 0.035 210);
-    --foreground: oklch(0.95 0.01 210);
-    --muted: oklch(0.23 0.025 210);
-    --muted-foreground: oklch(0.75 0.015 210);
-    --popover: oklch(0.21 0.04 210);
-    --popover-foreground: oklch(0.95 0.01 210);
-    --card: oklch(0.19 0.038 210);
-    --card-foreground: oklch(0.95 0.01 210);
-    --border: oklch(0.23 0.025 210);
-    --input: oklch(0.23 0.025 210);
-    --primary: oklch(0.62 0.16 255);
-    --primary-foreground: oklch(0.2 0.08 255);
-    /* NEW: Dark mode active state */
-    --primary-active: oklch(0.58 0.16 255);
-    --secondary: oklch(0.28 0.03 210);
-    --secondary-foreground: oklch(0.95 0.01 210);
-    --accent: oklch(0.95 0.01 210 / 10%);
-    --accent-foreground: oklch(0.95 0.01 210);
-    --destructive: oklch(0.7 0.2 55);
-    --destructive-foreground: oklch(0.15 0.08 55);
+    --background: oklch(0.15 0.03 149.579);
+    --foreground: oklch(0.97 0.01 149.579);
+    --muted: oklch(0.25 0.025 149.579);
+    --muted-foreground: oklch(0.7 0.015 149.579);
+    --popover: oklch(0.17 0.045 149.579);
+    --popover-foreground: oklch(0.97 0.01 149.579);
+    --card: oklch(0.19 0.04 149.579);
+    --card-foreground: oklch(0.97 0.01 149.579);
+    --border: oklch(0.25 0.03 149.579);
+    --input: oklch(0.25 0.03 149.579);
+    --primary: oklch(0.723 0.219 149.579);
+    --primary-foreground: oklch(0.15 0.08 149.579);
+    --secondary: oklch(0.3 0.03 149.579);
+    --secondary-foreground: oklch(0.97 0.01 149.579);
+    --accent: oklch(0.35 0.04 149.579);
+    --accent-foreground: oklch(0.97 0.01 149.579);
+    --destructive: oklch(0.68 0.25 25);
+    --destructive-foreground: oklch(0.98 0.02 25);
+    --ring: oklch(0.723 0.219 149.579 / 50%);
 
-    /* POLISHED: Dark mode focus ring */
-    --ring: 0 0 0 2px oklch(0.15 0.035 210), 0 0 0 4px oklch(0.62 0.16 255);
-
-    /* Sidebar: The darkest element, recedes perfectly */
-    --sidebar: oklch(0.12 0.04 210);
-    --sidebar-foreground: oklch(0.95 0.01 210);
-    --sidebar-primary: oklch(0.62 0.16 255);
-    --sidebar-primary-foreground: oklch(0.2 0.08 255);
-    --sidebar-accent: oklch(0.95 0.01 210 / 10%);
-    --sidebar-accent-foreground: oklch(0.95 0.01 210);
-    --sidebar-border: oklch(0.19 0.038 210);
+    /* Sidebar: A deeper panel for focus */
+    --sidebar: oklch(0.12 0.04 149.579);
+    --sidebar-foreground: oklch(0.97 0.01 149.579);
+    --sidebar-primary: oklch(0.723 0.219 149.579);
+    --sidebar-primary-foreground: oklch(0.15 0.08 149.579);
+    --sidebar-accent: oklch(0.25 0.025 149.579);
+    --sidebar-accent-foreground: oklch(0.97 0.01 149.579);
+    --sidebar-border: oklch(0.19 0.04 149.579);
     --sidebar-ring: var(--ring);
 
-    /* Chart Colors: Remain vibrant and clear */
-    --chart-1: oklch(0.62 0.16 255); /* Primary Indigo */
-    --chart-2: oklch(0.7 0.16 150); /* Success Green */
-    --chart-3: oklch(0.7 0.2 55); /* Attention Amber */
-    --chart-4: oklch(0.65 0.18 320); /* Deep Magenta */
-    --chart-5: oklch(0.7 0.14 200); /* Sky Cyan */
+    /* CHART COLORS THAT POP: They remain identical to pop brilliantly against the dark canvas */
+    --chart-1: oklch(0.723 0.219 149.579); /* Vivid Green (Primary) */
+    --chart-2: oklch(0.65 0.22 280); /* Electric Violet */
+    --chart-3: oklch(0.75 0.2 50); /* Solar Orange */
+    --chart-4: oklch(0.75 0.18 195); /* Bright Cyan */
+    --chart-5: oklch(0.7 0.25 325); /* Hot Pink */
   }
 }
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
