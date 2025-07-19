@@ -16,7 +16,7 @@ const JoinButton = ({ text }: { text: string }) => {
         style={wrapperStyle}
       >
         <Button
-          className='w-full font-bold dark:bg-background dark:hover:bg-background/90 dark:text-foreground rounded-lg'
+          className='w-full font-bold bg-black hover:bg-black/90  text-white rounded-lg'
           size={'lg'}
         >
           {text}

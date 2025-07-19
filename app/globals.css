@@ -43,13 +43,6 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/**
- * The "Vivid" Theme
- * A confident, data-driven theme built around a vibrant green, with chart colors that pop.
- * 
- * - Primary Hue: 149.579 (Vibrant Minty Green)
- * - Destructive Hue: 25 (Clear, Confident Red)
- */
 @layer base {
   :root {
     --background: oklch(0.99 0.005 149.579);
