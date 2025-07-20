@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { categoryId: string } }
+  { params }: { params: Promise<{ categoryId: string }> }
 ) {
   try {
     const session = await auth();
@@ -15,7 +15,7 @@ export async function DELETE(
       });
     }
     const userId = session.user.id;
-    const { categoryId } = params;
+    const { categoryId } = await params;
 
     const categoryToDelete = await prisma.category.findFirst({
       where: {
@@ -37,7 +37,7 @@ export async function DELETE(
       },
     });
 
-    return new NextResponse(null, { status: 204 }); 
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('[API:DELETE_CATEGORY]', error);
     return new NextResponse(
@@ -56,7 +56,7 @@ const updateCategorySchema = z.object({
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { categoryId: string } }
+  { params }: { params: Promise<{ categoryId: string }> }
 ) {
   try {
     const session = await auth();
@@ -66,7 +66,7 @@ export async function PATCH(
       });
     }
     const userId = session.user.id;
-    const { categoryId } = params;
+    const { categoryId } = await params;
 
     const body = await request.json();
     const validation = updateCategorySchema.safeParse(body);
@@ -77,7 +77,6 @@ export async function PATCH(
     }
     const { name } = validation.data;
 
-    
     const categoryToUpdate = await prisma.category.findFirst({
       where: { id: categoryId, userId },
     });
@@ -88,12 +87,11 @@ export async function PATCH(
       );
     }
 
-    
     const existing = await prisma.category.findFirst({
       where: {
         userId,
         name: { equals: name, mode: 'insensitive' },
-        id: { not: categoryId }, 
+        id: { not: categoryId },
       },
     });
     if (existing) {

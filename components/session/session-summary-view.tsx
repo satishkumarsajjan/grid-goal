@@ -39,7 +39,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { sessionSummarySchema } from '@/lib/zod-schemas';
 import { useTimerStore } from '@/store/timer-store';
-import { createFocusSessionSchema } from '@/app/api/focus-sessions/route';
+import { createFocusSessionSchema } from '@/lib/types';
 
 interface SessionSummaryViewProps {
   task: { id: string; title: string; goalId: string };

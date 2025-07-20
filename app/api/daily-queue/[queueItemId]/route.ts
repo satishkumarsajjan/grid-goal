@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { queueItemId: string } }
+  { params }: { params: Promise<{ queueItemId: string }> }
 ) {
   try {
     const session = await auth();
@@ -12,15 +12,13 @@ export async function DELETE(
       return new NextResponse('Unauthorized', { status: 401 });
     }
     const userId = session.user.id;
-
+    const { queueItemId } = await params;
     await prisma.dailyQueueItem.deleteMany({
       where: {
-        id: params.queueItemId,
+        id: queueItemId,
         userId: userId,
       },
     });
-
-    console.log(`Attempted to delete queue item: ${params.queueItemId}`);
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

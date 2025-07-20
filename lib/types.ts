@@ -1,4 +1,12 @@
-import { Category, FocusSession, type Goal, type Task } from '@prisma/client';
+import {
+  Category,
+  FocusSession,
+  PomodoroCycle,
+  SessionVibe,
+  TimerMode,
+  type Goal,
+  type Task,
+} from '@prisma/client';
 
 export type GoalWithTasksCount = Goal & {
   _count: {
@@ -27,6 +35,7 @@ export type GoalWithSessions = Goal & {
 };
 
 import { Prisma } from '@prisma/client';
+import { z } from 'zod';
 
 // Base type for queue items without goal
 export type DailyQueueItemWithTask = Prisma.DailyQueueItemGetPayload<{
@@ -71,3 +80,20 @@ export type FullGoalDetails = Goal & {
 };
 
 export type TaskWithGoal = Task & { goal: { title: string } };
+
+export const createFocusSessionSchema = z.object({
+  startTime: z.string().datetime(),
+  endTime: z.string().datetime(),
+  durationSeconds: z.number().int().positive(),
+  taskId: z.string().cuid(),
+  goalId: z.string().cuid(),
+  noteAccomplished: z.string().max(10000).optional().nullable(),
+  noteNextStep: z.string().max(10000).optional().nullable(),
+  artifactUrl: z.string().url().optional().nullable(),
+  vibe: z.nativeEnum(SessionVibe).optional(),
+  tags: z.array(z.string().min(1).max(50)).optional(),
+  mode: z.nativeEnum(TimerMode),
+  pomodoroCycle: z.nativeEnum(PomodoroCycle).optional(),
+  sequenceId: z.string().uuid().optional().nullable(),
+  markTaskAsComplete: z.boolean().optional(),
+});

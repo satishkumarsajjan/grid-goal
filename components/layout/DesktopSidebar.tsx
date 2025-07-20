@@ -2,11 +2,11 @@
 
 import { Suspense } from 'react';
 
-import { type GoalDialogOptions } from '@/app/(main)/goals/[[...goalId]]/page';
 import { CreateGoalButton } from '@/components/goals/create-goal-button';
 import { DeleteCategoriesButton } from '@/components/goals/DeleteCategoriesButton';
 import { GoalTree } from '@/components/goals/goal-tree';
 import { GoalNavigatorSkeleton } from './MobileSidebar';
+import { GoalDialogOptions } from '../goals/goal-navigator-item';
 
 interface DesktopSidebarProps {
   activeGoalId: string | null;

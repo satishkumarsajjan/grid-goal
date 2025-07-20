@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 export async function GET(
   request: Request,
-  { params }: { params: { goalId: string } }
+  { params }: { params: Promise<{ goalId: string }> }
 ) {
   try {
     const session = await auth();
@@ -16,7 +16,7 @@ export async function GET(
       });
     }
     const userId = session.user.id;
-    const goalId = params.goalId;
+    const { goalId } = await params;
 
     const goalOwnerCheck = await prisma.goal.findFirst({
       where: { id: goalId, userId: userId },
@@ -102,7 +102,7 @@ const updateGoalSchema = z
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { goalId: string } }
+  { params }: { params: Promise<{ goalId: string }> }
 ) {
   try {
     const session = await auth();
@@ -112,7 +112,7 @@ export async function PATCH(
       });
     }
     const userId = session.user.id;
-    const { goalId } = params;
+    const { goalId } = await params;
 
     const body = await request.json();
     const validation = updateGoalSchema.safeParse(body);
@@ -159,7 +159,7 @@ export async function PATCH(
 }
 export async function DELETE(
   request: Request,
-  { params }: { params: { goalId: string } }
+  { params }: { params: Promise<{ goalId: string }> }
 ) {
   try {
     const session = await auth();
@@ -169,7 +169,7 @@ export async function DELETE(
       });
     }
     const userId = session.user.id;
-    const { goalId } = params;
+    const { goalId } = await params;
     const goalToDelete = await prisma.goal.findFirst({
       where: { id: goalId, userId: userId },
     });

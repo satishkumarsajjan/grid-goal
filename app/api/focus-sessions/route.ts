@@ -1,31 +1,10 @@
 import { auth } from '@/auth';
 import { AwardService } from '@/lib/services/award.service';
+import { createFocusSessionSchema } from '@/lib/types';
 import { prisma } from '@/prisma';
-import {
-  PomodoroCycle,
-  SessionVibe,
-  TaskStatus,
-  TimerMode,
-} from '@prisma/client';
+import { TaskStatus } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-
-export const createFocusSessionSchema = z.object({
-  startTime: z.string().datetime(),
-  endTime: z.string().datetime(),
-  durationSeconds: z.number().int().positive(),
-  taskId: z.string().cuid(),
-  goalId: z.string().cuid(),
-  noteAccomplished: z.string().max(10000).optional().nullable(),
-  noteNextStep: z.string().max(10000).optional().nullable(),
-  artifactUrl: z.string().url().optional().nullable(),
-  vibe: z.nativeEnum(SessionVibe).optional(),
-  tags: z.array(z.string().min(1).max(50)).optional(),
-  mode: z.nativeEnum(TimerMode),
-  pomodoroCycle: z.nativeEnum(PomodoroCycle).optional(),
-  sequenceId: z.string().uuid().optional().nullable(),
-  markTaskAsComplete: z.boolean().optional(),
-});
 
 export async function POST(request: Request) {
   try {

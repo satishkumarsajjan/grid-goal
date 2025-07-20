@@ -22,7 +22,7 @@ export type GoalSummaryData = {
 
 export async function GET(
   request: Request,
-  { params }: { params: { goalId: string } }
+  { params }: { params: Promise<{ goalId: string }> }
 ) {
   try {
     const session = await auth();
@@ -30,7 +30,7 @@ export async function GET(
       return new NextResponse('Unauthorized', { status: 401 });
     }
     const userId = session.user.id;
-    const { goalId } = params;
+    const { goalId } = await params;
 
     const goal = await prisma.goal.findFirst({
       where: { id: goalId, userId: userId },

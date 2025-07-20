@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { periodId: string } }
+  { params }: { params: Promise<{ periodId: string }> }
 ) {
   try {
     const session = await auth();
@@ -13,10 +13,10 @@ export async function DELETE(
       return new NextResponse('Unauthorized', { status: 401 });
     }
     const userId = session.user.id;
-
+    const { periodId } = await params;
     const periodToDelete = await prisma.pausePeriod.findFirst({
       where: {
-        id: params.periodId,
+        id: periodId,
         userId: userId,
       },
     });
@@ -39,7 +39,7 @@ export async function DELETE(
 
     await prisma.pausePeriod.delete({
       where: {
-        id: params.periodId,
+        id: periodId,
       },
     });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { type GoalDialogOptions } from '@/app/(main)/goals/[[...goalId]]/page';
 import { CreateGoalButton } from '@/components/goals/create-goal-button';
 import { DeleteCategoriesButton } from '@/components/goals/DeleteCategoriesButton';
 import { GoalTree } from '@/components/goals/goal-tree';
@@ -16,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { Menu } from 'lucide-react';
 import { Suspense } from 'react';
 import { Skeleton } from '../ui/skeleton';
+import { GoalDialogOptions } from '../goals/goal-navigator-item';
 
 interface MobileSidebarProps {
   activeGoalId: string | null;

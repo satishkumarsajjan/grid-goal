@@ -4,7 +4,7 @@ import { prisma } from '@/prisma';
 
 export async function GET(
   request: Request,
-  { params }: { params: { goalId: string } }
+  { params }: { params: Promise<{ goalId: string }> }
 ) {
   try {
     const session = await auth();
@@ -14,7 +14,7 @@ export async function GET(
       });
     }
 
-    const goalId = params.goalId;
+    const { goalId } = await params;
     const userId = session.user.id;
 
     const goal = await prisma.goal.findFirst({
