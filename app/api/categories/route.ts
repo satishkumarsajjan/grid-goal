@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 
 import { z } from 'zod';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE() {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -89,14 +89,12 @@ export async function DELETE(request: Request) {
     }
     const userId = session.user.id;
 
-    
     const [_, deletedCategories] = await prisma.$transaction([
- 
       prisma.goal.updateMany({
         where: { userId: userId },
         data: { categoryId: null },
       }),
-     
+
       prisma.category.deleteMany({
         where: { userId: userId },
       }),

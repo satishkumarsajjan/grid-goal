@@ -77,8 +77,6 @@ export async function POST(request: Request) {
         tagIds = upsertedTags;
       }
 
-      let createdSession;
-
       if (sessionData.mode === 'POMODORO' && sequenceId) {
         await tx.focusSession.updateMany({
           where: { sequenceId: sequenceId, userId: userId },
@@ -109,7 +107,7 @@ export async function POST(request: Request) {
         }
       }
 
-      createdSession = await tx.focusSession.create({
+      const createdSession = await tx.focusSession.create({
         data: {
           ...sessionData,
           userId,

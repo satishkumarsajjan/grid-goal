@@ -1,4 +1,4 @@
-import { PomodoroCycle, SessionVibe, TimerMode } from '@prisma/client';
+import { SessionVibe } from '@prisma/client';
 import { z } from 'zod';
 
 export const createGoalSchema = z.object({
@@ -18,9 +18,6 @@ export const createTaskSchema = z.object({
     .positive('Must be a positive number')
     .optional(),
 });
-// You would create other schemas here as you build more features
-// export const updateGoalSchema = ...
-// export const createTaskSchema = ...
 
 export const sessionSummarySchema = z.object({
   vibe: z.nativeEnum(SessionVibe).optional(),

@@ -103,25 +103,21 @@ const checkSessionAwards = async (
   }
 };
 
-// --- Checkers Triggered by Goal Actions ---
 const checkGoalAwards = async (
   userId: string,
   goal: Goal,
   awardedAwards: Set<AwardId>
 ) => {
-  // THE_ARCHITECT
   const goalCount = await prisma.goal.count({ where: { userId } });
   if (goalCount === 1)
     await grantAward(userId, AwardId.THE_ARCHITECT, awardedAwards);
 
-  // MASTER_PLANNER
   const depthQuery = await prisma.$queryRaw<
     [{ depth: bigint }]
   >`WITH RECURSIVE "GoalDepth" AS (SELECT id, "parentId", 1 as depth FROM "Goal" WHERE id = ${goal.id} UNION ALL SELECT p.id, p."parentId", d.depth + 1 FROM "Goal" p INNER JOIN "GoalDepth" d ON p.id = d."parentId") SELECT MAX(depth) as depth FROM "GoalDepth";`;
   if (Number(depthQuery[0]?.depth || 1) >= 3)
     await grantAward(userId, AwardId.MASTER_PLANNER, awardedAwards);
 
-  // Completion awards
   if (goal.status === 'ARCHIVED') {
     if (goal.deadline && goal.deadline > new Date())
       await grantAward(userId, AwardId.AHEAD_OF_THE_CURVE, awardedAwards);
@@ -135,7 +131,6 @@ const checkGoalAwards = async (
   }
 };
 
-// --- Other Checkers (simplified for brevity, logic is sound) ---
 const checkTaskAwards = async (userId: string, awardedAwards: Set<AwardId>) => {
   const count = await prisma.task.count({ where: { userId } });
   if (count === 1) await grantAward(userId, AwardId.IGNITION, awardedAwards);
@@ -154,7 +149,6 @@ const checkUserActionAwards = async (
   }
 };
 
-// --- Main Service Export ---
 const processAwards = async (
   userId: string,
   trigger:

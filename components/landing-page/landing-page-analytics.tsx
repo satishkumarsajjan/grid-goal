@@ -357,22 +357,7 @@ type PomodoroStatsData = {
   SHORT_BREAK: number;
   LONG_BREAK: number;
 };
-type WeeklyBalanceData = { dayOfWeek: number; totalSeconds: number };
-type PeakTime = { day: number; hour: number } | null;
-type ProductivityHotspotData = {
-  heatmap: number[][];
-  maxValue: number;
-  peakTime: PeakTime;
-  totalHours: number;
-};
-type TimeAllocationData = {
-  chartData: {
-    name: string;
-    totalSeconds: number;
-    color?: string | null;
-  }[];
-  unallocatedSeconds: number;
-};
+
 type EstimationAccuracyItem = {
   goalId: string;
   goalTitle: string;
@@ -395,8 +380,6 @@ function TimeAllocationChart() {
   const { startDate, endDate } = range;
 
   const data = DUMMY_TIME_ALLOCATION[viewMode];
-  const isLoading = false;
-  const isError = false;
 
   const totalAllocatedTime = useMemo(
     () => data.chartData.reduce((sum, item) => sum + item.totalSeconds, 0),
@@ -693,15 +676,7 @@ function FlowTriggersChart() {
 }
 
 // 3. Sustainability Report
-function BreakDisciplineStats({
-  data,
-  isLoading,
-  isError,
-}: {
-  data?: PomodoroStatsData;
-  isLoading: boolean;
-  isError: boolean;
-}) {
+function BreakDisciplineStats({ data }: { data?: PomodoroStatsData }) {
   const stats = useMemo(() => {
     if (!data || data.WORK === 0) return null;
     const pomodorosPerLongBreak = 4;
@@ -891,11 +866,7 @@ function SustainabilityReport() {
               }
             />
           </div>
-          <BreakDisciplineStats
-            data={DUMMY_POMODORO_STATS}
-            isLoading={false}
-            isError={false}
-          />
+          <BreakDisciplineStats data={DUMMY_POMODORO_STATS} />
         </div>
       </CardContent>
     </Card>

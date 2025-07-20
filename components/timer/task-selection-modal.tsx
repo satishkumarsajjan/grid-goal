@@ -24,10 +24,12 @@ import { Skeleton } from '../ui/skeleton';
 
 type TaskWithGoalTitle = Task & { goal: { title: string } };
 
-const fetchQueue = async (): Promise<TaskWithGoalTitle[]> =>
-  (await axios.get('/api/daily-queue?includeGoal=true')).data.map(
-    (item: any) => item.task
+const fetchQueue = async (): Promise<TaskWithGoalTitle[]> => {
+  const response = await axios.get<{ task: TaskWithGoalTitle }[]>(
+    '/api/daily-queue?includeGoal=true'
   );
+  return response.data.map((item) => item.task);
+};
 const fetchAllTasks = async (): Promise<TaskWithGoalTitle[]> =>
   (await axios.get('/api/tasks?includeGoal=true')).data;
 

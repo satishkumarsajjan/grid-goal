@@ -1,7 +1,10 @@
 'use client';
 
-import { Suspense } from 'react';
-import { type Goal } from '@prisma/client';
+import { type GoalDialogOptions } from '@/app/(main)/goals/[[...goalId]]/page';
+import { CreateGoalButton } from '@/components/goals/create-goal-button';
+import { DeleteCategoriesButton } from '@/components/goals/DeleteCategoriesButton';
+import { GoalTree } from '@/components/goals/goal-tree';
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -9,13 +12,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
-import { GoalTree } from '@/components/goals/goal-tree';
-import { CreateGoalButton } from '@/components/goals/create-goal-button';
-import { DeleteCategoriesButton } from '@/components/goals/DeleteCategoriesButton';
-import { type GoalDialogOptions } from '@/app/(main)/goals/[[...goalId]]/page';
 import { cn } from '@/lib/utils';
+import { Menu } from 'lucide-react';
+import { Suspense } from 'react';
 import { Skeleton } from '../ui/skeleton';
 
 interface MobileSidebarProps {
