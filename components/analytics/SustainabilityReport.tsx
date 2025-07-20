@@ -298,8 +298,8 @@ export function SustainabilityReport() {
                 <>
                   <p>
                     Your adherence score reflects how consistently you take
-                    breaks during Pomodoro sessions. A high score means you're
-                    respecting the work-rest cycles.
+                    breaks during Pomodoro sessions. A high score means
+                    you&apos;re respecting the work-rest cycles.
                   </p>
                   <p className='mt-2 text-xs'>
                     <strong>Why it matters:</strong> Deliberate breaks are

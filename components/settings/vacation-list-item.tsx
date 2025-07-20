@@ -28,12 +28,17 @@ export function VacationListItem({ period }: { period: PausePeriod }) {
       queryClient.invalidateQueries({ queryKey: ['pausePeriods'] });
       queryClient.invalidateQueries({ queryKey: ['streakData'] });
     },
-    onError: (error: any) => {
-      // Provide specific feedback if the API forbids deletion
-      if (error?.response?.status === 400) {
-        toast.error('Cannot delete a past break.', {
-          description: 'This is to preserve your streak history.',
-        });
+    onError: (error: unknown) => {
+      // Type guard for Axios errors
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response: { status: number } };
+        if (axiosError.response?.status === 400) {
+          toast.error('Cannot delete a past break.', {
+            description: 'This is to preserve your streak history.',
+          });
+        } else {
+          toast.error('Failed to remove break.');
+        }
       } else {
         toast.error('Failed to remove break.');
       }

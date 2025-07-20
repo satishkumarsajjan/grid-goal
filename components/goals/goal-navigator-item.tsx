@@ -228,8 +228,8 @@ export function GoalNavigatorItem({
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the
-              goal "{goal.title}" and **all of its sub-goals**. All associated
-              tasks and focus sessions will also be deleted.
+              goal &quot;{goal.title}&quot; and all of its sub-goals. All
+              associated tasks and focus sessions will also be deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -6,7 +6,7 @@ import { type Goal } from '@prisma/client';
 
 import { TaskList } from '@/components/tasks/task-list';
 import { ArchivedGoalSummary } from './ArchivedGoalSummary';
-import { TaskListSkeleton } from '@/app/(main)/goals/[[...goalId]]/page';
+import { TaskListSkeleton } from '../tasks/task-list-skeleton';
 
 // This fetcher gets just the core goal object, including its status
 const fetchCoreGoal = async (goalId: string): Promise<Goal> => {

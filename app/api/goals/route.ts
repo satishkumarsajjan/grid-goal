@@ -6,7 +6,7 @@ import { prisma } from '@/prisma';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {

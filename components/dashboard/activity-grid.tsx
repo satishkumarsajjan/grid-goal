@@ -12,8 +12,6 @@ import {
 } from '../ui/tooltip';
 import { GridCellData, ProcessedGridData } from '@/lib/grid-helpers';
 
-interface ActivityGridProps extends ProcessedGridData {}
-
 const getColorClass = (level: GridCellData['level']): string => {
   switch (level) {
     case 1:
@@ -102,7 +100,7 @@ export function ActivityGrid({
   totalHours,
   gridData,
   monthBoundaries,
-}: ActivityGridProps) {
+}: ProcessedGridData) {
   const { isTouch } = useDeviceDetect();
 
   if (!gridData || gridData.length === 0) {

@@ -97,11 +97,16 @@ export async function PATCH(
     });
 
     return NextResponse.json(updatedTask);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API:UPDATE_TASK]', error);
-    if (error.message.includes('Task not found')) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
+
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+
+    if (errorMessage.includes('Task not found')) {
+      return NextResponse.json({ error: errorMessage }, { status: 404 });
     }
+
     return NextResponse.json(
       { error: 'An internal error occurred' },
       { status: 500 }
@@ -144,10 +149,12 @@ export async function DELETE(
     });
 
     return new NextResponse(null, { status: 204 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API:DELETE_TASK]', error);
-    if (error.message.includes('Task not found')) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage.includes('Task not found')) {
+      return NextResponse.json({ error: errorMessage }, { status: 404 });
     }
     return NextResponse.json(
       { error: 'An internal error occurred' },

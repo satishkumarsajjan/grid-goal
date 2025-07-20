@@ -158,6 +158,7 @@ const processAwards = async (
     | 'TASK_CREATED'
     | 'RESET_COMPLETED'
     | 'PAUSE_CREATED',
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any
 ) => {
   try {

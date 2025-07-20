@@ -15,10 +15,10 @@ export function StepAction({ onGoalCreated, onBack }: StepProps) {
     <div className='p-8 bg-card border rounded-lg shadow-xl'>
       <div className='text-center'>
         <h1 className='text-3xl font-bold tracking-tight'>
-          What's one thing you want to achieve?
+          What&apos;s one thing you want to achieve?
         </h1>
         <p className='mt-2 text-muted-foreground'>
-          Don't overthink it! This will be your first Goal.
+          Don&apos;t overthink it! This will be your first Goal.
         </p>
       </div>
 

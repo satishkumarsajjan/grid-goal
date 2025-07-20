@@ -528,7 +528,7 @@ function FlowTriggersChart() {
     STRUGGLE: { label: 'Struggle', color: 'var(--chart-5)' },
   };
 
-  const viewConfig: Record<FlowViewMode, any> = {
+  const viewConfig = {
     category: {
       title: 'Flow by Category',
       description: "Percentage of session 'vibes' for your top categories.",
@@ -853,8 +853,8 @@ function SustainabilityReport() {
                 <>
                   <p>
                     Your adherence score reflects how consistently you take
-                    breaks during Pomodoro sessions. A high score means you're
-                    respecting the work-rest cycles.
+                    breaks during Pomodoro sessions. A high score means
+                    you&apos;re respecting the work-rest cycles.
                   </p>
                   <p className='mt-2 text-xs'>
                     <strong>Why it matters:</strong> Deliberate breaks are
@@ -915,8 +915,8 @@ function ProductivityHotspotChart() {
               <p>
                 This heatmap shows your focus intensity throughout the week.
                 More intense squares indicate more time spent in a focus session
-                during that specific hour. Use this to identify your 'deep work'
-                windows and schedule important tasks accordingly.
+                during that specific hour. Use this to identify your &apos;deep
+                work&apos; windows and schedule important tasks accordingly.
               </p>
             }
           />
@@ -1006,7 +1006,7 @@ function EstimationAccuracyReport() {
     currentPage === 1
       ? DUMMY_ESTIMATION_ACCURACY.page1
       : DUMMY_ESTIMATION_ACCURACY.page2;
-  const isLoading = false;
+
   const formatSecondsToHM = (seconds: number): string => {
     if (seconds < 60) return '0m';
     const h = Math.floor(seconds / 3600);
@@ -1220,7 +1220,7 @@ export default function LandingPageAnalytics() {
             Unlock Your Peak Productivity
           </h1>
           <p className='mt-3 max-w-2xl mx-auto text-lg text-muted-foreground'>
-            GridGoal doesn't just track your time. It gives you actionable
+            GridGoal doesn&apos;t just track your time. It gives you actionable
             insights to work smarter, not just harder.
           </p>
         </div>

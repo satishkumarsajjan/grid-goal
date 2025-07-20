@@ -187,8 +187,8 @@ export function ProductivityHotspotChart() {
               <p>
                 This heatmap shows your focus intensity throughout the week.
                 More intense squares indicate more time spent in a focus session
-                during that specific hour. Use this to identify your 'deep work'
-                windows and schedule important tasks accordingly.
+                during that specific hour. Use this to identify your &apos;deep
+                work&apos; windows and schedule important tasks accordingly.
               </p>
             }
           />

@@ -69,11 +69,34 @@ export function VacationModeSection() {
       queryClient.invalidateQueries({ queryKey: ['streakData'] });
       form.reset();
     },
-    onError: (error: any) => {
-      if (error?.response?.data?.error?.dateRange) {
-        toast.error('Invalid date range', {
-          description: error.response.data.error.dateRange._errors[0],
-        });
+    onError: (error: unknown) => {
+      // Type guard for Axios errors with nested error structure
+      if (
+        error &&
+        typeof error === 'object' &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'error' in error.response.data
+      ) {
+        const errorData = error.response.data as {
+          error: {
+            dateRange?: {
+              _errors: string[];
+            };
+          };
+        };
+
+        if (errorData.error.dateRange) {
+          toast.error('Invalid date range', {
+            description: errorData.error.dateRange._errors[0],
+          });
+        } else {
+          toast.error('Failed to schedule vacation.');
+        }
       } else {
         toast.error('Failed to schedule vacation.');
       }

@@ -8,27 +8,25 @@ import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import { TaskListSkeleton } from '@/app/(main)/goals/[[...goalId]]/page';
 import { TaskSelectionModal } from '@/components/timer/task-selection-modal';
 import { AriaLiveRegion } from '@/components/ui/AriaLiveRegion';
 import { type FullGoalDetails, type TaskWithTime } from '@/lib/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { SortableTasks } from './SortableTasks';
+import { TaskForm } from './TaskForm';
 import {
   TaskListControls,
   type FilterOption,
   type SortOption,
 } from './TaskListControls';
 import { TaskListHeader } from './TaskListHeader';
-import { TaskForm } from './TaskForm'; // NEW: Import the generic TaskForm
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Plus } from 'lucide-react';
+import { TaskListSkeleton } from './task-list-skeleton';
 
 interface TaskListProps {
   goalId: string | null;
@@ -230,7 +228,7 @@ export function TaskList({
           <DialogHeader>
             <DialogTitle>Add New Task</DialogTitle>
             <DialogDescription>
-              What's the next step to move this goal forward?
+              What&apos;s the next step to move this goal forward?
             </DialogDescription>
           </DialogHeader>
           <div className='pt-4'>

@@ -134,7 +134,7 @@ export function CategoryManagementSection() {
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>
-                      Delete "{category.name}"?
+                      Delete &quot;{category.name}&quot;?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
                       This will permanently delete the category. Goals in this

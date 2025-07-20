@@ -37,9 +37,6 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 const getPaceStatus = (data: PaceDataPoint[]) => {
-  const today = startOfToday();
-  const todayStr = today.toISOString().split('T')[0];
-
   // Find the last point with actual data for a more robust status
   const lastDataPointWithActuals = [...data]
     .reverse()

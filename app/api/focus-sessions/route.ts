@@ -10,7 +10,7 @@ import {
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-const createFocusSessionSchema = z.object({
+export const createFocusSessionSchema = z.object({
   startTime: z.string().datetime(),
   endTime: z.string().datetime(),
   durationSeconds: z.number().int().positive(),
@@ -146,11 +146,16 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(newSession, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API:CREATE_FOCUS_SESSION]', error);
-    if (error.message.includes('Task not found')) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
+
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+
+    if (errorMessage.includes('Task not found')) {
+      return NextResponse.json({ error: errorMessage }, { status: 404 });
     }
+
     return NextResponse.json(
       { error: 'An internal error occurred' },
       { status: 500 }
@@ -192,7 +197,7 @@ export async function DELETE(request: Request) {
     console.log(`Deleted ${count} sessions for sequenceId: ${sequenceId}`);
 
     return NextResponse.json({ success: true, deletedCount: count });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API:DELETE_FOCUS_SESSION]', error);
     return NextResponse.json(
       { error: 'An internal error occurred' },

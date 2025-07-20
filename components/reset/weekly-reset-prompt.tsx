@@ -31,7 +31,7 @@ export function WeeklyResetPrompt({ shouldShow }: WeeklyResetPromptProps) {
           Ready for your Weekly Reset?
         </h3>
         <p className='text-sm text-muted-foreground mt-1'>
-          Celebrate last week's wins and plan for success.
+          Celebrate last week&apos;s wins and plan for success.
         </p>
       </div>
       <div className='flex gap-2'>

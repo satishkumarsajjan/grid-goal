@@ -11,12 +11,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Skeleton } from '@/components/ui/skeleton';
 import { LayoutGrid } from 'lucide-react';
 
 import { GoalContent } from '@/components/goals/GoalContent';
 import { DesktopSidebar } from '@/components/layout/DesktopSidebar';
 import { MobileSidebar } from '@/components/layout/MobileSidebar';
+import { TaskListSkeleton } from '@/components/tasks/task-list-skeleton';
 
 export interface GoalDialogOptions {
   open: boolean;
@@ -25,12 +25,13 @@ export interface GoalDialogOptions {
   initialData?: Goal | null;
 }
 
-export default function GoalsLayoutAndPage({
+export default async function GoalsLayoutAndPage({
   params,
 }: {
-  params: { goalId?: string[] };
+  params: Promise<{ goalId?: string[] }>;
 }) {
-  const selectedGoalId = params.goalId?.[0] ?? null;
+  const resolvedParams = await params;
+  const selectedGoalId = resolvedParams.goalId?.[0] ?? null;
 
   const [goalDialogOptions, setGoalDialogOptions] = useState<GoalDialogOptions>(
     {
@@ -113,7 +114,7 @@ export default function GoalsLayoutAndPage({
   );
 }
 
-function GoalDialog({
+export function GoalDialog({
   options,
   onOpenChange,
 }: {
@@ -144,7 +145,7 @@ function GoalDialog({
     </Dialog>
   );
 }
-function WelcomePlaceholder() {
+export function WelcomePlaceholder() {
   return (
     <div className='flex h-full flex-col items-center justify-center text-center p-8 gap-4'>
       {' '}
@@ -155,27 +156,6 @@ function WelcomePlaceholder() {
         Select a goal from the left to view its tasks, or create a new one to
         get started.{' '}
       </p>{' '}
-    </div>
-  );
-}
-export function TaskListSkeleton() {
-  return (
-    <div className='p-6 space-y-4'>
-      {' '}
-      <div className='space-y-2'>
-        {' '}
-        <Skeleton className='h-8 w-1/2' /> <Skeleton className='h-4 w-3/4' />{' '}
-      </div>{' '}
-      <div className='space-y-3 pt-4'>
-        {' '}
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className='flex items-center gap-3'>
-            {' '}
-            <Skeleton className='h-5 w-5 rounded-sm' />{' '}
-            <Skeleton className='h-5 flex-1' />{' '}
-          </div>
-        ))}{' '}
-      </div>{' '}
     </div>
   );
 }

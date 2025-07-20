@@ -65,9 +65,14 @@ export function CategoryForm({ initialData, onFinished }: CategoryFormProps) {
       queryClient.invalidateQueries({ queryKey: ['vibeAnalysis'] });
       onFinished();
     },
-    onError: (error: any) => {
-      if (error?.response?.status === 409) {
-        toast.error('A category with this name already exists.');
+    onError: (error: unknown) => {
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response: { status: number } };
+        if (axiosError.response?.status === 409) {
+          toast.error('A category with this name already exists.');
+        } else {
+          toast.error('Failed to save category.');
+        }
       } else {
         toast.error('Failed to save category.');
       }

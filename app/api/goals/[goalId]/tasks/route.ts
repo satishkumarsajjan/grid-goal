@@ -46,6 +46,7 @@ export async function GET(
         0
       );
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { focusSessions, ...taskData } = task;
 
       return {

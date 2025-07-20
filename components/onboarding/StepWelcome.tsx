@@ -18,7 +18,7 @@ export function StepWelcome({ onNext, onSkip }: StepProps) {
         Welcome to GridGoal!
       </h1>
       <p className='mt-4 text-lg text-muted-foreground'>
-        Let's turn your ambitions into achievements, one step at a time.
+        Let&apos;s turn your ambitions into achievements, one step at a time.
       </p>
       <div className='mt-8 flex flex-col sm:flex-row justify-center gap-4'>
         <Button onClick={onNext} size='lg'>

@@ -97,10 +97,12 @@ export async function POST(request: Request) {
       console.error('Failed to process task-creation awards:', awardError);
     }
     return NextResponse.json(newTask, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API:CREATE_TASK]', error);
-    if (error.message.includes('Goal not found')) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage.includes('Goal not found')) {
+      return NextResponse.json({ error: errorMessage }, { status: 404 });
     }
     return NextResponse.json(
       { error: 'An internal error occurred' },

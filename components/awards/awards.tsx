@@ -91,7 +91,7 @@ export function AwardsPage() {
           A Trophy Case for Your Journey
         </h2>
         <p className='mt-4 text-lg text-muted-foreground'>
-          Your hard work doesn't go unnoticed. Unlock awards that celebrate
+          Your hard work doesn&apos;t go unnoticed. Unlock awards that celebrate
           every step of your journey, from the first task to total mastery.
         </p>
         {!isLoading && earnedAwards && (

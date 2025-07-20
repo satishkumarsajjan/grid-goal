@@ -92,7 +92,7 @@ export function Achievements() {
           )}
         </div>
         <CardDescription>
-          Your unlocked milestones and what's next.
+          Your unlocked milestones and what&apos;s next.
         </CardDescription>
       </CardHeader>
       <CardContent className='flex-grow'>{renderContent()}</CardContent>

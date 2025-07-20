@@ -18,7 +18,8 @@ export function StepFinish({ onFinish, goalTitle }: StepProps) {
         Great! Your Goal is Set.
       </h1>
       <p className='mt-4 text-lg text-muted-foreground'>
-        You're ready to start breaking down "{goalTitle}" into actionable tasks.
+        You&apos;re ready to start breaking down &quot;{goalTitle}&quot; into
+        actionable tasks.
       </p>
       <div className='mt-8 flex justify-center'>
         <Button onClick={onFinish} size='lg'>

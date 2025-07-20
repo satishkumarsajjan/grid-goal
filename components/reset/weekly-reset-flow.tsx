@@ -153,7 +153,7 @@ export function WeeklyResetFlow() {
                   tabIndex={-1}
                   className='text-3xl font-bold tracking-tight outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm'
                 >
-                  You're all set!
+                  You&apos;re all set!
                 </h2>
                 <p className='mt-2 text-muted-foreground'>
                   Have a productive and focused week.
@@ -192,8 +192,8 @@ export function WeeklyResetFlow() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure you want to close?</AlertDialogTitle>
             <AlertDialogDescription>
-              You've started planning your week. If you close now, your selected
-              queue will be discarded.
+              You&apos;ve started planning your week. If you close now, your
+              selected queue will be discarded.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1,14 +1,14 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Task } from '@prisma/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosResponse } from 'axios';
-import { z } from 'zod';
-import { Plus, Clock } from 'lucide-react';
-import { toast } from 'sonner';
-import { Task } from '@prisma/client';
+import { Clock } from 'lucide-react';
 import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -44,6 +44,7 @@ const upsertTask = async ({
     estimatedTimeSeconds: (values.estimatedTimeInHours ?? 0) * 3600,
   };
   if (apiPayload.estimatedTimeSeconds <= 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (apiPayload as any).estimatedTimeSeconds;
   }
 

@@ -39,10 +39,10 @@ export function StepCelebrate() {
         tabIndex={-1}
         className='text-3xl font-bold tracking-tight outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm'
       >
-        Last Week's Wins
+        Last Week&apos;s Wins
       </h2>
       <p className='mt-2 text-muted-foreground'>
-        Let's celebrate the effort you put in over the last 7 days.
+        Let&apos;s celebrate the effort you put in over the last 7 days.
       </p>
       <div className='mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center'>
         <StatCard

@@ -39,6 +39,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { sessionSummarySchema } from '@/lib/zod-schemas';
 import { useTimerStore } from '@/store/timer-store';
+import { createFocusSessionSchema } from '@/app/api/focus-sessions/route';
 
 interface SessionSummaryViewProps {
   task: { id: string; title: string; goalId: string };
@@ -54,7 +55,9 @@ interface SessionSummaryViewProps {
 
 type SummaryFormValues = z.infer<typeof sessionSummarySchema>;
 
-const createFocusSession = async (payload: any) => {
+const createFocusSession = async (
+  payload: z.infer<typeof createFocusSessionSchema>
+) => {
   const { data } = await axios.post('/api/focus-sessions', payload);
   return data;
 };
@@ -265,7 +268,7 @@ export function SessionSummaryView({
                 name='noteNextStep'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>What's the very next step?</FormLabel>
+                    <FormLabel>What&apos;s the very next step?</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder='e.g., Write unit tests for the GET endpoint...'
@@ -318,7 +321,8 @@ export function SessionSummaryView({
                     </AlertDialogTitle>
                     <AlertDialogDescription>
                       This will discard the summary and any automatically saved
-                      progress from this session. You can't undo this action.
+                      progress from this session. You can&apos;t undo this
+                      action.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
