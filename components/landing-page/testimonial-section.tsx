@@ -18,10 +18,10 @@ export function TestimonialSection() {
     <section
       ref={container}
       id='testimonials'
-      className='py-32 bg-card/50 backdrop-blur-sm text-secondary-foreground rounded-xl'
+      className='text-secondary-foreground px-8'
       aria-labelledby='testimonial-heading'
     >
-      <div className='container mx-auto px-6 text-center'>
+      <div className='py-32 mx-auto px-6 text-center bg-card/50 backdrop-blur-sm rounded-xl'>
         <blockquote className='max-w-4xl mx-auto'>
           <h2 id='testimonial-heading' className='sr-only'>
             Testimonial from Veena

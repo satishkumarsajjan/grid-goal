@@ -879,7 +879,7 @@ function ProductivityHotspotChart() {
   const { startDate, endDate } = range;
   const data = DUMMY_HOTSPOT_DATA;
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const TIME_LABELS = ['12AM', '6AM', '12PM', '6PM'];
+  const TIME_LABELS = ['12AM', '6AM', '12PM', '6PM', '11PM'];
 
   const formatSecondsForTooltip = (seconds: number): string => {
     if (seconds < 1) return 'No focus time';

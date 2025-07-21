@@ -8,7 +8,6 @@ export interface PomodoroSettings {
   cyclesUntilLongBreak: number;
 }
 
-// NEW: Define shape for notification settings
 export interface NotificationSettings {
   soundEnabled: boolean;
   soundVolume: number; // A value between 0 and 1
@@ -16,13 +15,12 @@ export interface NotificationSettings {
 
 interface SettingsState {
   pomodoro: PomodoroSettings;
-  // NEW: Add notifications to the state
   notifications: NotificationSettings;
 }
 
 interface SettingsActions {
   updatePomodoroSettings: (newSettings: Partial<PomodoroSettings>) => void;
-  // NEW: Add action to update notification settings
+
   updateNotificationSettings: (
     newSettings: Partial<NotificationSettings>
   ) => void;

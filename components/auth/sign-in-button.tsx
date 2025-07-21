@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 export function SignInButton() {
   return (
     <form action={signInWithGoogle}>
-      <Button type='submit'>Sign in with Google</Button>
+      <Button type='submit'>Sign in</Button>
     </form>
   );
 }
