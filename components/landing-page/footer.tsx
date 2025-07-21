@@ -18,7 +18,7 @@ export function Footer() {
               <XLogo className='h-8 w-8' />
             </Link>
             <Link
-              href='https://github.com/satishkumarsajjan'
+              href='https://github.com/satishkumarsajjan/grid-goal'
               className='hover:text-foreground transition-colors'
               target='_blank'
             >
