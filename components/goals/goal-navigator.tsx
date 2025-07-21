@@ -1,31 +1,36 @@
 'use client';
 
-import { GoalNavigatorItem } from './goal-navigator-item';
-import { type GoalWithProgressAndChildren } from '@/lib/types'; // Using our new richer type
-import { type GoalCreationOptions } from '@/app/(main)/goals/[[...goalId]]/page';
+import { type GoalWithProgressAndChildren } from '@/lib/types';
+import {
+  GoalNavigatorItem,
+  type GoalDialogOptions,
+} from './goal-navigator-item';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface GoalNavigatorProps {
-  goalTree: GoalWithProgressAndChildren[]; // Use the richer type
+  goalTree: GoalWithProgressAndChildren[];
   activeGoalId: string | null;
-  openCreationDialog: (options: GoalCreationOptions) => void;
+  openGoalDialog: (options: GoalDialogOptions) => void;
 }
 
 export function GoalNavigator({
   goalTree,
   activeGoalId,
-  openCreationDialog,
+  openGoalDialog,
 }: GoalNavigatorProps) {
   return (
-    <nav className='flex-1 space-y-1 p-2'>
-      {goalTree.map((goal) => (
-        <GoalNavigatorItem
-          key={goal.id}
-          goal={goal}
-          activeGoalId={activeGoalId}
-          level={0}
-          openCreationDialog={openCreationDialog}
-        />
-      ))}
-    </nav>
+    <ScrollArea className='h-full'>
+      <nav className='space-y-1 p-2'>
+        {goalTree.map((goal) => (
+          <GoalNavigatorItem
+            key={goal.id}
+            goal={goal}
+            activeGoalId={activeGoalId}
+            level={0}
+            openGoalDialog={openGoalDialog}
+          />
+        ))}
+      </nav>
+    </ScrollArea>
   );
 }

@@ -1,34 +1,34 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
-import { type PausePeriod } from '@prisma/client';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { type PausePeriod } from '@prisma/client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
+import { format, startOfToday } from 'date-fns'; // Import startOfToday
 import { CalendarIcon, Plus } from 'lucide-react';
-import { format } from 'date-fns';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from '@/components/ui/form';
-import { toast } from 'sonner';
-import { VacationListItem } from './vacation-list-item';
-import { Skeleton } from '../ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '../ui/skeleton';
+import { VacationListItem } from './vacation-list-item';
 
-// --- Zod Schema, API Functions, and Component ---
 const pausePeriodSchema = z
   .object({
     dateRange: z.object({
@@ -39,10 +39,13 @@ const pausePeriodSchema = z
   .refine((data) => data.dateRange.to >= data.dateRange.from, {
     message: "End date can't be before start date.",
     path: ['dateRange'],
+  })
+  .refine((data) => data.dateRange.from >= startOfToday(), {
+    message: 'Start date cannot be in the past.',
+    path: ['dateRange'],
   });
 
 type FormValues = z.infer<typeof pausePeriodSchema>;
-
 const fetchPeriods = async (): Promise<PausePeriod[]> =>
   (await axios.get('/api/pause-periods')).data;
 const createPeriod = async (data: { startDate: Date; endDate: Date }) =>
@@ -54,7 +57,6 @@ export function VacationModeSection() {
     queryKey: ['pausePeriods'],
     queryFn: fetchPeriods,
   });
-
   const form = useForm<FormValues>({
     resolver: zodResolver(pausePeriodSchema),
   });
@@ -64,9 +66,41 @@ export function VacationModeSection() {
     onSuccess: () => {
       toast.success('Vacation period scheduled!');
       queryClient.invalidateQueries({ queryKey: ['pausePeriods'] });
+      queryClient.invalidateQueries({ queryKey: ['streakData'] });
       form.reset();
     },
-    onError: () => toast.error('Failed to schedule vacation.'),
+    onError: (error: unknown) => {
+      // Type guard for Axios errors with nested error structure
+      if (
+        error &&
+        typeof error === 'object' &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'error' in error.response.data
+      ) {
+        const errorData = error.response.data as {
+          error: {
+            dateRange?: {
+              _errors: string[];
+            };
+          };
+        };
+
+        if (errorData.error.dateRange) {
+          toast.error('Invalid date range', {
+            description: errorData.error.dateRange._errors[0],
+          });
+        } else {
+          toast.error('Failed to schedule vacation.');
+        }
+      } else {
+        toast.error('Failed to schedule vacation.');
+      }
+    },
   });
 
   function onSubmit(data: FormValues) {
@@ -77,16 +111,17 @@ export function VacationModeSection() {
   }
 
   return (
-    <div className='p-6 border rounded-lg'>
-      <h2 className='text-xl font-semibold'>Vacation Mode</h2>
-      <p className='text-muted-foreground mt-1'>
-        Schedule planned breaks to pause your streak counter. No progress will
-        be lost.
-      </p>
-
-      <div className='mt-6 grid gap-8 md:grid-cols-2'>
+    <Card>
+      <CardHeader>
+        <CardTitle>Vacation Mode</CardTitle>
+        <CardDescription>
+          Schedule planned breaks to pause your streak counter. No progress will
+          be lost.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className='space-y-6'>
         <div>
-          <h3 className='font-semibold mb-4'>Schedule a New Break</h3>
+          <h3 className='font-semibold mb-4 text-sm'>Schedule a New Break</h3>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
               <FormField
@@ -125,6 +160,7 @@ export function VacationModeSection() {
                           selected={field.value}
                           onSelect={field.onChange}
                           numberOfMonths={2}
+                          disabled={(date) => date < startOfToday()}
                         />
                       </PopoverContent>
                     </Popover>
@@ -138,26 +174,26 @@ export function VacationModeSection() {
             </form>
           </Form>
         </div>
-      </div>
-      <div>
-        <h3 className='font-semibold mb-4'>Scheduled Breaks</h3>
-        <div className='space-y-2'>
-          {isLoading && (
-            <>
-              <Skeleton className='h-10 w-full' />
-              <Skeleton className='h-10 w-full' />
-            </>
-          )}
-          {periods?.length === 0 && (
-            <p className='text-sm text-muted-foreground'>
-              No breaks scheduled.
-            </p>
-          )}
-          {periods?.map((period) => (
-            <VacationListItem key={period.id} period={period} />
-          ))}
+        <div>
+          <h3 className='font-semibold mb-4 text-sm'>Scheduled Breaks</h3>
+          <div className='space-y-2'>
+            {isLoading && (
+              <>
+                <Skeleton className='h-10 w-full' />
+                <Skeleton className='h-10 w-full' />
+              </>
+            )}
+            {periods?.length === 0 && (
+              <p className='text-sm text-muted-foreground'>
+                No breaks scheduled.
+              </p>
+            )}
+            {periods?.map((period) => (
+              <VacationListItem key={period.id} period={period} />
+            ))}
+          </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

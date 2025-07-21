@@ -1,87 +1,99 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { AwardService } from '@/lib/services/award.service';
+import { createFocusSessionSchema } from '@/lib/types';
 import { prisma } from '@/prisma';
+import { TaskStatus } from '@prisma/client';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { SessionVibe, TaskStatus } from '@prisma/client';
 
-// Zod schema for validation
-const createFocusSessionSchema = z.object({
-  startTime: z.string().datetime(),
-  endTime: z.string().datetime(),
-  durationSeconds: z.number().int().positive(),
-  taskId: z.string().cuid(),
-  goalId: z.string().cuid(),
-  noteAccomplished: z.string().max(10000).optional(),
-  noteNextStep: z.string().max(10000).optional(),
-  vibe: z.nativeEnum(SessionVibe).optional(),
-  tags: z.array(z.string().min(1).max(50)).optional(), // Assuming tags are passed as an array of names
-});
-
-// This function handles POST requests to /api/focus-sessions
 export async function POST(request: Request) {
   try {
-    // 1. Authenticate & Authorize
     const session = await auth();
     if (!session?.user?.id) {
-      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const userId = session.user.id;
 
-    // 2. Validate request body
     const body = await request.json();
     const validation = createFocusSessionSchema.safeParse(body);
 
     if (!validation.success) {
-      return new NextResponse(
-        JSON.stringify({ error: validation.error.format() }),
+      return NextResponse.json(
+        { error: validation.error.format() },
         { status: 400 }
       );
     }
-    const { taskId, goalId, tags, ...sessionData } = validation.data;
 
-    // 3. Security Check: Verify user owns the task/goal they are logging time for.
-    const task = await prisma.task.findFirst({
-      where: { id: taskId, userId: userId },
-    });
+    const {
+      taskId,
+      goalId,
+      tags,
+      sequenceId,
+      markTaskAsComplete,
+      ...sessionData
+    } = validation.data;
 
-    if (!task) {
-      return new NextResponse(
-        JSON.stringify({
-          error: 'Task not found or you do not have permission',
-        }),
-        { status: 404 }
-      );
-    }
-
-    // 4. Perform the database operations within a transaction
-    // This ensures that BOTH the session creation and the task update succeed or fail together.
     const [newSession] = await prisma.$transaction(async (tx) => {
-      // A) Create or find tags and get their IDs
+      const task = await tx.task.findFirst({
+        where: { id: taskId, userId: userId },
+      });
+      if (!task) {
+        throw new Error('Task not found or you do not have permission');
+      }
+
       let tagIds: { id: string }[] = [];
       if (tags && tags.length > 0) {
-        await Promise.all(
-          tags.map(async (tagName) => {
-            const tag = await tx.tag.upsert({
+        const upsertedTags = await Promise.all(
+          tags.map((tagName) =>
+            tx.tag.upsert({
               where: { userId_name: { userId, name: tagName } },
               update: {},
               create: { name: tagName, userId },
-            });
-            tagIds.push({ id: tag.id });
-          })
+              select: { id: true },
+            })
+          )
         );
+        tagIds = upsertedTags;
       }
 
-      // B) Create the focus session
+      if (sessionData.mode === 'POMODORO' && sequenceId) {
+        await tx.focusSession.updateMany({
+          where: { sequenceId: sequenceId, userId: userId },
+          data: {
+            noteAccomplished: sessionData.noteAccomplished,
+            noteNextStep: sessionData.noteNextStep,
+            vibe: sessionData.vibe,
+            artifactUrl: sessionData.artifactUrl,
+          },
+        });
+
+        const existingSessions = await tx.focusSession.findMany({
+          where: { sequenceId: sequenceId, userId: userId },
+          select: { id: true },
+        });
+
+        if (tagIds.length > 0 && existingSessions.length > 0) {
+          const tagConnections = existingSessions.flatMap((s) =>
+            tagIds.map((tag) => ({
+              focusSessionId: s.id,
+              tagId: tag.id,
+            }))
+          );
+          await tx.tagsOnFocusSessions.createMany({
+            data: tagConnections,
+            skipDuplicates: true,
+          });
+        }
+      }
+
       const createdSession = await tx.focusSession.create({
         data: {
           ...sessionData,
           userId,
           taskId,
           goalId,
+          sequenceId,
           tags: {
-            // Connect the tags to this session
             create: tagIds.map((tag) => ({
               tag: { connect: { id: tag.id } },
             })),
@@ -89,23 +101,83 @@ export async function POST(request: Request) {
         },
       });
 
-      // C) CRITICAL SIDE-EFFECT: Update the task's status if it's currently PENDING
+      let newStatus = task.status;
       if (task.status === TaskStatus.PENDING) {
-        await tx.task.update({
-          where: { id: taskId },
-          data: { status: TaskStatus.IN_PROGRESS },
-        });
+        newStatus = TaskStatus.IN_PROGRESS;
+      }
+      if (markTaskAsComplete) {
+        newStatus = TaskStatus.COMPLETED;
       }
 
+      if (newStatus !== task.status) {
+        await tx.task.update({
+          where: { id: taskId },
+          data: { status: newStatus },
+        });
+      }
       return [createdSession];
     });
 
-    // 5. Return a successful response
+    try {
+      await AwardService.processAwards(userId, 'SESSION_SAVED', newSession);
+    } catch (awardError) {
+      console.error('Failed to process awards for focus-session:', awardError);
+    }
+
     return NextResponse.json(newSession, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[API:CREATE_FOCUS_SESSION]', error);
-    return new NextResponse(
-      JSON.stringify({ error: 'An internal error occurred' }),
+
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+
+    if (errorMessage.includes('Task not found')) {
+      return NextResponse.json({ error: errorMessage }, { status: 404 });
+    }
+
+    return NextResponse.json(
+      { error: 'An internal error occurred' },
+      { status: 500 }
+    );
+  }
+}
+
+const deleteFocusSessionSchema = z.object({
+  sequenceId: z.string().uuid(),
+});
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = session.user.id;
+
+    const body = await request.json();
+    const validation = deleteFocusSessionSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.format() },
+        { status: 400 }
+      );
+    }
+
+    const { sequenceId } = validation.data;
+
+    const { count } = await prisma.focusSession.deleteMany({
+      where: {
+        sequenceId: sequenceId,
+        userId: userId,
+      },
+    });
+
+    return NextResponse.json({ success: true, deletedCount: count });
+  } catch (error: unknown) {
+    console.error('[API:DELETE_FOCUS_SESSION]', error);
+    return NextResponse.json(
+      { error: 'An internal error occurred' },
       { status: 500 }
     );
   }

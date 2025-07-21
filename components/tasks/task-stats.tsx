@@ -14,11 +14,11 @@ export function TaskStats({
   pending,
 }: TaskStatsProps) {
   if (total === 0) {
-    return null; // Don't show stats if there are no tasks
+    return null;
   }
 
   return (
-    <div className='flex items-center space-x-4 text-sm text-muted-foreground'>
+    <div className='flex items-start space-x-4 text-sm text-muted-foreground flex-col md:flex-row'>
       <div className='flex items-center gap-1.5'>
         <CheckCircle2 className='h-4 w-4 text-green-500' />
         <span>{completed} Completed</span>

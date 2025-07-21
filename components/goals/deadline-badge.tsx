@@ -1,12 +1,18 @@
-import { format, isPast, differenceInDays } from 'date-fns';
-import { CalendarClock } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import {
+  differenceInDays,
+  format,
+  isPast,
+  isToday,
+  isTomorrow,
+} from 'date-fns';
+import { CalendarClock } from 'lucide-react';
 
 interface DeadlineBadgeProps {
   deadline: Date;
@@ -14,31 +20,25 @@ interface DeadlineBadgeProps {
 
 export function DeadlineBadge({ deadline }: DeadlineBadgeProps) {
   const now = new Date();
-  const isOverdue = isPast(deadline) && !isToday(deadline);
+
+  const isDueToday = isToday(deadline);
+  const isDueTomorrow = isTomorrow(deadline);
+  const isOverdue = isPast(deadline) && !isDueToday;
   const daysRemaining = differenceInDays(deadline, now);
 
-  let colorClass = 'bg-secondary text-secondary-foreground'; // Default/neutral color
+  let colorClass = 'bg-secondary text-secondary-foreground';
   let tooltipText = `Due in ${daysRemaining + 1} days`;
 
   if (isOverdue) {
-    colorClass = 'bg-destructive/20 text-destructive-foreground';
+    colorClass = 'bg-destructive/20 text-destructive';
     tooltipText = `Overdue by ${Math.abs(daysRemaining)} days`;
-  } else if (daysRemaining < 0) {
-    // isToday
-    colorClass = 'bg-yellow-500/20 text-yellow-foreground';
-    tooltipText = 'Due today';
+  } else if (isDueToday || isDueTomorrow) {
+    colorClass = 'bg-destructive/20 text-destructive';
+    tooltipText = isDueToday ? 'Due today' : 'Due tomorrow';
   } else if (daysRemaining < 7) {
-    colorClass = 'bg-yellow-500/20 text-yellow-foreground';
-    tooltipText = `Due in ${daysRemaining + 1} days`;
-  }
+    colorClass = 'bg-amber-500/20 text-amber-700 dark:text-amber-400';
 
-  function isToday(date: Date) {
-    const today = new Date();
-    return (
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
-    );
+    tooltipText = `Due in ${daysRemaining + 1} days`;
   }
 
   return (

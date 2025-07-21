@@ -3,7 +3,6 @@ import { auth } from '@/auth';
 import { prisma } from '@/prisma';
 import { z } from 'zod';
 
-// Zod schema for the array of tasks to reorder
 const updateTaskOrderSchema = z.array(
   z.object({
     id: z.string().cuid(),
@@ -11,7 +10,6 @@ const updateTaskOrderSchema = z.array(
   })
 );
 
-// This function handles PATCH requests to /api/tasks/order
 export async function PATCH(request: Request) {
   try {
     const session = await auth();
@@ -33,12 +31,9 @@ export async function PATCH(request: Request) {
     }
     const tasksToUpdate = validation.data;
 
-    // To ensure security, we'll run all updates within a transaction.
-    // Prisma's $transaction lets us do this efficiently.
     const transactions = tasksToUpdate.map((task) =>
       prisma.task.update({
         where: {
-          // IMPORTANT: We include userId here to ensure a user can't reorder someone else's tasks.
           id: task.id,
           userId: userId,
         },

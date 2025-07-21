@@ -1,11 +1,12 @@
 'use client';
 
-import { type Task } from '@prisma/client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { ArrowRight, Check } from 'lucide-react';
+import { Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+
+import { type Task } from '@prisma/client';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 
@@ -16,8 +17,19 @@ const fetchActionableTasks = async (): Promise<TaskWithGoal[]> => {
   return data;
 };
 
-const addTaskToQueue = (taskId: string) =>
-  axios.post('/api/daily-queue', { taskId });
+const updateQueue = ({
+  taskId,
+  action,
+}: {
+  taskId: string;
+  action: 'add' | 'remove';
+}) => {
+  if (action === 'add') {
+    return axios.post('/api/daily-queue', { taskId });
+  }
+
+  return axios.delete(`/api/daily-queue/${taskId}`);
+};
 
 export function StepPlan() {
   const queryClient = useQueryClient();
@@ -33,14 +45,26 @@ export function StepPlan() {
   });
 
   const mutation = useMutation({
-    mutationFn: addTaskToQueue,
-    onSuccess: (data, taskId) => {
-      setQueuedTaskIds((prev) => new Set(prev).add(taskId));
-      // Invalidate the main dashboard queue query so it's fresh after the reset
+    mutationFn: updateQueue,
+    onSuccess: (_, { taskId, action }) => {
+      setQueuedTaskIds((prev) => {
+        const newSet = new Set(prev);
+        if (action === 'add') {
+          newSet.add(taskId);
+        } else {
+          newSet.delete(taskId);
+        }
+        return newSet;
+      });
       queryClient.invalidateQueries({ queryKey: ['dailyQueue'] });
     },
-    onError: () => toast.error('Could not add task to queue.'),
+    onError: (_, { action }) => toast.error(`Could not ${action} task.`),
   });
+
+  const handleToggleQueue = (task: Task) => {
+    const action = queuedTaskIds.has(task.id) ? 'remove' : 'add';
+    mutation.mutate({ taskId: task.id, action });
+  };
 
   if (isLoading) return <PlanSkeleton />;
   if (isError)
@@ -50,7 +74,12 @@ export function StepPlan() {
 
   return (
     <div className='text-center'>
-      <h2 className='text-3xl font-bold tracking-tight'>Plan Your Week</h2>
+      <h2
+        tabIndex={-1}
+        className='text-3xl font-bold tracking-tight outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm'
+      >
+        Plan Your Week
+      </h2>
       <p className='mt-2 text-muted-foreground'>
         Select your key priorities for the week ahead to populate your focus
         queue.
@@ -58,32 +87,42 @@ export function StepPlan() {
 
       <div className='mt-8 text-left max-h-[400px] overflow-y-auto p-1 border rounded-lg'>
         {tasks && tasks.length > 0 ? (
-          tasks.map((task) => (
-            <div
-              key={task.id}
-              className='p-3 border-b flex items-center justify-between'
-            >
-              <div>
-                <p className='font-medium'>{task.title}</p>
-                <p className='text-xs text-muted-foreground'>
-                  {task.goal.title}
-                </p>
-              </div>
-              <Button
-                size='sm'
-                variant={queuedTaskIds.has(task.id) ? 'secondary' : 'outline'}
-                onClick={() => mutation.mutate(task.id)}
-                disabled={queuedTaskIds.has(task.id) || mutation.isPending}
+          tasks.map((task) => {
+            const isQueued = queuedTaskIds.has(task.id);
+            return (
+              <div
+                key={task.id}
+                className='p-3 border-b flex items-center justify-between'
               >
-                {queuedTaskIds.has(task.id) ? (
-                  <Check className='mr-2 h-4 w-4' />
-                ) : (
-                  <ArrowRight className='mr-2 h-4 w-4' />
-                )}
-                {queuedTaskIds.has(task.id) ? 'Queued' : 'Add to Queue'}
-              </Button>
-            </div>
-          ))
+                <div>
+                  <p className='font-medium'>{task.title}</p>
+                  <p className='text-xs text-muted-foreground'>
+                    {task.goal.title}
+                  </p>
+                </div>
+                <Button
+                  size='sm'
+                  variant={isQueued ? 'secondary' : 'outline'}
+                  onClick={() => handleToggleQueue(task)}
+                  disabled={
+                    mutation.isPending && mutation.variables?.taskId === task.id
+                  }
+                  aria-label={
+                    isQueued
+                      ? `Remove ${task.title} from queue`
+                      : `Add ${task.title} to queue`
+                  }
+                >
+                  {isQueued ? (
+                    <Minus className='mr-2 h-4 w-4' />
+                  ) : (
+                    <Plus className='mr-2 h-4 w-4' />
+                  )}
+                  {isQueued ? 'Queued' : 'Add to Queue'}
+                </Button>
+              </div>
+            );
+          })
         ) : (
           <p className='p-8 text-center text-muted-foreground'>
             You have no pending tasks to plan!

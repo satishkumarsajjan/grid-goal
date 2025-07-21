@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
-import { subDays, startOfDay } from 'date-fns';
 import { SessionVibe } from '@prisma/client';
+import { startOfDay, subDays } from 'date-fns';
+import { NextResponse } from 'next/server';
 
 export async function GET() {
   const session = await auth();
@@ -10,7 +10,7 @@ export async function GET() {
     return new NextResponse('Unauthorized', { status: 401 });
 
   const today = startOfDay(new Date());
-  const sevenDaysAgo = startOfDay(subDays(today, 6)); // Include today + the 6 previous days
+  const sevenDaysAgo = startOfDay(subDays(today, 6));
 
   const sessions = await prisma.focusSession.findMany({
     where: {
@@ -23,7 +23,6 @@ export async function GET() {
     },
   });
 
-  // Process the data on the server
   const totalSeconds = sessions.reduce((sum, s) => sum + s.durationSeconds, 0);
   const vibeCounts = {
     [SessionVibe.FLOW]: sessions.filter((s) => s.vibe === SessionVibe.FLOW)

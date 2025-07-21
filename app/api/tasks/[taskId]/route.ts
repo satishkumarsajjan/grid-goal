@@ -3,49 +3,44 @@ import { auth } from '@/auth';
 import { prisma } from '@/prisma';
 import { z } from 'zod';
 import { TaskStatus } from '@prisma/client';
+import { updateGoalTreeEstimates } from '@/lib/goal-estimate-updater';
 
-// --- Zod Schema for PATCH Validation ---
 const updateTaskSchema = z.object({
   title: z.string().min(1, 'Title cannot be empty').max(255).optional(),
   status: z.nativeEnum(TaskStatus).optional(),
+  estimatedTimeSeconds: z
+    .number()
+    .int()
+    .min(0, 'Estimate cannot be negative')
+    .optional(),
 });
 
-// ====================================================================
-// --- GET a Single Task's Details ---
-// ====================================================================
 export async function GET(
   request: Request,
-  { params }: { params: { taskId: string } }
+  { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const userId = session.user.id;
-    const { taskId } = params;
+    const { taskId } = await params;
 
     if (!taskId) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Task ID is required' }),
-        {
-          status: 400,
-        }
+      return NextResponse.json(
+        { error: 'Task ID is required' },
+        { status: 400 }
       );
     }
 
     const task = await prisma.task.findFirst({
-      where: {
-        id: taskId,
-        userId: userId, // Security check to ensure the user owns this task
-      },
+      where: { id: taskId, userId: userId },
     });
 
     if (!task) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Task not found or permission denied' }),
+      return NextResponse.json(
+        { error: 'Task not found or permission denied' },
         { status: 404 }
       );
     }
@@ -53,111 +48,116 @@ export async function GET(
     return NextResponse.json(task);
   } catch (error) {
     console.error('[API:GET_SINGLE_TASK]', error);
-    return new NextResponse(
-      JSON.stringify({ error: 'An internal error occurred' }),
+    return NextResponse.json(
+      { error: 'An internal error occurred' },
       { status: 500 }
     );
   }
 }
 
-// ====================================================================
-// --- UPDATE a Task (PATCH) ---
-// ====================================================================
 export async function PATCH(
   request: Request,
-  { params }: { params: { taskId: string } }
+  { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const userId = session.user.id;
-    const { taskId } = params;
+    const { taskId } = await params;
 
     const body = await request.json();
     const validation = updateTaskSchema.safeParse(body);
 
     if (!validation.success) {
-      return new NextResponse(
-        JSON.stringify({ error: validation.error.format() }),
-        {
-          status: 400,
-        }
+      return NextResponse.json(
+        { error: validation.error.format() },
+        { status: 400 }
       );
     }
 
-    // Security Check: Find the task first to ensure ownership before updating
-    const taskToUpdate = await prisma.task.findFirst({
-      where: { id: taskId, userId: userId },
-    });
+    const updatedTask = await prisma.$transaction(async (tx) => {
+      const taskToUpdate = await tx.task.findUnique({
+        where: { id: taskId, userId: userId },
+      });
+      if (!taskToUpdate) {
+        throw new Error('Task not found or permission denied.');
+      }
 
-    if (!taskToUpdate) {
-      return new NextResponse(
-        JSON.stringify({
-          error: 'Task not found or you do not have permission',
-        }),
-        { status: 404 }
-      );
-    }
+      const task = await tx.task.update({
+        where: { id: taskId },
+        data: validation.data,
+      });
 
-    const updatedTask = await prisma.task.update({
-      where: { id: taskId },
-      data: validation.data,
+      if (validation.data.estimatedTimeSeconds !== undefined) {
+        await updateGoalTreeEstimates(task.goalId, tx);
+      }
+      return task;
     });
 
     return NextResponse.json(updatedTask);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[API:UPDATE_TASK]', error);
-    return new NextResponse(
-      JSON.stringify({ error: 'An internal error occurred' }),
+
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+
+    if (errorMessage.includes('Task not found')) {
+      return NextResponse.json({ error: errorMessage }, { status: 404 });
+    }
+
+    return NextResponse.json(
+      { error: 'An internal error occurred' },
       { status: 500 }
     );
   }
 }
 
-// ====================================================================
-// --- DELETE a Task (DELETE) ---
-// ====================================================================
 export async function DELETE(
   request: Request,
-  { params }: { params: { taskId: string } }
+  { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const userId = session.user.id;
-    const { taskId } = params;
+    const { taskId } = await params;
 
-    // Security Check
-    const taskToDelete = await prisma.task.findFirst({
-      where: { id: taskId, userId: userId },
+    await prisma.$transaction(async (tx) => {
+      const taskToDelete = await tx.task.findUnique({
+        where: { id: taskId, userId: userId },
+        select: { goalId: true, estimatedTimeSeconds: true },
+      });
+
+      if (!taskToDelete) {
+        throw new Error('Task not found or permission denied.');
+      }
+
+      await tx.task.delete({
+        where: { id: taskId },
+      });
+
+      if (
+        taskToDelete.estimatedTimeSeconds &&
+        taskToDelete.estimatedTimeSeconds > 0
+      ) {
+        await updateGoalTreeEstimates(taskToDelete.goalId, tx);
+      }
     });
 
-    if (!taskToDelete) {
-      return new NextResponse(
-        JSON.stringify({
-          error: 'Task not found or you do not have permission',
-        }),
-        { status: 404 }
-      );
-    }
-
-    await prisma.task.delete({
-      where: { id: taskId },
-    });
-
-    return new NextResponse(null, { status: 204 }); // 204 No Content is standard for successful deletions
-  } catch (error) {
+    return new NextResponse(null, { status: 204 });
+  } catch (error: unknown) {
     console.error('[API:DELETE_TASK]', error);
-    return new NextResponse(
-      JSON.stringify({ error: 'An internal error occurred' }),
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage.includes('Task not found')) {
+      return NextResponse.json({ error: errorMessage }, { status: 404 });
+    }
+    return NextResponse.json(
+      { error: 'An internal error occurred' },
       { status: 500 }
     );
   }

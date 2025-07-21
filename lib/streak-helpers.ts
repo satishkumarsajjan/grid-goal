@@ -1,83 +1,125 @@
-import { isWithinInterval, startOfDay } from 'date-fns';
+import {
+  isWithinInterval,
+  startOfDay,
+  differenceInCalendarDays,
+} from 'date-fns';
 
 // Define the types for clarity and type safety
-type Session = { startTime: Date };
-type PausePeriod = { startDate: Date; endDate: Date };
-type StreakData = { currentStreak: number; todayInStreak: boolean };
+export type Session = { startTime: Date };
+export type PausePeriod = { startDate: Date; endDate: Date };
+// --- FIX: Add longestStreak to the return type ---
+export type StreakData = {
+  currentStreak: number;
+  longestStreak: number;
+  todayInStreak: boolean;
+};
 
 /**
- * Calculates the user's current activity streak, intelligently handling
+ * Calculates the user's current and longest activity streaks, intelligently handling
  * scheduled pause periods (vacations).
- * @param sessions - A sorted array of the user's focus sessions.
+ * @param sessions - An array of the user's focus sessions, sorted by startTime ascending.
  * @param pausePeriods - An array of the user's scheduled pause periods.
- * @returns An object containing the current streak count and whether today is part of it.
+ * @returns An object containing the current streak, longest streak, and whether today is part of the streak.
  */
 export function calculateStreak(
   sessions: Session[],
   pausePeriods: PausePeriod[]
 ): StreakData {
   if (sessions.length === 0) {
-    return { currentStreak: 0, todayInStreak: false };
+    return { currentStreak: 0, longestStreak: 0, todayInStreak: false };
   }
 
-  // 1. Create a set of unique dates (YYYY-MM-DD) where the user was active.
-  // Using startOfDay ensures we ignore the time part of the date.
-  const activeDays = new Set(
-    sessions.map((s) => startOfDay(s.startTime).toISOString())
-  );
+  // --- NEW, MORE EFFICIENT LOGIC ---
+  // 1. Get a sorted, unique list of active days.
+  const uniqueActiveDays = [
+    ...new Set(sessions.map((s) => startOfDay(s.startTime).getTime())),
+  ].sort((a, b) => a - b);
 
-  // 2. Define today and check if the user was active today.
-  const today = startOfDay(new Date());
-  let todayInStreak = activeDays.has(today.toISOString());
+  // Convert pause periods to a quick-lookup structure
+  const pauseIntervals = pausePeriods.map((p) => ({
+    start: startOfDay(p.startDate),
+    end: startOfDay(p.endDate),
+  }));
 
   let currentStreak = 0;
-  let currentDate = today;
+  let longestStreak = 0;
+  let todayInStreak = false;
 
-  // 3. Loop backwards from today for up to 365 days.
-  for (let i = 0; i < 365; i++) {
-    const dateToCheck = currentDate;
-    const dateToCheckISO = dateToCheck.toISOString();
-
-    // Check if the current date falls within any scheduled pause period.
-    const isPaused = pausePeriods.some((period) =>
-      isWithinInterval(dateToCheck, {
-        start: startOfDay(period.startDate),
-        end: startOfDay(period.endDate),
-      })
-    );
-
-    const isActive = activeDays.has(dateToCheckISO);
-
-    if (isActive) {
-      // If the user was active, increment the streak.
-      currentStreak++;
-    } else if (isPaused) {
-      // If the day was a scheduled break, we don't increment,
-      // but we also don't break the loop. The streak is preserved.
-      // However, if today is a pause day, it shouldn't count as part of an active streak.
-      if (i === 0) {
-        // If today is the first day we are checking
-        todayInStreak = false;
-      }
-      continue;
+  // 2. Iterate through the unique active days to find streaks.
+  for (let i = 0; i < uniqueActiveDays.length; i++) {
+    // Start of a new potential streak
+    if (i === 0) {
+      currentStreak = 1;
     } else {
-      // If the day was not active and not paused, the streak is broken. Stop counting.
-      // We must correct if the loop breaks on the first day (today).
-      if (i === 0) {
-        todayInStreak = false;
-      }
-      break;
-    }
+      const prevDay = new Date(uniqueActiveDays[i - 1]);
+      const currentDay = new Date(uniqueActiveDays[i]);
 
-    // Move to the previous day for the next iteration.
-    currentDate.setDate(currentDate.getDate() - 1);
+      const daysBetween = differenceInCalendarDays(currentDay, prevDay);
+
+      // Check if all days in the gap are covered by a pause period
+      let gapIsPaused = true;
+      if (daysBetween > 1) {
+        for (let j = 1; j < daysBetween; j++) {
+          const dayInGap = new Date(prevDay);
+          dayInGap.setDate(dayInGap.getDate() + j);
+          if (!pauseIntervals.some((p) => isWithinInterval(dayInGap, p))) {
+            gapIsPaused = false;
+            break;
+          }
+        }
+      }
+
+      if (daysBetween === 1 || (daysBetween > 1 && gapIsPaused)) {
+        // The streak continues
+        currentStreak++;
+      } else {
+        // The streak is broken, check if it was the longest
+        if (currentStreak > longestStreak) {
+          longestStreak = currentStreak;
+        }
+        // Start a new streak
+        currentStreak = 1;
+      }
+    }
   }
 
-  return { currentStreak, todayInStreak };
+  // 3. After the loop, check the final `currentStreak` against the `longestStreak`.
+  if (currentStreak > longestStreak) {
+    longestStreak = currentStreak;
+  }
+
+  // 4. Finally, determine the "current" streak status relative to today.
+  const lastActiveDay = new Date(uniqueActiveDays[uniqueActiveDays.length - 1]);
+  const today = startOfDay(new Date());
+  const daysSinceLastActive = differenceInCalendarDays(today, lastActiveDay);
+
+  if (daysSinceLastActive === 0) {
+    // The last active day was today.
+    todayInStreak = true;
+  } else {
+    // Check if the gap between today and the last active day is covered by a pause.
+    let gapIsPaused = true;
+    for (let j = 1; j < daysSinceLastActive; j++) {
+      const dayInGap = new Date(lastActiveDay);
+      dayInGap.setDate(dayInGap.getDate() + j);
+      if (!pauseIntervals.some((p) => isWithinInterval(dayInGap, p))) {
+        gapIsPaused = false;
+        break;
+      }
+    }
+
+    // If the gap is not paused, the current streak is 0.
+    if (daysSinceLastActive > 1 && !gapIsPaused) {
+      currentStreak = 0;
+    }
+    todayInStreak = false;
+  }
+
+  return { currentStreak, longestStreak, todayInStreak };
 }
 
 /**
- * Calculates the total focus time for the current day. This function remains unchanged.
+ * Calculates the total focus time for the current day.
  * @param sessions - An array of focus sessions.
  * @returns Total focus time for today in seconds.
  */
@@ -85,6 +127,7 @@ export function calculateTodayFocus(
   sessions: { startTime: Date; durationSeconds: number }[]
 ): number {
   const todayStart = startOfDay(new Date());
+
   return sessions
     .filter((s) => startOfDay(s.startTime).getTime() === todayStart.getTime())
     .reduce((total, session) => total + session.durationSeconds, 0);

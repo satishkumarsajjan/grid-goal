@@ -1,11 +1,12 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { AwardService } from '@/lib/services/award.service';
 import { prisma } from '@/prisma';
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
-// This function handles GET requests to /api/goals/[goalId]
 export async function GET(
   request: Request,
-  { params }: { params: { goalId: string } }
+  { params }: { params: Promise<{ goalId: string }> }
 ) {
   try {
     const session = await auth();
@@ -15,11 +16,11 @@ export async function GET(
       });
     }
     const userId = session.user.id;
-    const goalId = params.goalId;
+    const { goalId } = await params;
 
-    // First, verify the user owns the goal they are requesting.
     const goalOwnerCheck = await prisma.goal.findFirst({
       where: { id: goalId, userId: userId },
+      include: { category: true },
     });
 
     if (!goalOwnerCheck) {
@@ -29,7 +30,6 @@ export async function GET(
       );
     }
 
-    // Use a recursive raw query to find the ID of the parent goal AND all its nested sub-goals.
     const goalAndSubGoalIds = await prisma.$queryRaw<[{ id: string }]>`
       WITH RECURSIVE "GoalHierarchy" AS (
         SELECT id FROM "Goal" WHERE id = ${goalId}
@@ -39,26 +39,47 @@ export async function GET(
       )
       SELECT id FROM "GoalHierarchy";
     `;
-    const allIds = goalAndSubGoalIds.map((g) => g.id);
+    const allIdsInHierarchy = goalAndSubGoalIds.map((g) => g.id);
 
-    // Fetch the main goal's details AND all focus sessions from the entire hierarchy in parallel.
-    const [goalDetails, sessions] = await Promise.all([
-      prisma.goal.findUnique({ where: { id: goalId } }),
+    const [sessions, tasks, timePerTask] = await Promise.all([
       prisma.focusSession.findMany({
-        where: { goalId: { in: allIds } },
+        where: { goalId: { in: allIdsInHierarchy } },
         orderBy: { startTime: 'asc' },
         select: { startTime: true, durationSeconds: true },
       }),
+      prisma.task.findMany({
+        where: { goalId: goalId, userId: userId },
+        orderBy: { sortOrder: 'asc' },
+      }),
+
+      prisma.focusSession.groupBy({
+        by: ['taskId'],
+        where: {
+          goalId: goalId,
+          userId: userId,
+
+          OR: [{ pomodoroCycle: 'WORK' }, { mode: 'STOPWATCH' }],
+        },
+        _sum: { durationSeconds: true },
+      }),
     ]);
 
-    if (!goalDetails) {
-      return new NextResponse(JSON.stringify({ error: 'Goal not found' }), {
-        status: 404,
-      });
-    }
+    const timeMap = timePerTask.reduce((acc, curr) => {
+      acc[curr.taskId] = curr._sum.durationSeconds || 0;
+      return acc;
+    }, {} as Record<string, number>);
 
-    // Return the goal details with the focus sessions nested inside.
-    return NextResponse.json({ ...goalDetails, focusSessions: sessions });
+    const tasksWithTime = tasks.map((task) => ({
+      ...task,
+      totalTimeSpentSeconds: timeMap[task.id] || 0,
+    }));
+
+    const responsePayload = {
+      ...goalOwnerCheck,
+      focusSessions: sessions,
+      tasks: tasksWithTime,
+    };
+    return NextResponse.json(responsePayload);
   } catch (error) {
     console.error('[API:GET_GOAL_DETAILS]', error);
     return new NextResponse(
@@ -67,10 +88,21 @@ export async function GET(
     );
   }
 }
-// --- UPDATE a Goal (PATCH) ---
+
+const updateGoalSchema = z
+  .object({
+    title: z.string().min(1).max(100).optional(),
+    description: z.string().max(500).optional().nullable(),
+    status: z.enum(['ACTIVE', 'PAUSED', 'ARCHIVED']).optional(),
+    deadline: z.coerce.date().optional().nullable(),
+    color: z.string().startsWith('#').length(7).optional().nullable(),
+    categoryId: z.string().optional().nullable(),
+  })
+  .strict();
+
 export async function PATCH(
   request: Request,
-  { params }: { params: { goalId: string } }
+  { params }: { params: Promise<{ goalId: string }> }
 ) {
   try {
     const session = await auth();
@@ -83,27 +115,38 @@ export async function PATCH(
     const { goalId } = await params;
 
     const body = await request.json();
-    // NOTE: You would use a Zod schema here for validation as well.
-    const { title, description, status, deadline } = body;
+    const validation = updateGoalSchema.safeParse(body);
 
-    // Security Check: Ensure the user owns this goal before updating
+    if (!validation.success) {
+      return new NextResponse(
+        JSON.stringify({ error: validation.error.format() }),
+        { status: 400 }
+      );
+    }
+
+    const dataToUpdate = validation.data;
+
     const goalToUpdate = await prisma.goal.findFirst({
-      where: { id: goalId, userId: userId },
+      where: { id: goalId, userId },
     });
-
     if (!goalToUpdate) {
       return new NextResponse(
-        JSON.stringify({
-          error: 'Goal not found or you do not have permission',
-        }),
+        JSON.stringify({ error: 'Goal not found or permission denied' }),
         { status: 404 }
       );
     }
 
     const updatedGoal = await prisma.goal.update({
       where: { id: goalId },
-      data: { title, description, status, deadline },
+      data: dataToUpdate,
+      include: { category: true },
     });
+
+    try {
+      await AwardService.processAwards(userId, 'GOAL_UPDATED', updatedGoal);
+    } catch (awardError) {
+      console.error('Failed to process goal-update awards:', awardError);
+    }
 
     return NextResponse.json(updatedGoal);
   } catch (error) {
@@ -114,11 +157,9 @@ export async function PATCH(
     );
   }
 }
-
-// --- DELETE a Goal (DELETE) ---
 export async function DELETE(
   request: Request,
-  { params }: { params: { goalId: string } }
+  { params }: { params: Promise<{ goalId: string }> }
 ) {
   try {
     const session = await auth();
@@ -129,12 +170,9 @@ export async function DELETE(
     }
     const userId = session.user.id;
     const { goalId } = await params;
-
-    // Security Check: Ensure the user owns this goal before deleting
     const goalToDelete = await prisma.goal.findFirst({
       where: { id: goalId, userId: userId },
     });
-
     if (!goalToDelete) {
       return new NextResponse(
         JSON.stringify({
@@ -143,12 +181,8 @@ export async function DELETE(
         { status: 404 }
       );
     }
-
-    await prisma.goal.delete({
-      where: { id: goalId },
-    });
-
-    return new NextResponse(null, { status: 204 }); // 204 No Content
+    await prisma.goal.delete({ where: { id: goalId } });
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('[API:DELETE_GOAL]', error);
     return new NextResponse(

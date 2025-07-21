@@ -1,131 +1,129 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { forwardRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { type Goal, GoalStatus } from '@prisma/client';
-import { toast } from 'sonner';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '../ui/skeleton';
-import { Button } from '../ui/button';
-import { Archive, PauseCircle, Play } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { CheckCircle2, PieChart, Trophy } from 'lucide-react';
+import { type ReviewData } from '@/app/api/reset/review/route';
 
-const fetchGoalsToReview = async (): Promise<Goal[]> => {
+const fetchReviewData = async (): Promise<ReviewData> => {
   const { data } = await axios.get('/api/reset/review');
   return data;
 };
 
-const updateGoalStatus = async ({
-  goalId,
-  status,
-}: {
-  goalId: string;
-  status: GoalStatus;
-}) => {
-  const { data } = await axios.patch(`/api/goals/${goalId}`, { status });
-  return data;
+const formatDuration = (seconds: number) => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m`;
+  return '<1m';
 };
 
-export function StepReview() {
-  const queryClient = useQueryClient();
-  const {
-    data: goals,
-    isLoading,
-    isError,
-  } = useQuery<Goal[]>({
+export const StepReview = forwardRef<HTMLHeadingElement>((props, ref) => {
+  const { data, isLoading, isError } = useQuery<ReviewData>({
     queryKey: ['weeklyResetReview'],
-    queryFn: fetchGoalsToReview,
+    queryFn: fetchReviewData,
   });
 
-  const mutation = useMutation({
-    mutationFn: updateGoalStatus,
-    onSuccess: () => {
-      // Invalidate both the review query AND the main goals query
-      // so the navigator updates after the reset is complete.
-      queryClient.invalidateQueries({ queryKey: ['weeklyResetReview'] });
-      queryClient.invalidateQueries({ queryKey: ['goals'] });
-    },
-    onError: () => toast.error('Could not update goal status.'),
-  });
-
-  const handleStatusUpdate = (goalId: string, status: GoalStatus) => {
-    mutation.mutate({ goalId, status });
-  };
-
-  if (isLoading) {
-    return <ReviewSkeleton />;
-  }
-  if (isError) {
+  if (isLoading) return <ReviewSkeleton />;
+  if (isError || !data)
     return (
-      <p className='text-destructive'>Could not load your goals for review.</p>
+      <p className='text-destructive'>Could not load your weekly review.</p>
     );
-  }
-  if (!goals || goals.length === 0) {
-    return (
-      <div className='text-center'>
-        <h2 className='text-3xl font-bold tracking-tight'>Review Your Goals</h2>
-        <p className='mt-4 text-muted-foreground'>
-          You have no active goals to review. Ready to plan?
-        </p>
-      </div>
-    );
-  }
+
+  const hasAnyData =
+    data.completedGoals.length > 0 ||
+    data.completedTasks.length > 0 ||
+    data.timeByCategory.length > 0;
 
   return (
     <div className='text-center'>
-      <h2 className='text-3xl font-bold tracking-tight'>Review Your Goals</h2>
+      <h2
+        ref={ref}
+        tabIndex={-1}
+        className='text-3xl font-bold tracking-tight outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm'
+      >
+        Review Your Week
+      </h2>
       <p className='mt-2 text-muted-foreground'>
-        Decide what to keep, pause, or archive for the week ahead.
+        Look back at what you accomplished and where you struggled.
       </p>
 
-      <div className='mt-8 space-y-3 text-left'>
-        {goals.map((goal) => (
-          <div
-            key={goal.id}
-            className='p-4 border rounded-lg flex items-center justify-between bg-accent/50'
-          >
-            <div>
-              <p
-                className={cn(
-                  'font-semibold',
-                  goal.status === 'PAUSED' &&
-                    'text-muted-foreground line-through'
-                )}
-              >
-                {goal.title}
-              </p>
-              <p className='text-xs text-muted-foreground'>
-                Status: {goal.status}
-              </p>
-            </div>
-            <div className='flex gap-2'>
-              {goal.status === 'ACTIVE' ? (
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => handleStatusUpdate(goal.id, GoalStatus.PAUSED)}
-                >
-                  <PauseCircle className='mr-2 h-4 w-4' /> Pause
-                </Button>
-              ) : (
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => handleStatusUpdate(goal.id, GoalStatus.ACTIVE)}
-                >
-                  <Play className='mr-2 h-4 w-4' /> Resume
-                </Button>
-              )}
-              <Button
-                variant='destructive'
-                size='sm'
-                onClick={() => handleStatusUpdate(goal.id, GoalStatus.ARCHIVED)}
-              >
-                <Archive className='mr-2 h-4 w-4' /> Archive
-              </Button>
-            </div>
+      <ScrollArea className='mt-8 text-left max-h-[400px]'>
+        {hasAnyData ? (
+          <div className='space-y-6 p-1'>
+            {/* Section 1: Goals Completed */}
+            {data.completedGoals.length > 0 && (
+              <ReviewSection icon={Trophy} title='Goals Completed'>
+                {data.completedGoals.map((goal) => (
+                  <p key={goal.id} className='text-sm font-medium'>
+                    - {goal.title}
+                  </p>
+                ))}
+              </ReviewSection>
+            )}
+
+            {/* Section 2: Tasks Completed */}
+            {data.completedTasks.length > 0 && (
+              <ReviewSection icon={CheckCircle2} title='Tasks Completed'>
+                {data.completedTasks.map((task) => (
+                  <div key={task.id} className='text-sm'>
+                    <p className='font-medium'>- {task.title}</p>
+                    <p className='text-xs text-muted-foreground pl-4'>
+                      {task.goal.title}
+                    </p>
+                  </div>
+                ))}
+              </ReviewSection>
+            )}
+
+            {/* Section 3: Time by Category */}
+            {data.timeByCategory.length > 0 && (
+              <ReviewSection icon={PieChart} title='Time by Category'>
+                {data.timeByCategory.map((cat) => (
+                  <div
+                    key={cat.name}
+                    className='flex justify-between items-center text-sm'
+                  >
+                    <span className='font-medium'>{cat.name}</span>
+                    <span className='font-mono text-muted-foreground'>
+                      {formatDuration(cat.totalSeconds)}
+                    </span>
+                  </div>
+                ))}
+              </ReviewSection>
+            )}
           </div>
-        ))}
-      </div>
+        ) : (
+          <p className='text-center text-muted-foreground p-8'>
+            No completed goals or tasks from the last week to review.
+          </p>
+        )}
+      </ScrollArea>
+    </div>
+  );
+});
+StepReview.displayName = 'StepReview';
+
+// Helper component for consistent section styling
+function ReviewSection({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <h3 className='flex items-center text-lg font-semibold mb-3'>
+        <Icon className='h-5 w-5 mr-3 text-primary' />
+        {title}
+      </h3>
+      <div className='pl-8 space-y-2 border-l-2 ml-2.5'>{children}</div>
     </div>
   );
 }
@@ -135,10 +133,21 @@ function ReviewSkeleton() {
     <div className='text-center'>
       <Skeleton className='h-8 w-1/2 mx-auto' />
       <Skeleton className='h-4 w-2/3 mx-auto mt-2' />
-      <div className='mt-8 space-y-3'>
-        <Skeleton className='h-16 w-full' />
-        <Skeleton className='h-16 w-full' />
-        <Skeleton className='h-16 w-full' />
+      <div className='mt-8 space-y-6'>
+        <div>
+          <Skeleton className='h-6 w-1/3 mb-3' />
+          <div className='pl-8 space-y-2'>
+            <Skeleton className='h-5 w-full' />
+            <Skeleton className='h-5 w-4/5' />
+          </div>
+        </div>
+        <div>
+          <Skeleton className='h-6 w-1/3 mb-3' />
+          <div className='pl-8 space-y-2'>
+            <Skeleton className='h-5 w-full' />
+            <Skeleton className='h-5 w-3/4' />
+          </div>
+        </div>
       </div>
     </div>
   );

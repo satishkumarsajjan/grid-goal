@@ -6,11 +6,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { CreateGoalForm } from './create-goal-form'; // Assuming you have this form component
-import { type GoalCreationOptions } from '@/app/(main)/goals/[[...goalId]]/page';
+import { GoalForm } from './create-goal-form';
+import { GoalDialogOptions } from './goal-navigator-item';
 
 interface GoalCreationDialogProps {
-  options: GoalCreationOptions;
+  options: GoalDialogOptions;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -26,7 +26,7 @@ export function GoalCreationDialog({
             {options.parentId ? 'Create New Sub-Goal' : 'Create New Goal'}
           </DialogTitle>
         </DialogHeader>
-        <CreateGoalForm
+        <GoalForm
           parentId={options.parentId}
           onFinished={() => onOpenChange(false)}
         />

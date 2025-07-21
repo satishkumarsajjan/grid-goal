@@ -1,96 +1,138 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
-import { type Task } from '@prisma/client';
-
 import { useTimerStore } from '@/store/timer-store';
-import { useTimer } from '@/hooks/use-timer';
-import { Button } from '@/components/ui/button';
-import { SessionSummaryPanel } from '@/components/session/session-summary-panel';
+import { useTimerEngine } from '@/hooks/use-timer-engine';
+import { calculateFinalDuration } from '@/lib/timer-machine';
 
-// API fetching function for the task's details
-const fetchTaskDetails = async (taskId: string): Promise<Task> => {
-  const { data } = await axios.get(`/api/tasks/${taskId}`);
-  return data;
-};
+import { SessionControls } from './session-controls';
+import { SessionSummaryView } from '../session/session-summary-view';
+import { SessionHeader } from './session-header';
+import { TimerDisplay } from './timer-display';
+import { PomodoroTransition } from './pomodoro-transition';
 
-// Helper function to format seconds into a HH:MM:SS string
-const formatTime = (totalSeconds: number): string => {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return [hours, minutes, seconds]
-    .map((v) => v.toString().padStart(2, '0'))
-    .join(':');
-};
+import { PomodoroCycle, TimerMode } from '@prisma/client';
+import { ZenModeFader } from '../focus/ZenModeFader';
 
 export function FocusSessionUI() {
-  // State to control when the summary panel is shown
-  const [isSummaryVisible, setIsSummaryVisible] = useState(false);
+  const {
+    isActive,
+    activeTask,
+    mode,
+    pomodoroCycle,
+    reset,
+    pauseSession,
+    setTimerState,
+  } = useTimerStore();
 
-  // Get necessary state and actions from the global timer store
-  const { activeTaskId, activeGoalId } = useTimerStore();
+  const {
+    displayTime,
+    currentIntervalDuration,
+    isTransitioning,
+    transitionTo,
+    startNextInterval,
+    skipBreak,
+  } = useTimerEngine();
 
-  // Our custom hook provides the live elapsed time, updated every second
-  const elapsedTime = useTimer();
+  const [showSummary, setShowSummary] = useState(false);
+  const [finalSessionData, setFinalSessionData] = useState<{
+    durationSeconds: number;
+    mode: TimerMode;
+    pomodoroCycle: PomodoroCycle;
+  } | null>(null);
 
-  // Fetch the details of the currently active task
-  const { data: task, isLoading } = useQuery<Task>({
-    queryKey: ['task', activeTaskId], // Dynamic query key based on the active task
-    queryFn: () => fetchTaskDetails(activeTaskId!),
-    enabled: !!activeTaskId, // Only run the query if there is an active task
-    staleTime: Infinity, // The task details are unlikely to change during a session
-  });
+  const handleFinishSession = () => {
+    setTimerState({ isTransitioning: false, transitionTo: null });
 
-  // Handler for the "Stop Session" button
-  const handleStop = () => {
-    // Instead of stopping immediately, we show the summary panel
-    setIsSummaryVisible(true);
+    const timerStateBeforePause = useTimerStore.getState();
+    if (timerStateBeforePause.isActive) {
+      pauseSession();
+    }
+
+    const timerState = useTimerStore.getState();
+    const finalDurationSeconds = calculateFinalDuration(timerState);
+
+    setFinalSessionData({
+      durationSeconds: finalDurationSeconds,
+      mode: timerState.mode,
+      pomodoroCycle: timerState.pomodoroCycle,
+    });
+    setShowSummary(true);
   };
 
-  // This is the full-screen Zen Mode UI
-  const ZenMode = (
-    <div className='fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-900 text-white transition-opacity duration-300'>
-      <div className='text-center'>
-        <p className='text-lg text-gray-400'>Focusing on:</p>
-        <h1 className='mt-2 text-4xl font-bold text-white'>
-          {isLoading || !task ? 'Loading task...' : task.title}
-        </h1>
+  const handleCloseSummary = () => {
+    setShowSummary(false);
+  };
 
-        <div className='mt-12 font-mono text-8xl font-bold tracking-tighter text-white'>
-          {formatTime(elapsedTime)}
-        </div>
+  const handleSessionEnd = () => {
+    setShowSummary(false);
+    setFinalSessionData(null);
+    reset();
+  };
 
-        <Button
-          onClick={handleStop}
-          variant='destructive'
-          size='lg'
-          className='mt-12'
-        >
-          Stop Session
-        </Button>
-      </div>
-    </div>
-  );
+  if (!activeTask) return null;
+
+  if (isTransitioning && transitionTo) {
+    return (
+      <PomodoroTransition
+        nextCycle={transitionTo}
+        onStartNext={startNextInterval}
+        onSkipBreak={skipBreak}
+        onEndSession={handleFinishSession}
+      />
+    );
+  }
 
   return (
     <>
-      {ZenMode}
+      <div
+        className='fixed inset-0 bg-background z-40 flex flex-col items-center justify-center p-8 transition-all duration-300'
+        style={{
+          opacity: showSummary ? 0.2 : 1,
+          filter: showSummary ? 'blur(8px)' : 'none',
+          transform: showSummary ? 'scale(0.98)' : 'scale(1)',
+          pointerEvents: showSummary ? 'none' : 'auto',
+        }}
+      >
+        {!isActive && (
+          <div className='z-30 absolute inset-0 bg-black/10 dark:bg-black/30 flex items-center justify-center backdrop-blur-sm'>
+            <span className='text-white text-2xl font-bold tracking-widest uppercase bg-black/50 px-4 py-2 rounded-lg'>
+              Paused
+            </span>
+          </div>
+        )}
+        <span className='absolute top-8'>
+          <ZenModeFader>
+            <SessionHeader
+              taskTitle={activeTask.title}
+              goalTitle={activeTask.goalTitle}
+            />
+          </ZenModeFader>
+        </span>
 
-      {/* 
-        The SessionSummaryPanel is always rendered in the background, but it
-        is only made visible when its `isOpen` prop is true. This allows its
-        slide-in animation to work correctly.
-      */}
-      <SessionSummaryPanel
-        isOpen={isSummaryVisible}
-        onClose={() => setIsSummaryVisible(false)} // Allows closing the panel (e.g., by clicking outside)
-        durationSeconds={elapsedTime}
-        taskId={activeTaskId!}
-        goalId={activeGoalId!}
-      />
+        <TimerDisplay
+          mode={mode}
+          pomodoroCycle={pomodoroCycle}
+          displayMs={displayTime}
+          intervalDurationMs={currentIntervalDuration}
+        />
+
+        <div className='absolute bottom-16 w-full flex justify-center z-40'>
+          <ZenModeFader>
+            <SessionControls onFinish={handleFinishSession} />
+          </ZenModeFader>
+        </div>
+      </div>
+
+      {showSummary && finalSessionData && (
+        <SessionSummaryView
+          task={activeTask}
+          sessionData={finalSessionData}
+          onSessionSaved={handleSessionEnd}
+          onSessionDiscarded={handleSessionEnd}
+          onClose={handleCloseSummary}
+        />
+      )}
     </>
   );
 }

@@ -1,9 +1,12 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@/auth'; // Your NextAuth session handler
-import { prisma } from '@/prisma';
+import { auth } from '@/auth';
+import { GOAL_COLORS } from '@/lib/constants';
+import { AwardService } from '@/lib/services/award.service';
 import { createGoalSchema } from '@/lib/zod-schemas';
+import { prisma } from '@/prisma';
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -33,10 +36,8 @@ export async function GET(request: Request) {
   }
 }
 
-// This function handles POST requests to /api/goals
 export async function POST(request: Request) {
   try {
-    // 1. Authenticate the user
     const session = await auth();
     if (!session?.user?.id) {
       return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
@@ -45,7 +46,6 @@ export async function POST(request: Request) {
     }
     const userId = session.user.id;
 
-    // 2. Parse and validate the request body
     const body = await request.json();
     const validation = createGoalSchema.safeParse(body);
 
@@ -55,7 +55,51 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const { title, description, parentId, deadline } = validation.data;
+
+    const {
+      title,
+      description,
+      parentId,
+      deadline,
+      estimatedTimeSeconds,
+      color,
+    } = validation.data;
+
+    let finalColor = color;
+
+    if (!finalColor) {
+      const existingGoals = await prisma.goal.findMany({
+        where: { userId: userId, status: 'ACTIVE' },
+        select: { color: true },
+      });
+      const usedColors = existingGoals
+        .map((goal) => goal.color)
+        .filter(Boolean) as string[];
+
+      const colorFrequency = new Map<string, number>();
+      GOAL_COLORS.forEach((c) => colorFrequency.set(c, 0));
+      usedColors.forEach((used) => {
+        if (colorFrequency.has(used)) {
+          colorFrequency.set(used, colorFrequency.get(used)! + 1);
+        }
+      });
+
+      let leastUsedColor = GOAL_COLORS[0];
+      let minFrequency = Infinity;
+
+      for (const [paletteColor, frequency] of colorFrequency.entries()) {
+        if (frequency === 0) {
+          leastUsedColor = paletteColor;
+          break;
+        }
+        if (frequency < minFrequency) {
+          minFrequency = frequency;
+          leastUsedColor = paletteColor;
+        }
+      }
+      finalColor = leastUsedColor;
+    }
+
     if (parentId) {
       const parentGoal = await prisma.goal.findFirst({
         where: { id: parentId, userId: userId },
@@ -67,7 +111,7 @@ export async function POST(request: Request) {
         );
       }
     }
-    // 3. Perform the database operation
+
     const newGoal = await prisma.goal.create({
       data: {
         userId,
@@ -75,12 +119,20 @@ export async function POST(request: Request) {
         description,
         parentId,
         deadline,
+        deepEstimateTotalSeconds: estimatedTimeSeconds ?? undefined,
+        color: finalColor,
       },
     });
-
-    // 4. Return a successful response
-    return NextResponse.json(newGoal, { status: 201 }); // 201 Created
+    try {
+      await AwardService.processAwards(userId, 'GOAL_CREATED', newGoal);
+    } catch (awardError) {
+      console.error('Failed to process goal-creation awards:', awardError);
+    }
+    return NextResponse.json(newGoal, { status: 201 });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return new NextResponse(JSON.stringify(error.errors), { status: 400 });
+    }
     console.error('[API:CREATE_GOAL]', error);
     return new NextResponse(
       JSON.stringify({ error: 'An internal error occurred' }),

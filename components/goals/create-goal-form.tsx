@@ -1,17 +1,21 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { z } from 'zod';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
+import { Goal } from '@prisma/client';
 
 import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -26,47 +30,147 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { createGoalSchema } from '@/lib/zod-schemas'; // Import our updated schema
-import { toast } from 'sonner';
+import { GOAL_COLORS } from '@/lib/constants';
 
-type GoalFormValues = z.infer<typeof createGoalSchema>;
-
-const createGoal = async (values: GoalFormValues) => {
-  const { data } = await axios.post('/api/goals', values);
-  return data;
-};
-
-interface CreateGoalFormProps {
-  parentId?: string | null;
-  onFinished: () => void; // A function to close the dialog on success
+interface GoalColorPickerProps {
+  selectedColor: string | null;
+  onSelectColor: (color: string) => void;
+}
+function GoalColorPicker({
+  selectedColor,
+  onSelectColor,
+}: GoalColorPickerProps) {
+  return (
+    <div>
+      <FormLabel>Color</FormLabel>
+      <FormDescription className='text-xs pb-2'>
+        Pick a color for your goal.
+      </FormDescription>
+      <div className='flex flex-wrap gap-2'>
+        {GOAL_COLORS.map((color) => (
+          <button
+            key={color}
+            type='button'
+            onClick={() => onSelectColor(color)}
+            className={cn(
+              'w-8 h-8 rounded-full border-2 transition-transform duration-150 ease-in-out',
+              selectedColor === color
+                ? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background'
+                : 'border-transparent hover:scale-110'
+            )}
+            style={{ backgroundColor: color }}
+            aria-label={`Select color ${color}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
-export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
+const goalFormSchema = z.object({
+  title: z.string().min(1, 'Title is required.').max(100),
+  description: z.string().max(500).optional().nullable(),
+  deadline: z.date().optional().nullable(),
+});
+
+type GoalFormValues = z.infer<typeof goalFormSchema>;
+
+const upsertGoal = async ({
+  values,
+  initialData,
+}: {
+  values: GoalFormValues & { color?: string | null; parentId?: string };
+  initialData?: Goal | null;
+}): Promise<AxiosResponse<Goal>> => {
+  const apiPayload = {
+    ...values,
+  };
+
+  if (initialData?.id) {
+    return axios.patch(`/api/goals/${initialData.id}`, apiPayload);
+  } else {
+    return axios.post('/api/goals', apiPayload);
+  }
+};
+
+interface GoalFormProps {
+  initialData?: Goal | null;
+  parentId?: string | null;
+  onFinished: () => void;
+}
+
+export function GoalForm({ initialData, parentId, onFinished }: GoalFormProps) {
   const queryClient = useQueryClient();
+  const [selectedColor, setSelectedColor] = useState<string | null>(
+    initialData?.color || null
+  );
+
   const form = useForm<GoalFormValues>({
-    resolver: zodResolver(createGoalSchema),
+    resolver: zodResolver(goalFormSchema),
     defaultValues: {
-      title: '',
-      description: '',
-      deadline: undefined,
+      title: initialData?.title || '',
+      description: initialData?.description || '',
+      deadline: initialData?.deadline
+        ? new Date(initialData.deadline)
+        : undefined,
     },
   });
 
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        title: initialData.title,
+        description: initialData.description || '',
+        deadline: initialData.deadline
+          ? new Date(initialData.deadline)
+          : undefined,
+      });
+      setSelectedColor(initialData.color || null);
+    }
+  }, [initialData, form]);
+
   const mutation = useMutation({
-    mutationFn: createGoal,
-    onSuccess: () => {
-      toast.success('Goal successfully created!');
+    mutationFn: upsertGoal,
+
+    onSuccess: (response, variables) => {
+      const isEditing = !!variables.initialData;
+      const action = isEditing ? 'updated' : 'created';
+      toast.success(`Goal successfully ${action}!`);
+
       queryClient.invalidateQueries({ queryKey: ['goals'] });
-      onFinished(); // Close the dialog
+
+      if (isEditing && variables.initialData?.id) {
+        const goalId = variables.initialData.id;
+
+        queryClient.invalidateQueries({ queryKey: ['goal', goalId] });
+        queryClient.invalidateQueries({ queryKey: ['tasks', goalId] });
+        queryClient.invalidateQueries({ queryKey: ['timeAllocation'] });
+        queryClient.invalidateQueries({ queryKey: ['vibeAnalysis'] });
+        queryClient.invalidateQueries({ queryKey: ['goal', goalId] });
+      }
+
+      onFinished();
     },
-    onError: () => {
-      toast.error('Failed to create goal. Please try again.');
+
+    onError: (error) => {
+      const action = initialData ? 'update' : 'create';
+      console.error(`Failed to ${action} goal:`, error);
+      toast.error(`Failed to ${action} goal. Please try again.`);
     },
   });
 
   function onSubmit(values: GoalFormValues) {
-    mutation.mutate({ ...values, parentId: parentId ?? undefined });
+    mutation.mutate({
+      values: {
+        ...values,
+        parentId: parentId ?? undefined,
+        color: selectedColor,
+      },
+      initialData,
+    });
   }
+
+  const isEditing = !!initialData;
 
   return (
     <Form {...form}>
@@ -95,6 +199,7 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
                   placeholder='Describe what success looks like for this goal.'
                   className='resize-none'
                   {...field}
+                  value={field.value ?? ''}
                 />
               </FormControl>
               <FormMessage />
@@ -102,7 +207,13 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
           )}
         />
 
-        {/* --- NEW DATE PICKER FIELD --- */}
+        <GoalColorPicker
+          selectedColor={selectedColor}
+          onSelectColor={(color) =>
+            setSelectedColor(color === selectedColor ? null : color)
+          }
+        />
+
         <FormField
           control={form.control}
           name='deadline'
@@ -131,12 +242,12 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
                 <PopoverContent className='w-auto p-0' align='start'>
                   <Calendar
                     mode='single'
-                    selected={field.value}
+                    selected={field.value ?? undefined}
                     onSelect={field.onChange}
                     disabled={(date) =>
-                      date < new Date() || date < new Date('1900-01-01')
+                      date < new Date(new Date().setHours(0, 0, 0, 0))
                     }
-                    autoFocus
+                    initialFocus
                   />
                 </PopoverContent>
               </Popover>
@@ -146,7 +257,13 @@ export function CreateGoalForm({ parentId, onFinished }: CreateGoalFormProps) {
         />
 
         <Button type='submit' className='w-full' disabled={mutation.isPending}>
-          {mutation.isPending ? 'Creating...' : 'Create Goal'}
+          {mutation.isPending
+            ? isEditing
+              ? 'Saving...'
+              : 'Creating...'
+            : isEditing
+            ? 'Save Changes'
+            : 'Create Goal'}
         </Button>
       </form>
     </Form>

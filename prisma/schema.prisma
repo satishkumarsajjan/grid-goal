@@ -71,22 +71,22 @@ model User {
 
   // --- GridGoal Application Relationships ---
   // All user data is cascaded on delete for privacy and data integrity.
-  subscription    UserSubscription?
-  workspaces      Workspace[] // Pro Feature
-  goals           Goal[]
-  tasks           Task[]
-  focusSessions   FocusSession[]
-  dailyQueue      DailyQueueItem[] // For the Daily Focus Queue (Phase 2).
-  pausePeriods    PausePeriod[] // For Vacation Mode (Phase 2).
-  squads          SquadMember[] // Pro Feature
-  apiKeys         ApiKey[] // Pro Feature
-  rewindSummaries RewindSummary[]
-  awards          UserAward[]
-  categories      Category[]
-  tags            Tag[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  subscription          UserSubscription?
+  workspaces            Workspace[] // Pro Feature
+  goals                 Goal[]
+  tasks                 Task[]
+  focusSessions         FocusSession[]
+  dailyQueue            DailyQueueItem[] // For the Daily Focus Queue (Phase 2).
+  pausePeriods          PausePeriod[] // For Vacation Mode (Phase 2).
+  squads                SquadMember[] // Pro Feature
+  apiKeys               ApiKey[] // Pro Feature
+  rewindSummaries       RewindSummary[]
+  awards                UserAward[]
+  categories            Category[]
+  tags                  Tag[]
+  dailyFocusGoalMinutes Int?              @default(180)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 }
 
 // =======================================================
@@ -94,21 +94,22 @@ model User {
 // =======================================================
 
 model Goal {
-  id                   String     @id @default(cuid())
-  title                String
-  description          String?
-  status               GoalStatus @default(ACTIVE)
-  deadline             DateTime?
-  estimatedTimeSeconds Int?
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      GoalStatus @default(ACTIVE)
+  color       String?
+  deadline    DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  deepEstimateTotalSeconds Int @default(0)
 
   userId      String
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspaceId String?
   workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  // Self-relation for Nested Goals (Phase 2).
   parentId String?
   parent   Goal?   @relation("SubGoals", fields: [parentId], references: [id], onDelete: Cascade)
   subGoals Goal[]  @relation("SubGoals")
@@ -120,19 +121,23 @@ model Goal {
 }
 
 model Task {
-  id                   String           @id @default(cuid())
-  title                String
-  status               TaskStatus       @default(PENDING)
-  sortOrder            Int
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-  estimatedTimeSeconds Int?             @default(0)
-  userId               String
-  user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  goalId               String
-  goal                 Goal             @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  focusSessions        FocusSession[]
-  dailyQueueItems      DailyQueueItem[]
+  id        String     @id @default(cuid())
+  title     String
+  status    TaskStatus @default(PENDING)
+  sortOrder Int
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  estimatedTimeSeconds Int? @default(0)
+
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalId          String
+  goal            Goal             @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  focusSessions   FocusSession[]
+  dailyQueueItems DailyQueueItem[]
+
+  @@index([estimatedTimeSeconds])
 }
 
 // ===================================================
@@ -148,16 +153,38 @@ model FocusSession {
   noteNextStep     String?
   artifactUrl      String?
   vibe             SessionVibe?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
 
+  mode TimerMode @default(STOPWATCH)
+
+  pomodoroCycle PomodoroCycle?
+
+  sequenceId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // --- Relationships remain the same ---
   userId String
   user   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  goalId String // Denormalized for query performance.
+  goalId String
   goal   Goal                  @relation(fields: [goalId], references: [id], onDelete: Cascade)
   taskId String
   task   Task                  @relation(fields: [taskId], references: [id], onDelete: Cascade)
   tags   TagsOnFocusSessions[]
+
+  @@index([sequenceId])
+}
+
+// --- NEW ENUMS TO SUPPORT THE NEW FIELDS ---
+enum TimerMode {
+  STOPWATCH
+  POMODORO
+}
+
+enum PomodoroCycle {
+  WORK
+  SHORT_BREAK
+  LONG_BREAK
 }
 
 // For the Daily Focus Queue feature (Phase 2).

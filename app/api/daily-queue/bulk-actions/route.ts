@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/prisma';
+import { NextResponse } from 'next/server';
 
-// POST /api/daily-queue/bulk-actions
+
 export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.id)
@@ -18,8 +18,7 @@ export async function POST(request: Request) {
   }
 
   if (action === 'RESET_DATES') {
-    // This action updates the createdAt timestamp of all queue items to "now",
-    // effectively making yesterday's queue today's queue.
+
     await prisma.dailyQueueItem.updateMany({
       where: { userId: session.user.id },
       data: { createdAt: new Date() },

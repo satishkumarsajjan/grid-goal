@@ -3,8 +3,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/prisma';
 import { TaskStatus } from '@prisma/client';
 
-// This function handles GET requests to /api/tasks/actionable
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -14,7 +13,6 @@ export async function GET(request: Request) {
     }
     const userId = session.user.id;
 
-    // Fetch all tasks for the user that are NOT completed
     const tasks = await prisma.task.findMany({
       where: {
         userId: userId,

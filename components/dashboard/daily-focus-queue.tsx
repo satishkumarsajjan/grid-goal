@@ -1,149 +1,157 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { type DailyQueueItem, type Task } from '@prisma/client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { isToday } from 'date-fns';
-import { CalendarCheck2, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { Skeleton } from '../ui/skeleton';
+import { X } from 'lucide-react';
 
-// Combine the types for easier use
-type QueueItemWithTask = DailyQueueItem & { task: Task };
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { type TaskWithGoal } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { ScrollArea } from '../ui/scroll-area';
 
-// --- API Functions ---
-const fetchQueue = async (): Promise<QueueItemWithTask[]> => {
-  const { data } = await axios.get('/api/daily-queue');
+type QueueItem = { id: string; task: TaskWithGoal };
+
+const fetchQueue = async (): Promise<QueueItem[]> => {
+  const { data } = await axios.get('/api/daily-queue?includeGoal=true');
   return data;
 };
-const removeItem = async (itemId: string) =>
-  axios.delete(`/api/daily-queue/${itemId}`);
-const bulkAction = async (action: 'CLEAR_ALL' | 'RESET_DATES') =>
-  axios.post('/api/daily-queue/bulk-actions', { action });
 
-// --- Main Component ---
+const removeFromQueue = async (queueItemId: string) => {
+  return axios.delete(`/api/daily-queue/${queueItemId}`);
+};
+
 export function DailyFocusQueue() {
   const queryClient = useQueryClient();
 
   const {
-    data: items,
+    data: queue,
     isLoading,
     isError,
-  } = useQuery<QueueItemWithTask[]>({
+  } = useQuery<QueueItem[]>({
     queryKey: ['dailyQueue'],
     queryFn: fetchQueue,
   });
 
-  // --- Mutations ---
-  const removeItemMutation = useMutation({
-    mutationFn: removeItem,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['dailyQueue'] }),
-  });
+  const mutation = useMutation({
+    mutationFn: removeFromQueue,
+    onMutate: async (removedQueueItemId: string) => {
+      await queryClient.cancelQueries({ queryKey: ['dailyQueue'] });
+      const previousQueue = queryClient.getQueryData<QueueItem[]>([
+        'dailyQueue',
+      ]);
 
-  const bulkActionMutation = useMutation({
-    mutationFn: bulkAction,
-    onSuccess: (data, action) => {
-      toast.success(
-        action === 'CLEAR_ALL'
-          ? 'Queue cleared!'
-          : "Yesterday's tasks carried over!"
+      // Optimistically remove the item using its unique queueItemId
+      queryClient.setQueryData<QueueItem[]>(['dailyQueue'], (old) =>
+        old ? old.filter((item) => item.id !== removedQueueItemId) : []
       );
+
+      toast.success('Task removed from queue.');
+      return { previousQueue };
+    },
+    onError: (err, removedQueueItemId, context) => {
+      toast.error('Failed to remove task. Restoring queue.');
+      if (context?.previousQueue) {
+        queryClient.setQueryData(['dailyQueue'], context.previousQueue);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['dailyQueue'] });
     },
-    onError: () => toast.error('Something went wrong.'),
   });
-
-  // --- Logic for "Yesterday's Review" ---
-  const hasItems = items && items.length > 0;
-  // The queue is from yesterday if it has items AND none of them were created today.
-  const isYesterdayQueue =
-    hasItems && !items.some((item) => isToday(new Date(item.createdAt)));
 
   const renderContent = () => {
     if (isLoading) return <QueueSkeleton />;
     if (isError)
       return (
-        <p className='text-sm text-destructive'>Could not load focus queue.</p>
+        <p className='text-sm text-destructive text-center p-4'>
+          Could not load focus queue.
+        </p>
       );
-    if (!hasItems) {
+    if (!queue || queue.length === 0) {
       return (
-        <div className='text-center py-4'>
-          <p className='text-sm font-medium'>Your focus queue is empty.</p>
-          <p className='text-xs text-muted-foreground'>
-            Add tasks from your goals to plan your day.
+        <div className='text-center text-sm text-muted-foreground p-6'>
+          <p>Your focus queue is empty.</p>
+          <p className='text-xs mt-1'>
+            Add tasks from a goal to start your day.
           </p>
         </div>
       );
     }
-
-    // --- The "Yesterday's Review" UI ---
-    if (isYesterdayQueue) {
-      return (
-        <div className='p-4 bg-accent/50 rounded-lg'>
-          <h4 className='font-semibold text-sm'>Review Yesterday's Plan</h4>
-          <p className='text-xs text-muted-foreground mb-4'>
-            You have unfinished tasks from yesterday.
-          </p>
-          <div className='flex gap-2'>
-            <Button
-              size='sm'
-              onClick={() => bulkActionMutation.mutate('RESET_DATES')}
-            >
-              <CalendarCheck2 className='mr-2 h-4 w-4' /> Keep for Today
-            </Button>
-            <Button
-              size='sm'
-              variant='outline'
-              onClick={() => bulkActionMutation.mutate('CLEAR_ALL')}
-            >
-              Clear All
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
-    // --- The Standard Queue List UI ---
     return (
-      <ul className='space-y-2'>
-        {items.map((item) => (
-          <li
+      <div className='space-y-2'>
+        {queue.map((item) => (
+          <FocusQueueItem
             key={item.id}
-            className='flex items-center gap-2 group p-2 rounded-md hover:bg-accent/50'
-          >
-            <span className='flex-1 text-sm font-medium truncate'>
-              {item.task.title}
-            </span>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='h-6 w-6 rounded-full opacity-0 group-hover:opacity-100'
-              onClick={() => removeItemMutation.mutate(item.id)}
-            >
-              <X className='h-4 w-4' />
-            </Button>
-          </li>
+            task={item.task}
+            onRemove={() => mutation.mutate(item.id)}
+            isPending={mutation.isPending && mutation.variables === item.id}
+          />
         ))}
-      </ul>
+      </div>
     );
   };
 
   return (
-    <div className='p-4 border rounded-lg bg-card'>
-      <h3 className='text-lg font-bold mb-4'>Today's Focus</h3>
-      {renderContent()}
-    </div>
+    <Card className='h-full flex flex-col'>
+      <CardHeader>
+        <CardTitle>Daily Focus Queue</CardTitle>
+        <CardDescription>Your prioritized tasks for today.</CardDescription>
+      </CardHeader>
+      <CardContent className='flex-1 flex flex-col gap-4 overflow-hidden'>
+        <ScrollArea className='flex-1 -mx-4 px-4'>{renderContent()}</ScrollArea>
+      </CardContent>
+    </Card>
   );
 }
 
 function QueueSkeleton() {
-  return (
+  /* ... unchanged ... */ return (
     <div className='space-y-3'>
-      <Skeleton className='h-5 w-3/4' />
-      <Skeleton className='h-5 w-full' />
-      <Skeleton className='h-5 w-5/6' />
+      <Skeleton className='h-12 w-full' />
+      <Skeleton className='h-12 w-full' />
+      <Skeleton className='h-12 w-full' />
+    </div>
+  );
+}
+
+interface FocusQueueItemProps {
+  task: TaskWithGoal;
+  onRemove: () => void;
+  isPending: boolean;
+}
+function FocusQueueItem({ task, onRemove, isPending }: FocusQueueItemProps) {
+  return (
+    <div
+      className={cn(
+        'group flex items-center justify-between gap-2 p-2 border rounded-md bg-background text-sm transition-opacity',
+        isPending && 'opacity-50'
+      )}
+    >
+      <div className='flex-1 min-w-0'>
+        <p className='font-medium truncate'>{task.title}</p>
+        <p className='text-xs text-muted-foreground truncate'>
+          {task.goal.title}
+        </p>
+      </div>
+      <Button
+        variant='ghost'
+        size='icon'
+        className='h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 focus:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+        onClick={onRemove}
+        disabled={isPending}
+        aria-label={`Remove ${task.title} from queue`}
+      >
+        <X className='h-4 w-4' />
+      </Button>
     </div>
   );
 }

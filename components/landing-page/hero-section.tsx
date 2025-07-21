@@ -41,7 +41,7 @@ export function HeroSection() {
           Start achieving.
         </p>
         <span className='hero-form mt-16 flex items-center justify-center opacity-0 translate-y-[20px]'>
-          <JoinButton text='Join the waitlist by completing this quick survey' />
+          <JoinButton text='Get Started' />
         </span>
       </div>
     </section>

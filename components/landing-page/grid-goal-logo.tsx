@@ -34,7 +34,7 @@ const GridGoalLogo = () => {
           width={squareSize}
           height={squareSize}
           rx={cornerRadius}
-          fill='#16a34a'
+          fill='#16a34a' // This is tailwind's green-600
         />
         <rect
           x={(squareSize + gap) * 2}
@@ -44,7 +44,6 @@ const GridGoalLogo = () => {
           rx={cornerRadius}
           fill='currentColor'
         />
-
         <rect
           x={0}
           y={squareSize + gap}
@@ -69,7 +68,6 @@ const GridGoalLogo = () => {
           rx={cornerRadius}
           fill='#16a34a'
         />
-
         <rect
           x={0}
           y={(squareSize + gap) * 2}
@@ -96,7 +94,15 @@ const GridGoalLogo = () => {
         />
       </svg>
 
-      <span className='font-bold text-lg'>GridGoal</span>
+      <div className='relative'>
+        <span className='font-bold text-lg'>GridGoal</span>
+        <span
+          className='absolute top-0 left-full ml-1.5 -translate-y-1 bg-green-600 text-white text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded-full'
+          aria-hidden='true'
+        >
+          BETA
+        </span>
+      </div>
     </Link>
   );
 };
