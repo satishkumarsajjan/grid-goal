@@ -1,11 +1,11 @@
 import { GitHubLogoIcon } from '@radix-ui/react-icons';
+import Link from 'next/link';
 import GridGoalLogo from './grid-goal-logo';
 import XLogo from './x-logo';
-import Link from 'next/link';
 
 export function Footer() {
   return (
-    <footer className='bg-background border-border'>
+    <footer className='border-border'>
       <div className='container mx-auto px-6 py-12 flex flex-col gap-4'>
         <div className='flex flex-col md:flex-row justify-between items-center gap-8'>
           <GridGoalLogo />
@@ -18,7 +18,7 @@ export function Footer() {
               <XLogo className='h-8 w-8' />
             </Link>
             <Link
-              href='https://github.com/satishkumarsajjan'
+              href='https://github.com/satishkumarsajjan/grid-goal'
               className='hover:text-foreground transition-colors'
               target='_blank'
             >

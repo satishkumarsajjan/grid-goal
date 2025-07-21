@@ -37,7 +37,7 @@ const BentoCard = ({
       'bento-card group relative flex flex-col justify-between overflow-hidden rounded-xl',
       'bg-background/50 border border-border/80 shadow-inner shadow-muted-foreground/10',
       'transition-all duration-300 hover:border-primary/50 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10',
-      'opacity-0', // Initial state for GSAP animation
+      'opacity-0',
       className
     )}
   >
@@ -50,12 +50,11 @@ const BentoCard = ({
         </div>
       </div>
     </div>
-    {/* Child content pushes to the bottom of the flex container */}
+
     <div className='flex-1 flex flex-col justify-end p-5 pt-2'>{children}</div>
   </div>
 );
 
-// The main Feature Bento Grid component
 export function FeatureBentoGrid() {
   const container = useRef(null);
 
@@ -72,7 +71,7 @@ export function FeatureBentoGrid() {
 
   const features = [
     {
-      className: 'md:col-span-4 md:row-span-2', // Hero card
+      className: 'md:col-span-4 md:row-span-2',
       title: 'Turn Ambition into Action',
       description:
         'Define your goal and break it down into a clear, scannable roadmap. See your entire plan from start to finish.',
@@ -107,7 +106,7 @@ export function FeatureBentoGrid() {
       ),
     },
     {
-      className: 'md:col-span-2 md:row-span-2', // Pace indicator gets a prominent spot
+      className: 'md:col-span-2 md:row-span-2',
       title: 'Data-Driven Confidence',
       description:
         "Know if you're on track to meet your deadline with a simple, at-a-glance pace chart.",

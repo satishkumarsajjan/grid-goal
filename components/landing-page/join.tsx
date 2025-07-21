@@ -10,13 +10,13 @@ const JoinButton = ({ text }: { text: string }) => {
   };
 
   return (
-    <Link href={'https://forms.gle/P5PgoBdk3XKfQXrB9'} target='_blank'>
+    <Link href={'/dashboard'} target='_blank'>
       <div
         className='relative inline-block p-0.5 rounded-lg'
         style={wrapperStyle}
       >
         <Button
-          className='w-full font-bold dark:bg-background dark:hover:bg-background/90 dark:text-foreground rounded-lg'
+          className='w-full font-bold bg-black hover:bg-black/90  text-white rounded-lg'
           size={'lg'}
         >
           {text}
