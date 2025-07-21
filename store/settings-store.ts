@@ -30,12 +30,12 @@ interface SettingsActions {
 
 const defaultSettings: SettingsState = {
   pomodoro: {
-    durationWork: 0.1 * 60, // 25 minutes
-    durationShortBreak: 0.1 * 60, // 5 minutes
-    durationLongBreak: 0.1 * 60, // 15 minutes
+    durationWork: 25 * 60, // 25 minutes
+    durationShortBreak: 5 * 60, // 5 minutes
+    durationLongBreak: 30 * 60, // 15 minutes
     cyclesUntilLongBreak: 2,
   },
-  // NEW: Default notification settings
+
   notifications: {
     soundEnabled: true,
     soundVolume: 0.5,
@@ -52,7 +52,6 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
           pomodoro: { ...state.pomodoro, ...newSettings },
         })),
 
-      // NEW: Implement the action for notification settings
       updateNotificationSettings: (newSettings) =>
         set((state) => ({
           notifications: { ...state.notifications, ...newSettings },

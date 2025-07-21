@@ -29,7 +29,8 @@ export function useTimerEngine() {
   const notificationSettings = useSettingsStore((state) => state.notifications);
   const queryClient = useQueryClient();
 
-  const [currentIntervalElapsed, setCurrentIntervalElapsed] = useState(0);
+  // This state will hold the time to be displayed, updated every frame.
+  const [displayTime, setDisplayTime] = useState(0);
 
   const {
     isActive,
@@ -40,8 +41,6 @@ export function useTimerEngine() {
     activeTask,
     sequenceId,
   } = useTimerStore();
-
-  const displayTime = accumulatedTime + currentIntervalElapsed;
 
   const logCycleMutation = useMutation({
     mutationFn: logCycle,
@@ -70,26 +69,33 @@ export function useTimerEngine() {
   }, [mode, pomodoroCycle, pomodoroSettings]);
 
   useEffect(() => {
-    if (!isActive || !intervalStartTime) {
-      setCurrentIntervalElapsed(0);
+    // When the timer is not active, ensure the display time reflects the final accumulated time.
+    if (!isActive) {
+      setDisplayTime(accumulatedTime);
+      return;
+    }
+
+    // This should not happen, but it's a good guard clause.
+    if (!intervalStartTime) {
+      setDisplayTime(accumulatedTime);
       return;
     }
 
     let animationFrameId: number;
 
     const updateTimer = () => {
-      const elapsed = Date.now() - intervalStartTime;
-      setCurrentIntervalElapsed(elapsed);
+      const elapsedSinceResume = Date.now() - intervalStartTime;
+      const newDisplayTime = accumulatedTime + elapsedSinceResume;
 
-      if (mode === 'POMODORO' && elapsed >= currentIntervalDuration) {
+      setDisplayTime(newDisplayTime);
+
+      if (mode === 'POMODORO' && newDisplayTime >= currentIntervalDuration) {
         cancelAnimationFrame(animationFrameId);
 
-        // NEW: Play sound based on the completed cycle
         if (notificationSettings.soundEnabled) {
           if (pomodoroCycle === 'WORK') {
             playSound('/chime-work-end.mp3', notificationSettings.soundVolume);
           } else {
-            // It was a break
             playSound('/chime-break-end.mp3', notificationSettings.soundVolume);
           }
         }
@@ -134,11 +140,14 @@ export function useTimerEngine() {
         animationFrameId = requestAnimationFrame(updateTimer);
       }
     };
+
     animationFrameId = requestAnimationFrame(updateTimer);
+
     return () => cancelAnimationFrame(animationFrameId);
   }, [
     isActive,
     intervalStartTime,
+    accumulatedTime, // Add `accumulatedTime` to the dependency array
     mode,
     pomodoroCycle,
     currentIntervalDuration,
