@@ -153,7 +153,7 @@ export function TaskSelectionModal({
       );
     }
     return tasks.map((task) => (
-      <Button
+      <button
         key={task.id}
         onClick={() => setSelectedTaskId(task.id)}
         className={cn(
@@ -172,7 +172,7 @@ export function TaskSelectionModal({
         >
           {task.goal.title}
         </span>
-      </Button>
+      </button>
     ));
   };
 

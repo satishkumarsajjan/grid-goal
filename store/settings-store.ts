@@ -30,9 +30,9 @@ interface SettingsActions {
 
 const defaultSettings: SettingsState = {
   pomodoro: {
-    durationWork: 1 * 60, // 25 minutes
-    durationShortBreak: 1 * 60, // 5 minutes
-    durationLongBreak: 1 * 60, // 15 minutes
+    durationWork: 0.1 * 60, // 25 minutes
+    durationShortBreak: 0.1 * 60, // 5 minutes
+    durationLongBreak: 0.1 * 60, // 15 minutes
     cyclesUntilLongBreak: 2,
   },
   // NEW: Default notification settings

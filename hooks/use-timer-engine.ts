@@ -11,13 +11,11 @@ const logCycle = async (payload: any) => {
   return data;
 };
 
-// NEW: A helper function to play sounds
 const playSound = (soundFile: string, volume: number) => {
   try {
     const audio = new Audio(soundFile);
     audio.volume = volume;
     audio.play().catch((error) => {
-      // Autoplay can be blocked by the browser, log error if it happens.
       console.error('Audio play failed:', error);
     });
   } catch (error) {
@@ -28,7 +26,6 @@ const playSound = (soundFile: string, volume: number) => {
 export function useTimerEngine() {
   const { setTimerState, addTimeToTotal } = useTimerStore.getState();
   const pomodoroSettings = useSettingsStore((state) => state.pomodoro);
-  // NEW: Get notification settings from the store
   const notificationSettings = useSettingsStore((state) => state.notifications);
   const queryClient = useQueryClient();
 
@@ -187,9 +184,6 @@ export function useTimerEngine() {
   return {
     displayTime,
     currentIntervalDuration,
-    // Note: isTransitioning and transitionTo are no longer returned here
-    // as they are consumed directly by the UI component from the store.
-    // Let's re-add them for consistency with your FocusSessionUI component.
     isTransitioning: useTimerStore((s) => s.isTransitioning),
     transitionTo: useTimerStore((s) => s.transitionTo),
     startNextInterval,
