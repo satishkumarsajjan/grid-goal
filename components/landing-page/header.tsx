@@ -1,31 +1,19 @@
-// @/components/layout/header.tsx (Updated)
-
 'use client';
 
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
-import { Menu, X } from 'lucide-react'; // <-- Import icons
+import { Menu, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { useRef, useState } from 'react'; // <-- Import useState
-import { SignInButton } from '../auth/sign-in-button';
-import { SignOutButton } from '../auth/sign-out-button';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
+import { useRef, useState } from 'react';
 import GridGoalLogo from './grid-goal-logo';
 import JoinButton from './join';
-import { MobileNav } from './mobile-nav'; // <-- Import MobileNav
+import { MobileNav } from './mobile-nav';
 import ThemeSwitch from './theme-switch';
 
 gsap.registerPlugin(ScrollToPlugin);
 
-// Define nav links in one place for reusability
 const navLinks = [
   { href: '#hero', label: 'Home' },
   { href: '#workflow', label: 'About' },
@@ -63,6 +51,7 @@ export function Header() {
       });
 
       const links = gsap.utils.toArray('.desktop-nav-link');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       links.forEach((link: any) => {
         link.addEventListener('click', (e: MouseEvent) => {
           e.preventDefault();
@@ -92,13 +81,11 @@ export function Header() {
             <GridGoalLogo />
           </Link>
 
-          {/* --- Desktop Navigation --- */}
           <nav className='hidden lg:flex items-center gap-6 text-sm font-medium text-muted-foreground'>
             {navLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                // Added a specific class for desktop to avoid conflicting selectors
                 className='desktop-nav-link hover:text-primary transition-colors'
               >
                 {link.label}
@@ -106,16 +93,14 @@ export function Header() {
             ))}
           </nav>
 
-          {/* --- Right-side Actions (Desktop) --- */}
           <div className='hidden lg:flex items-center gap-2'>
             <ThemeSwitch />
 
             <JoinButton text='Get Started' />
           </div>
 
-          {/* --- Mobile Hamburger Menu Button --- */}
           <div className='flex items-center gap-2 lg:hidden'>
-            <ThemeSwitch /> {/* Keep theme switch visible if desired */}
+            <ThemeSwitch />
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className='p-2'
@@ -127,7 +112,6 @@ export function Header() {
         </div>
       </header>
 
-      {/* --- Render the Mobile Navigation Menu --- */}
       <MobileNav
         isOpen={isMenuOpen}
         links={navLinks}

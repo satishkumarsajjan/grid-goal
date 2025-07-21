@@ -28,7 +28,6 @@ export function MobileNav({
 }: MobileNavProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Animate the menu based on the isOpen prop
   useGSAP(
     () => {
       gsap.to(containerRef.current, {

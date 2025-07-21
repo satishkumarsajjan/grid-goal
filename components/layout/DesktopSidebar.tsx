@@ -3,10 +3,9 @@
 import { Suspense } from 'react';
 
 import { CreateGoalButton } from '@/components/goals/create-goal-button';
-import { DeleteCategoriesButton } from '@/components/goals/DeleteCategoriesButton';
 import { GoalTree } from '@/components/goals/goal-tree';
-import { GoalNavigatorSkeleton } from './MobileSidebar';
 import { GoalDialogOptions } from '../goals/goal-navigator-item';
+import { GoalNavigatorSkeleton } from './MobileSidebar';
 
 interface DesktopSidebarProps {
   activeGoalId: string | null;
@@ -32,9 +31,6 @@ export function DesktopSidebar({
             openGoalDialog={openGoalDialog}
           />
         </Suspense>
-      </div>
-      <div className='p-2 border-t bg-background'>
-        <DeleteCategoriesButton />
       </div>
     </aside>
   );

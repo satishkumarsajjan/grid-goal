@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import { Category } from '@prisma/client';
-import { toast } from 'sonner';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
+import { CategoryForm } from '@/components/goals/CategoryForm';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -14,15 +16,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { CategoryForm } from '@/components/goals/CategoryForm';
+import { Skeleton } from '@/components/ui/skeleton';
+import { DeleteCategoriesButton } from '../goals/DeleteCategoriesButton';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -171,10 +172,13 @@ export function CategoryManagementSection() {
                 Create, edit, and delete your work categories.
               </CardDescription>
             </div>
-            <Button onClick={() => handleOpenDialog('create')}>
-              <Plus className='mr-2 h-4 w-4' />
-              New Category
-            </Button>
+            <div className='flex items-center justify-center gap-2'>
+              <DeleteCategoriesButton />
+              <Button onClick={() => handleOpenDialog('create')}>
+                <Plus className='mr-2 h-4 w-4' />
+                New Category
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>{renderContent()}</CardContent>

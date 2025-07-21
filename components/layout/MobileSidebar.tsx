@@ -1,7 +1,6 @@
 'use client';
 
 import { CreateGoalButton } from '@/components/goals/create-goal-button';
-import { DeleteCategoriesButton } from '@/components/goals/DeleteCategoriesButton';
 import { GoalTree } from '@/components/goals/goal-tree';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,8 +13,8 @@ import {
 import { cn } from '@/lib/utils';
 import { Menu } from 'lucide-react';
 import { Suspense } from 'react';
-import { Skeleton } from '../ui/skeleton';
 import { GoalDialogOptions } from '../goals/goal-navigator-item';
+import { Skeleton } from '../ui/skeleton';
 
 interface MobileSidebarProps {
   activeGoalId: string | null;
@@ -76,9 +75,6 @@ export function MobileSidebar({
               openGoalDialog={openGoalDialog}
             />
           </Suspense>
-        </div>
-        <div className='p-2 border-t mt-auto bg-background'>
-          <DeleteCategoriesButton />
         </div>
       </SheetContent>
     </Sheet>
