@@ -153,10 +153,9 @@ export function TaskSelectionModal({
       );
     }
     return tasks.map((task) => (
-      <button
+      <Button
         key={task.id}
         onClick={() => setSelectedTaskId(task.id)}
-        aria-selected={selectedTaskId === task.id}
         className={cn(
           'w-full text-left p-2 rounded-md transition-colors',
           selectedTaskId === task.id
@@ -173,7 +172,7 @@ export function TaskSelectionModal({
         >
           {task.goal.title}
         </span>
-      </button>
+      </Button>
     ));
   };
 

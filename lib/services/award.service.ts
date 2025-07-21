@@ -3,30 +3,25 @@ import { AwardId, FocusSession, Goal } from '@prisma/client';
 import { calculateStreak } from '../streak-helpers';
 import { startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 
-// --- Private Helper Function ---
-// FIX #1: This function now MUTATES the Set that is passed to it.
 const grantAward = async (
   userId: string,
   awardId: AwardId,
   awardedAwards: Set<AwardId>
 ): Promise<boolean> => {
   if (awardedAwards.has(awardId)) {
-    return false; // No new award was granted
+    return false;
   }
   await prisma.userAward.create({ data: { userId, awardId } });
-  awardedAwards.add(awardId); // Mutate the set for subsequent checks in the same run
-  console.log(`Awarded ${awardId} to user ${userId}`);
-  return true; // A new award was granted
+
+  return true;
 };
 
-// --- Checkers Triggered by Focus Session ---
 const checkSessionAwards = async (
   userId: string,
   newSession: FocusSession,
   awardedAwards: Set<AwardId>
 ) => {
-  // Simple, single-session checks first
-  grantAward(userId, AwardId.FIRST_STEP, awardedAwards); // Always try to grant first step
+  grantAward(userId, AwardId.FIRST_STEP, awardedAwards);
   if (newSession.noteNextStep?.trim())
     grantAward(userId, AwardId.PERFECT_HANDOFF, awardedAwards);
   if (newSession.vibe === 'STRUGGLE')
@@ -34,7 +29,6 @@ const checkSessionAwards = async (
   if (newSession.durationSeconds >= 7200)
     grantAward(userId, AwardId.DEEP_DIVE, awardedAwards);
 
-  // FIX #2: Group checks and exit early if all awards in a group are earned.
   const needsComplexCheck =
     !awardedAwards.has(AwardId.MARATHONER) ||
     !awardedAwards.has(AwardId.JOURNEYMAN) ||

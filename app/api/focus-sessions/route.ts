@@ -173,8 +173,6 @@ export async function DELETE(request: Request) {
       },
     });
 
-    console.log(`Deleted ${count} sessions for sequenceId: ${sequenceId}`);
-
     return NextResponse.json({ success: true, deletedCount: count });
   } catch (error: unknown) {
     console.error('[API:DELETE_FOCUS_SESSION]', error);

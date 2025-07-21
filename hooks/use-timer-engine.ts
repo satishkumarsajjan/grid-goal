@@ -52,7 +52,6 @@ export function useTimerEngine() {
       queryClient.invalidateQueries({
         queryKey: ['goal', variables.goalId],
       });
-      console.log('Successfully logged cycle:', data);
     },
     onError: () => {
       console.error('Failed to log pomodoro cycle to server.');
