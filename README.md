@@ -46,7 +46,7 @@ Want to run GridGoal on your own machine? Here’s how:
 
 - [Node.js](https://nodejs.org/) (v18 or later)
 - [pnpm](https://pnpm.io/) (recommended package manager)
-- [PostgreSQL](https://www.postgresql.org/) database running locally or on a service like Supabase.
+- [PostgreSQL](https://www.postgresql.org/) database running locally or on a service like Neon.
 - A Google account for OAuth authentication.
 
 **2. Clone the Repository:**

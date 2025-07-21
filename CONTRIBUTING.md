@@ -15,7 +15,7 @@ There are many ways to contribute:
 - **Reporting Bugs:** Find a bug? Please open an issue and use the "Bug Report" template. Provide as much detail as possible.
 - **Suggesting Enhancements:** Have an idea for a new feature or an improvement to an existing one? Open an issue using the "Feature Request" template.
 - **Writing Code:** Pick an open issue, especially one labeled `help wanted` or `good first issue`, and submit a pull request.
-- **Improving Documentation:** Our documentation can always be better. If you see something that's unclear or missing, let us know or submit a PR!
+- **Improving Documentation:** Documentation is still in planning stage, will be ready to build once the planning stage gets over.
 
 ### Your First Code Contribution
 
